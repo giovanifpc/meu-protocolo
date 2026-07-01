@@ -80,7 +80,7 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 Projeto em setup inicial (2026-07-01): repositório e projeto Supabase criados.
 
 **Já implementado:**
-- Schema SQL: `supabase_professionals.sql`, `supabase_auth_functions.sql`, `supabase_students.sql` — **rodar nessa ordem exata** no SQL Editor do Supabase (students.sql depende de professionals já existir)
+- Schema SQL: `supabase_01_professionals.sql`, `supabase_02_students.sql`, `supabase_03_auth_functions.sql` — **rodar em ordem numérica** no SQL Editor do Supabase (auth_functions depende de students já existir, students depende de professionals)
 - `login.html` — OTP por e-mail (mesmo padrão do Fox, evita bug de PWA no iOS), roteia para `index.html` (profissional), `aluno.html` (aluno) ou `onboarding.html` (novo cadastro)
 - `onboarding.html` — primeiro acesso do profissional cria a própria linha em `professionals` (trial de 14 dias)
 - `index.html` — painel do profissional: banner de trial, cadastro rápido de aluno, lista de alunos

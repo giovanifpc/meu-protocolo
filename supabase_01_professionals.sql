@@ -28,5 +28,5 @@ create policy "professional creates own row"
   on professionals for insert
   with check (email = auth.jwt() ->> 'email');
 
--- Nota: a policy "aluno lê o próprio professional" é criada em supabase_students.sql,
--- pois depende da tabela students já existir. Rodar este arquivo ANTES de supabase_students.sql.
+-- Nota: a policy "aluno lê o próprio professional" é criada em supabase_02_students.sql,
+-- pois depende da tabela students já existir. Rodar os arquivos supabase_0N_*.sql em ordem numérica.

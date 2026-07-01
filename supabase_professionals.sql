@@ -22,3 +22,11 @@ create policy "professional reads own row"
 create policy "professional updates own row"
   on professionals for update
   using (email = auth.jwt() ->> 'email');
+
+-- Permite que o profissional crie a própria linha no primeiro login (onboarding)
+create policy "professional creates own row"
+  on professionals for insert
+  with check (email = auth.jwt() ->> 'email');
+
+-- Nota: a policy "aluno lê o próprio professional" é criada em supabase_students.sql,
+-- pois depende da tabela students já existir. Rodar este arquivo ANTES de supabase_students.sql.

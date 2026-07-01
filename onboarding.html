@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meu Protocolo — Criar conta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg:#F8F9FA; --primary:#2D6BE4; --accent:#3BB08F; --text:#1E2A3A;
+    --line:#E2E5EA; --card:#FFFFFF; --muted:#6B7684; --font:'Inter', sans-serif;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--bg); color:var(--text); font-family:var(--font); padding:24px; }
+  .card { width:100%; max-width:400px; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:28px 24px; }
+  h1 { font-size:22px; font-weight:700; margin:0 0 6px; }
+  p.hint { color:var(--muted); font-size:14px; margin:0 0 20px; }
+  .field { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+  .field label { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .field input { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:11px 13px; font-size:15px; color:var(--text); font-family:var(--font); }
+  .field input:focus { outline:none; border-color:var(--primary); }
+  .btn { width:100%; padding:12px 18px; border-radius:10px; font-weight:700; font-size:15px; cursor:pointer; border:none; background:var(--primary); color:#fff; font-family:var(--font); }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+  .msg { font-size:13px; margin-top:12px; text-align:center; min-height:18px; }
+  .msg.error { color:#C0392B; }
+  .trial-note { font-size:12px; color:var(--muted); background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:14px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Bem-vindo</h1>
+    <p class="hint">Vamos criar sua conta de profissional.</p>
+    <div class="trial-note">Trial gratuito de 14 dias. Ao final, a cobrança do plano escolhido é feita automaticamente.</div>
+
+    <div class="field">
+      <label>Seu nome ou nome do negócio</label>
+      <input type="text" id="displayNameInput" placeholder="Ex: João Personal Trainer">
+    </div>
+
+    <button class="btn" id="createBtn">Criar minha conta</button>
+    <div class="msg" id="msgBox"></div>
+  </div>
+
+<script>
+  const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';
+  const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const $ = (id) => document.getElementById(id);
+  const msgBox = $('msgBox');
+
+  function showMsg(text) { msgBox.textContent = text; }
+
+  (async () => {
+    const { data: { session } } = await supa.auth.getSession();
+    if (!session) { window.location.href = 'login.html'; }
+  })();
+
+  $('createBtn').addEventListener('click', async () => {
+    const displayName = $('displayNameInput').value.trim();
+    if (!displayName) { showMsg('Digite seu nome ou nome do negócio.'); return; }
+
+    $('createBtn').disabled = true;
+    showMsg('Criando conta...');
+
+    const { data: { session } } = await supa.auth.getSession();
+    const email = session.user.email;
+    const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+
+    const { error } = await supa.from('professionals').insert({
+      email,
+      display_name: displayName,
+      status: 'trial',
+      trial_ends_at: trialEndsAt,
+    });
+
+    $('createBtn').disabled = false;
+    if (error) {
+      showMsg('Erro ao criar conta: ' + error.message);
+      return;
+    }
+    window.location.href = 'index.html';
+  });
+</script>
+</body>
+</html>

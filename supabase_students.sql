@@ -22,3 +22,10 @@ create policy "professional manages own students"
 create policy "student reads own row"
   on students for select
   using (email = auth.jwt() ->> 'email');
+
+-- Alunos leem os dados de branding do próprio professional (necessário para o join em aluno.html)
+create policy "student reads own professional"
+  on professionals for select
+  using (
+    id in (select professional_id from students where email = auth.jwt() ->> 'email')
+  );

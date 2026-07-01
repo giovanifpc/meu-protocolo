@@ -77,4 +77,20 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
-Projeto em setup inicial (2026-07-01): repositório e projeto Supabase criados, schema ainda não implementado. Próximos passos: schema SQL de `professionals`/`students`, fluxo de auth (OTP, mesmo padrão validado no Fox), estrutura de páginas.
+Projeto em setup inicial (2026-07-01): repositório e projeto Supabase criados.
+
+**Já implementado:**
+- Schema SQL: `supabase_professionals.sql`, `supabase_auth_functions.sql`, `supabase_students.sql` — **rodar nessa ordem exata** no SQL Editor do Supabase (students.sql depende de professionals já existir)
+- `login.html` — OTP por e-mail (mesmo padrão do Fox, evita bug de PWA no iOS), roteia para `index.html` (profissional), `aluno.html` (aluno) ou `onboarding.html` (novo cadastro)
+- `onboarding.html` — primeiro acesso do profissional cria a própria linha em `professionals` (trial de 14 dias)
+- `index.html` — painel do profissional: banner de trial, cadastro rápido de aluno, lista de alunos
+- `aluno.html` — placeholder do aluno (mostra branding do profissional via `primary_color`/`display_name`, aguardando protocolo publicado)
+
+**Ainda não implementado (próximos passos):**
+- Rodar o SQL no Supabase (passo manual — Code não tem credenciais de DB)
+- Protocolo de treino (schema + tela) — reaproveitar formato JSON validado no Fox como ponto de partida
+- Webhook Mercado Pago (cobrança automática ao fim do trial)
+- Chatbot de suporte via IA (item 1 do master doc)
+- PWA completo (manifest, ícones, service worker)
+- Política de Privacidade / Termos de Uso
+- Rate limiting, headers de segurança, backup automático (item 13 do master doc)

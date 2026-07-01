@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meu Protocolo — Entrar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg:#F8F9FA;
+    --primary:#2D6BE4;
+    --accent:#3BB08F;
+    --text:#1E2A3A;
+    --line:#E2E5EA;
+    --card:#FFFFFF;
+    --muted:#6B7684;
+    --font:'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background:var(--bg); color:var(--text); font-family:var(--font);
+    padding:24px;
+  }
+  .card {
+    width:100%; max-width:380px; background:var(--card); border:1px solid var(--line);
+    border-radius:16px; padding:28px 24px;
+  }
+  h1 { font-size:22px; font-weight:700; margin:0 0 6px; }
+  p.hint { color:var(--muted); font-size:14px; margin:0 0 20px; }
+  .field { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+  .field label { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .field input {
+    background:var(--bg); border:1px solid var(--line); border-radius:10px;
+    padding:11px 13px; font-size:15px; color:var(--text); font-family:var(--font);
+  }
+  .field input:focus { outline:none; border-color:var(--primary); }
+  .btn {
+    width:100%; padding:12px 18px; border-radius:10px; font-weight:700; font-size:15px;
+    cursor:pointer; border:none; background:var(--primary); color:#fff; font-family:var(--font);
+  }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+  .msg { font-size:13px; margin-top:12px; text-align:center; min-height:18px; }
+  .msg.error { color:#C0392B; }
+  .msg.ok { color:var(--accent); }
+  .back-link { display:block; text-align:center; margin-top:16px; font-size:13px; color:var(--muted); cursor:pointer; text-decoration:underline; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Meu Protocolo</h1>
+    <p class="hint" id="stepHint">Digite seu e-mail para receber um código de acesso.</p>
+
+    <div id="stepEmail">
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" id="emailInput" placeholder="seu@email.com" autocomplete="email">
+      </div>
+      <button class="btn" id="sendOtpBtn">Enviar código</button>
+    </div>
+
+    <div id="stepOtp" style="display:none;">
+      <div class="field">
+        <label>Código recebido por e-mail</label>
+        <input type="text" id="otpInput" placeholder="000000" maxlength="8" inputmode="numeric">
+      </div>
+      <button class="btn" id="verifyOtpBtn">Confirmar</button>
+      <span class="back-link" id="backToEmail">Usar outro e-mail</span>
+    </div>
+
+    <div class="msg" id="msgBox"></div>
+  </div>
+
+<script>
+  const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';
+  const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const $ = (id) => document.getElementById(id);
+  const msgBox = $('msgBox');
+  let pendingEmail = '';
+
+  function showMsg(text, type) {
+    msgBox.textContent = text;
+    msgBox.className = 'msg' + (type ? ' ' + type : '');
+  }
+
+  $('sendOtpBtn').addEventListener('click', async () => {
+    const email = $('emailInput').value.trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      showMsg('Digite um e-mail válido.', 'error');
+      return;
+    }
+    $('sendOtpBtn').disabled = true;
+    showMsg('Enviando código...', '');
+    const { error } = await supa.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+    $('sendOtpBtn').disabled = false;
+    if (error) {
+      showMsg('Erro ao enviar código: ' + error.message, 'error');
+      return;
+    }
+    pendingEmail = email;
+    $('stepEmail').style.display = 'none';
+    $('stepOtp').style.display = 'block';
+    $('stepHint').textContent = 'Código enviado para ' + email;
+    showMsg('', '');
+  });
+
+  $('verifyOtpBtn').addEventListener('click', async () => {
+    const token = $('otpInput').value.trim();
+    if (!token) {
+      showMsg('Digite o código recebido.', 'error');
+      return;
+    }
+    $('verifyOtpBtn').disabled = true;
+    showMsg('Verificando...', '');
+    const { data, error } = await supa.auth.verifyOtp({ email: pendingEmail, token, type: 'email' });
+    $('verifyOtpBtn').disabled = false;
+    if (error) {
+      showMsg('Código inválido ou expirado: ' + error.message, 'error');
+      return;
+    }
+
+    const email = data.user.email;
+    const { data: isPro } = await supa.rpc('is_professional_email', { check_email: email });
+    if (isPro) {
+      window.location.href = 'index.html';
+      return;
+    }
+    const { data: isStudent } = await supa.rpc('is_student_email', { check_email: email });
+    if (isStudent) {
+      window.location.href = 'aluno.html';
+      return;
+    }
+    // Primeiro acesso sem cadastro prévio: trata como novo profissional (onboarding)
+    window.location.href = 'onboarding.html';
+  });
+
+  $('backToEmail').addEventListener('click', () => {
+    $('stepOtp').style.display = 'none';
+    $('stepEmail').style.display = 'block';
+    $('stepHint').textContent = 'Digite seu e-mail para receber um código de acesso.';
+    showMsg('', '');
+  });
+</script>
+</body>
+</html>

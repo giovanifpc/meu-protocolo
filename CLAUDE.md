@@ -15,7 +15,10 @@ Produto **totalmente separado da marca Fox Performance** — projetos distintos,
 
 ## Regras de desenvolvimento
 
-- **Branch principal:** `main` — commits vão direto para a main
+- **Branch principal:** `main` — todo commit vai direto para a main
+- **GitHub Pages** serve a main automaticamente — mudanças ficam ao vivo após push (`https://giovanifpc.github.io/meu-protocolo`)
+- **No PC (Windows):** edições via PowerShell/terminal + `git pull` para sincronizar após commits feitos em outro lugar
+- **Aqui (Claude Code web/celular):** faço edições, commit e push direto na main
 - **RLS sempre habilitado** em toda tabela nova, sem exceção — dado sensível de saúde (LGPD), multi-tenant real
 - **Nunca usar `--no-verify` ou forçar push destrutivo sem confirmação explícita**
 - Commits em português, mensagens descritivas

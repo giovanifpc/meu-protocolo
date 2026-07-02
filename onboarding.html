@@ -54,7 +54,13 @@
 
   (async () => {
     const { data: { session } } = await supa.auth.getSession();
-    if (!session) { window.location.href = 'login.html'; }
+    if (!session) { window.location.href = 'login.html'; return; }
+
+    // Se já existe conta pro e-mail (ex: sessão anterior criou o registro mas
+    // não completou o redirecionamento), pula direto pro painel em vez de
+    // tentar criar de novo e esbarrar na constraint de email único.
+    const { data: existing } = await supa.from('professionals').select('id').eq('email', session.user.email).maybeSingle();
+    if (existing) { window.location.href = 'index.html'; }
   })();
 
   $('createBtn').addEventListener('click', async () => {
@@ -77,6 +83,8 @@
 
     $('createBtn').disabled = false;
     if (error) {
+      // Conta já existe (corrida entre abas/tentativas) — segue pro painel em vez de travar.
+      if (error.code === '23505') { window.location.href = 'index.html'; return; }
       showMsg('Erro ao criar conta: ' + error.message);
       return;
     }

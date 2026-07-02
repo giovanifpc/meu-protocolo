@@ -17,9 +17,19 @@
   header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--card); border-bottom:1px solid var(--line); }
   header h1 { font-size:18px; font-weight:700; margin:0; }
   .btn.secondary { padding:8px 14px; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; border:1px solid var(--line); background:var(--bg); color:var(--text); font-family:var(--font); }
-  main { max-width:520px; margin:0 auto; padding:24px 20px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:24px 20px; text-align:center; }
-  .card p { color:var(--muted); font-size:14px; line-height:1.5; }
+  main { max-width:520px; margin:0 auto; padding:20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; }
+  .card.center { text-align:center; }
+  .card p { color:var(--muted); font-size:14px; line-height:1.5; margin:0; }
+  .protocol-title { font-size:16px; font-weight:700; margin:0 0 4px; }
+  .protocol-meta { font-size:12px; color:var(--muted); margin:0 0 16px; }
+  .workout-block { border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:12px; }
+  .workout-name { font-weight:700; font-size:15px; margin:0 0 10px; }
+  .exercise-row { display:flex; gap:12px; align-items:center; padding:8px 0; border-bottom:1px solid var(--line); }
+  .exercise-row:last-child { border-bottom:none; }
+  .exercise-row img { width:44px; height:44px; border-radius:8px; object-fit:cover; background:var(--bg); flex-shrink:0; }
+  .exercise-name { font-size:14px; font-weight:600; }
+  .exercise-meta { font-size:12px; color:var(--muted); }
 </style>
 </head>
 <body>
@@ -27,8 +37,8 @@
     <h1 id="proName">Meu Protocolo</h1>
     <button class="btn secondary" id="logoutBtn">Sair</button>
   </header>
-  <main>
-    <div class="card">
+  <main id="mainArea">
+    <div class="card center">
       <p id="statusText">Carregando...</p>
     </div>
   </main>
@@ -39,12 +49,29 @@
   const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const $ = (id) => document.getElementById(id);
 
+  function escapeHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
   async function boot() {
     const { data: { session } } = await supa.auth.getSession();
     if (!session) { window.location.href = 'login.html'; return; }
 
-    const { data: student, error } = await supa.from('students').select('*, professionals(display_name, primary_color, logo_url)').eq('email', session.user.email).single();
-    if (error || !student) { $('statusText').textContent = 'Não encontramos seu cadastro. Fale com seu personal trainer.'; return; }
+    const { data: student, error } = await supa
+      .from('students')
+      .select('*, professionals(display_name, primary_color, logo_url)')
+      .eq('email', session.user.email)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Falha ao carregar aluno:', error.message);
+      $('statusText').textContent = 'Erro ao carregar seus dados: ' + error.message;
+      return;
+    }
+    if (!student) {
+      $('statusText').textContent = 'Não encontramos seu cadastro. Fale com seu personal trainer.';
+      return;
+    }
 
     if (student.professionals?.display_name) {
       $('proName').textContent = student.professionals.display_name;
@@ -52,7 +79,52 @@
     if (student.professionals?.primary_color) {
       document.documentElement.style.setProperty('--primary', student.professionals.primary_color);
     }
-    $('statusText').textContent = `Olá, ${student.nome}! Seu protocolo de treino ainda não foi publicado. Assim que seu personal configurar, ele aparecerá aqui.`;
+
+    const { data: protocol, error: protoErr } = await supa
+      .from('training_protocols')
+      .select('*')
+      .eq('student_id', student.id)
+      .eq('status', 'publicado')
+      .order('publicado_em', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (protoErr) {
+      console.error('Falha ao carregar protocolo:', protoErr.message);
+      $('statusText').textContent = 'Erro ao carregar seu protocolo: ' + protoErr.message;
+      return;
+    }
+
+    if (!protocol || !protocol.workouts || !protocol.workouts.length) {
+      $('statusText').textContent = `Olá, ${student.nome}! Seu protocolo de treino ainda não foi publicado. Assim que seu personal configurar, ele aparecerá aqui.`;
+      return;
+    }
+
+    renderProtocol(student, protocol);
+  }
+
+  function renderProtocol(student, protocol) {
+    const main = $('mainArea');
+    main.innerHTML = `
+      <div class="card" style="margin-bottom:14px;">
+        <div class="protocol-title">${escapeHtml(protocol.titulo)}</div>
+        <div class="protocol-meta">Olá, ${escapeHtml(student.nome)}! Aqui está seu treino atual.</div>
+      </div>
+      ${protocol.workouts.map(w => `
+        <div class="workout-block">
+          <div class="workout-name">${escapeHtml(w.name)}</div>
+          ${(w.exercises || []).map(ex => `
+            <div class="exercise-row">
+              ${ex.media ? `<img src="${escapeHtml(ex.media)}" alt="">` : ''}
+              <div>
+                <div class="exercise-name">${escapeHtml(ex.nome)}</div>
+                <div class="exercise-meta">${escapeHtml(ex.sets)}x${escapeHtml(ex.reps)} · descanso ${escapeHtml(ex.rest)}s</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `).join('')}
+    `;
   }
 
   $('logoutBtn').addEventListener('click', async () => {

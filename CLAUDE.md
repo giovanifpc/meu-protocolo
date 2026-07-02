@@ -23,6 +23,7 @@ Produto **totalmente separado da marca Fox Performance** — projetos distintos,
 - **Aqui (Claude Code web/celular):** faço edições, commit e push direto na main
 - **RLS sempre habilitado** em toda tabela nova, sem exceção — dado sensível de saúde (LGPD), multi-tenant real
 - **Nunca usar `--no-verify` ou forçar push destrutivo sem confirmação explícita**
+- **Autonomia de execução:** o Giovani pediu operação sem pausas de confirmação — faça o commit e push das mudanças diretamente, sem perguntar "posso commitar?" a cada passo. Vale para qualquer sessão (PC, web, celular), não só a que recebeu essa instrução originalmente. Só pare pra confirmar em ações genuinamente arriscadas: alterar/apagar dado real de aluno ou profissional (não teste), mudar configuração de cobrança real, ou qualquer coisa irreversível fora do fluxo normal de código
 - Commits em português, mensagens descritivas
 - Sem TypeScript no frontend (só seria usado, se necessário, em Edge Functions)
 

@@ -58,8 +58,9 @@
 
     // Se já existe conta pro e-mail (ex: sessão anterior criou o registro mas
     // não completou o redirecionamento), pula direto pro painel em vez de
-    // tentar criar de novo e esbarrar na constraint de email único.
-    const { data: existing } = await supa.from('professionals').select('id').eq('email', session.user.email).maybeSingle();
+    // mostrar o formulário de novo.
+    const { data: existing, error: existingErr } = await supa.from('professionals').select('id').eq('email', session.user.email).maybeSingle();
+    if (existingErr) console.error('Falha ao checar conta existente:', existingErr.message);
     if (existing) { window.location.href = 'index.html'; }
   })();
 
@@ -74,17 +75,18 @@
     const email = session.user.email;
     const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
-    const { error } = await supa.from('professionals').insert({
+    // upsert (não insert): se a linha já existir pro e-mail, atualiza em vez de
+    // falhar com erro de constraint única — elimina o loop de "já existe".
+    const { error } = await supa.from('professionals').upsert({
       email,
       display_name: displayName,
       status: 'trial',
       trial_ends_at: trialEndsAt,
-    });
+    }, { onConflict: 'email' });
 
     $('createBtn').disabled = false;
     if (error) {
-      // Conta já existe (corrida entre abas/tentativas) — segue pro painel em vez de travar.
-      if (error.code === '23505') { window.location.href = 'index.html'; return; }
+      console.error('Falha ao criar/atualizar conta:', error.message);
       showMsg('Erro ao criar conta: ' + error.message);
       return;
     }

@@ -89,8 +89,13 @@
     const { data: { session } } = await supa.auth.getSession();
     if (!session) { window.location.href = 'login.html'; return; }
 
-    const { data: pro, error } = await supa.from('professionals').select('*').eq('email', session.user.email).single();
-    if (error || !pro) { window.location.href = 'onboarding.html'; return; }
+    const { data: pro, error } = await supa.from('professionals').select('*').eq('email', session.user.email).maybeSingle();
+    if (error) {
+      console.error('Falha ao carregar professional:', error.message);
+      document.querySelector('main').innerHTML = `<div class="card"><p style="color:var(--danger)">Erro ao carregar sua conta: ${escapeHtml(error.message)}</p></div>`;
+      return;
+    }
+    if (!pro) { window.location.href = 'onboarding.html'; return; }
 
     professional = pro;
     $('profName').textContent = pro.display_name;

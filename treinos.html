@@ -36,6 +36,13 @@
   .exercise-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px solid var(--line); font-size:13px; }
   .exercise-row:last-child { border-bottom:none; }
   .exercise-row .ex-meta { color:var(--muted); font-size:12px; }
+  .exercise-row-edit { flex-wrap:wrap; }
+  .ex-name-col { font-weight:600; flex:1 1 100%; margin-bottom:4px; }
+  .ex-fields { display:flex; align-items:center; gap:4px; }
+  .ex-field-input { width:44px; padding:5px 4px; text-align:center; border:1px solid var(--line); border-radius:6px; font-size:12px; font-family:var(--font); }
+  .ex-field-input:focus { outline:none; border-color:var(--primary); }
+  .ex-field-rest { width:52px; }
+  .ex-field-x, .ex-field-unit { color:var(--muted); font-size:12px; }
   .search-box { position:relative; margin-top:8px; }
   .search-results { position:absolute; z-index:20; top:100%; left:0; right:0; background:var(--card); border:1px solid var(--line); border-radius:10px; margin-top:4px; max-height:240px; overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,.08); }
   .search-result-item { padding:9px 12px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--line); }
@@ -93,6 +100,7 @@
   let professional = null;
   let currentProtocol = null; // { id, student_id, titulo, status, workouts: [...] }
   let searchDebounce = null;
+  let muscleGroups = [];
 
   function toast(msg) {
     const t = document.createElement('div');
@@ -120,6 +128,7 @@
     professional = pro;
 
     await loadStudents();
+    await loadMuscleGroups();
 
     const params = new URLSearchParams(window.location.search);
     const preselect = params.get('student_id');
@@ -139,6 +148,12 @@
       opt.textContent = s.nome;
       select.appendChild(opt);
     });
+  }
+
+  async function loadMuscleGroups() {
+    const { data, error } = await supa.from('exercise_library').select('grupo_muscular');
+    if (error || !data) return;
+    muscleGroups = [...new Set(data.map(r => r.grupo_muscular).filter(Boolean))].sort();
   }
 
   $('studentSelect').addEventListener('change', async (e) => {
@@ -192,17 +207,27 @@
         </div>
         <div class="exercises-list">
           ${w.exercises.length ? w.exercises.map((ex, i) => `
-            <div class="exercise-row">
-              <div>
-                <div>${escapeHtml(ex.nome)}</div>
-                <div class="ex-meta">${ex.sets}x${ex.reps} · descanso ${ex.rest}s</div>
+            <div class="exercise-row exercise-row-edit">
+              <div class="ex-name-col">${escapeHtml(ex.nome)}</div>
+              <div class="ex-fields">
+                <input type="number" min="1" class="ex-field-input" value="${escapeHtml(ex.sets)}" data-role="ex-sets" data-workout-id="${w._uid}" data-idx="${i}" title="Séries">
+                <span class="ex-field-x">×</span>
+                <input type="text" class="ex-field-input" value="${escapeHtml(ex.reps)}" data-role="ex-reps" data-workout-id="${w._uid}" data-idx="${i}" title="Repetições">
+                <input type="number" min="0" step="5" class="ex-field-input ex-field-rest" value="${escapeHtml(ex.rest)}" data-role="ex-rest" data-workout-id="${w._uid}" data-idx="${i}" title="Descanso (segundos)">
+                <span class="ex-field-unit">s</span>
               </div>
               <button class="btn danger small" data-role="remove-exercise" data-workout-id="${w._uid}" data-idx="${i}">×</button>
             </div>
           `).join('') : '<div class="empty">Nenhum exercício ainda.</div>'}
         </div>
         <div class="search-box">
-          <input type="text" placeholder="Buscar exercício por nome..." data-role="search-input" data-workout-id="${w._uid}" autocomplete="off">
+          <div class="row three" style="grid-template-columns:2fr 1fr;">
+            <input type="text" placeholder="Buscar exercício por nome..." data-role="search-input" data-workout-id="${w._uid}" autocomplete="off">
+            <select data-role="filter-grupo" data-workout-id="${w._uid}">
+              <option value="">Todos os grupos</option>
+              ${muscleGroups.map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('')}
+            </select>
+          </div>
           <div class="search-results" data-role="search-results" data-workout-id="${w._uid}" style="display:none;"></div>
         </div>
       </div>
@@ -227,6 +252,17 @@
         renderWorkouts();
       });
     });
+    container.querySelectorAll('[data-role="ex-sets"], [data-role="ex-reps"], [data-role="ex-rest"]').forEach(inp => {
+      inp.addEventListener('change', (e) => {
+        const w = currentProtocol.workouts.find(x => x._uid === e.target.dataset.workoutId);
+        if (!w) return;
+        const ex = w.exercises[Number(e.target.dataset.idx)];
+        if (!ex) return;
+        if (e.target.dataset.role === 'ex-sets') ex.sets = Number(e.target.value) || 1;
+        if (e.target.dataset.role === 'ex-reps') ex.reps = e.target.value;
+        if (e.target.dataset.role === 'ex-rest') ex.rest = Number(e.target.value) || 0;
+      });
+    });
     container.querySelectorAll('[data-role="search-input"]').forEach(inp => {
       inp.addEventListener('input', (e) => {
         clearTimeout(searchDebounce);
@@ -234,25 +270,32 @@
         const query = e.target.value.trim();
         const resultsBox = container.querySelector(`[data-role="search-results"][data-workout-id="${workoutId}"]`);
         if (query.length < 2) { resultsBox.style.display = 'none'; return; }
-        searchDebounce = setTimeout(() => searchExercises(query, workoutId, resultsBox), 300);
+        const grupoFilter = container.querySelector(`[data-role="filter-grupo"][data-workout-id="${workoutId}"]`).value;
+        searchDebounce = setTimeout(() => searchExercises(query, grupoFilter, workoutId, resultsBox), 300);
+      });
+    });
+    container.querySelectorAll('[data-role="filter-grupo"]').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const workoutId = e.target.dataset.workoutId;
+        const searchInput = container.querySelector(`[data-role="search-input"][data-workout-id="${workoutId}"]`);
+        const query = searchInput.value.trim();
+        const resultsBox = container.querySelector(`[data-role="search-results"][data-workout-id="${workoutId}"]`);
+        if (query.length < 2) return;
+        searchExercises(query, e.target.value, workoutId, resultsBox);
       });
     });
   }
 
-  async function searchExercises(query, workoutId, resultsBox) {
-    const { data, error } = await supa
-      .from('exercise_library')
-      .select('exercise_id, nome, grupo_muscular, gif_url, exercise_ref')
-      .ilike('nome', `%${query}%`)
-      .limit(15);
-
+  async function searchExercises(query, grupoFilter, workoutId, resultsBox) {
+    const { data, error } = await supa.rpc('search_exercise_library', { q: query });
     if (error) { console.error(error.message); return; }
-    if (!data || !data.length) {
+    const filtered = grupoFilter ? (data || []).filter(ex => ex.grupo_muscular === grupoFilter) : (data || []);
+    if (!filtered.length) {
       resultsBox.innerHTML = '<div class="search-result-item">Nenhum exercício encontrado.</div>';
       resultsBox.style.display = 'block';
       return;
     }
-    resultsBox.innerHTML = data.map(ex => `
+    resultsBox.innerHTML = filtered.map(ex => `
       <div class="search-result-item" data-exercise-id="${ex.exercise_id}">
         ${escapeHtml(ex.nome)}
         <div class="grupo">${escapeHtml(ex.grupo_muscular || '')}</div>
@@ -262,7 +305,7 @@
 
     resultsBox.querySelectorAll('.search-result-item[data-exercise-id]').forEach(item => {
       item.addEventListener('click', () => {
-        const ex = data.find(x => String(x.exercise_id) === item.dataset.exerciseId);
+        const ex = filtered.find(x => String(x.exercise_id) === item.dataset.exerciseId);
         addExerciseToWorkout(workoutId, ex);
         resultsBox.style.display = 'none';
       });

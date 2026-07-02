@@ -80,20 +80,26 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
-Projeto em setup inicial (2026-07-01): repositório e projeto Supabase criados.
+Última atualização: 2026-07-02. Ver `ATUALIZACAO-2026-07-02.md` para o detalhe completo da sessão mais recente (setup de e-mail transacional e debug do login).
 
 **Já implementado:**
-- Schema SQL: `supabase_01_professionals.sql`, `supabase_02_students.sql`, `supabase_03_auth_functions.sql` — **rodar em ordem numérica** no SQL Editor do Supabase (auth_functions depende de students já existir, students depende de professionals)
-- `login.html` — OTP por e-mail (mesmo padrão do Fox, evita bug de PWA no iOS), roteia para `index.html` (profissional), `aluno.html` (aluno) ou `onboarding.html` (novo cadastro)
-- `onboarding.html` — primeiro acesso do profissional cria a própria linha em `professionals` (trial de 14 dias)
+- Schema SQL: `supabase_01_professionals.sql`, `supabase_02_students.sql`, `supabase_03_auth_functions.sql` — já rodados no Supabase
+- `login.html` — OTP por e-mail (mesmo padrão do Fox, evita bug de PWA no iOS), roteia para `index.html` (profissional), `aluno.html` (aluno) ou `onboarding.html` (novo cadastro). **Funcionando de ponta a ponta.**
+- `onboarding.html` — primeiro acesso do profissional cria a própria linha em `professionals` (trial de 14 dias). O insert funciona.
 - `index.html` — painel do profissional: banner de trial, cadastro rápido de aluno, lista de alunos
 - `aluno.html` — placeholder do aluno (mostra branding do profissional via `primary_color`/`display_name`, aguardando protocolo publicado)
+- E-mail transacional: domínio `meuprotocolo.app` (Cloudflare Registrar) verificado no Resend, SMTP customizado configurado no Supabase, templates "Confirm signup" e "Magic Link or OTP" editados para exibir `{{ .Token }}`
+
+**Bug em aberto (prioridade — investigar primeiro na próxima sessão):**
+- Depois do `onboarding.html` criar a conta com sucesso e redirecionar pro `index.html`, o `SELECT` em `professionals` (linha ~92 de `index.html`) não encontra a linha recém-criada e bate de volta pro `onboarding.html`. Retestar o insert dá erro de `duplicate key`, confirmando que a linha existe mas não está sendo lida de volta. Suspeita: policy de RLS `"professional reads own row"` em `supabase_01_professionals.sql`. Diagnóstico pendente: navegar direto pra `index.html` com uma linha já existente e ver se reproduz.
 
 **Ainda não implementado (próximos passos):**
-- Rodar o SQL no Supabase (passo manual — Code não tem credenciais de DB)
+- Corrigir o bug de RLS acima
 - Protocolo de treino (schema + tela) — reaproveitar formato JSON validado no Fox como ponto de partida
-- Webhook Mercado Pago (cobrança automática ao fim do trial)
+- Webhook Mercado Pago (cobrança automática ao fim do trial, trial deve exigir cartão cadastrado desde o cadastro — ver master doc seção 4)
 - Chatbot de suporte via IA (item 1 do master doc)
 - PWA completo (manifest, ícones, service worker)
 - Política de Privacidade / Termos de Uso
 - Rate limiting, headers de segurança, backup automático (item 13 do master doc)
+- Painel/acesso master: master doc não pede CRUD de tenants, só 2FA + recuperação de emergência (item 14) — escopo exato ainda não decidido com o usuário
+- Nota: o master doc completo (`MEU-PROTOCOLO-MASTER.md`) só existe no PC do usuário — não está disponível em sessões remotas (celular/web) a menos que seja colado na conversa ou commitado no repo

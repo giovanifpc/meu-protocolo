@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meu Protocolo — Montar treino</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg:#F8F9FA; --primary:#2D6BE4; --accent:#3BB08F; --text:#1E2A3A;
+    --line:#E2E5EA; --card:#FFFFFF; --muted:#6B7684; --danger:#C0392B; --font:'Inter', sans-serif;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font-family:var(--font); }
+  header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--card); border-bottom:1px solid var(--line); gap:12px; }
+  header h1 { font-size:17px; font-weight:700; margin:0; }
+  main { max-width:720px; margin:0 auto; padding:20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:16px; }
+  .card h2 { font-size:15px; margin:0 0 12px; }
+  .field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+  .field label { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .field input, .field select { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; color:var(--text); font-family:var(--font); }
+  .field input:focus, .field select:focus { outline:none; border-color:var(--primary); }
+  .row.three { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .btn { padding:10px 16px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; border:none; background:var(--primary); color:#fff; font-family:var(--font); }
+  .btn.secondary { background:var(--bg); color:var(--text); border:1px solid var(--line); }
+  .btn.danger { background:#FDEDEC; color:var(--danger); border:1px solid #F5C6C0; }
+  .btn.small { padding:6px 10px; font-size:12px; }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+  .workout-block { border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:12px; }
+  .workout-block-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .workout-block-header input { font-weight:700; font-size:14px; border:none; background:transparent; padding:4px 0; flex:1; }
+  .workout-block-header input:focus { outline:none; border-bottom:1px solid var(--primary); }
+  .exercise-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  .exercise-row:last-child { border-bottom:none; }
+  .exercise-row .ex-meta { color:var(--muted); font-size:12px; }
+  .search-box { position:relative; margin-top:8px; }
+  .search-results { position:absolute; z-index:20; top:100%; left:0; right:0; background:var(--card); border:1px solid var(--line); border-radius:10px; margin-top:4px; max-height:240px; overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,.08); }
+  .search-result-item { padding:9px 12px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--line); }
+  .search-result-item:last-child { border-bottom:none; }
+  .search-result-item:hover { background:var(--bg); }
+  .search-result-item .grupo { color:var(--muted); font-size:11px; }
+  .empty { color:var(--muted); font-size:13px; text-align:center; padding:16px 0; }
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#23263a; color:#fff; padding:10px 18px; border-radius:10px; font-size:13px; z-index:999; }
+  .status-tag { font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; text-transform:uppercase; }
+  .status-tag.rascunho { background:#FFF4E5; color:#8A5A00; }
+  .status-tag.publicado { background:#E7F7F1; color:#1B7A55; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Montar treino</h1>
+    <a href="index.html" class="btn secondary small">‹ Painel</a>
+  </header>
+
+  <main>
+    <div class="card">
+      <div class="field">
+        <label>Aluno</label>
+        <select id="studentSelect"><option value="">Selecione um aluno...</option></select>
+      </div>
+      <div id="protocolStatus" style="display:none;">
+        <span class="status-tag" id="statusTag"></span>
+      </div>
+    </div>
+
+    <div id="builderArea" style="display:none;">
+      <div class="card">
+        <div class="field">
+          <label>Título do protocolo</label>
+          <input type="text" id="tituloInput" placeholder="Ex: Ciclo 1 — Hipertrofia">
+        </div>
+        <button class="btn secondary" id="addWorkoutBtn">+ Adicionar treino (A, B, C...)</button>
+      </div>
+
+      <div id="workoutsContainer"></div>
+
+      <div class="card" style="display:flex; gap:10px;">
+        <button class="btn secondary" id="saveDraftBtn">Salvar rascunho</button>
+        <button class="btn" id="publishBtn">Publicar para o aluno</button>
+      </div>
+    </div>
+  </main>
+
+<script>
+  const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';
+  const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const $ = (id) => document.getElementById(id);
+
+  let professional = null;
+  let currentProtocol = null; // { id, student_id, titulo, status, workouts: [...] }
+  let searchDebounce = null;
+
+  function toast(msg) {
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+
+  function escapeHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function uid() {
+    return 'w' + Math.random().toString(36).slice(2, 9);
+  }
+
+  async function boot() {
+    const { data: { session } } = await supa.auth.getSession();
+    if (!session) { window.location.href = 'login.html'; return; }
+
+    const { data: pro, error } = await supa.from('professionals').select('*').eq('email', session.user.email).maybeSingle();
+    if (error) { console.error(error.message); return; }
+    if (!pro) { window.location.href = 'onboarding.html'; return; }
+    professional = pro;
+
+    await loadStudents();
+
+    const params = new URLSearchParams(window.location.search);
+    const preselect = params.get('student_id');
+    if (preselect) {
+      $('studentSelect').value = preselect;
+      await loadOrCreateProtocol(preselect);
+    }
+  }
+
+  async function loadStudents() {
+    const { data, error } = await supa.from('students').select('*').eq('professional_id', professional.id).order('nome');
+    const select = $('studentSelect');
+    if (error || !data) return;
+    data.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.nome;
+      select.appendChild(opt);
+    });
+  }
+
+  $('studentSelect').addEventListener('change', async (e) => {
+    const studentId = e.target.value;
+    if (!studentId) { $('builderArea').style.display = 'none'; return; }
+    await loadOrCreateProtocol(studentId);
+  });
+
+  async function loadOrCreateProtocol(studentId) {
+    const { data, error } = await supa
+      .from('training_protocols')
+      .select('*')
+      .eq('student_id', studentId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) { console.error(error.message); toast('Erro ao carregar protocolo.'); return; }
+
+    if (data) {
+      currentProtocol = data;
+      currentProtocol.workouts = (data.workouts || []).map(w => ({ ...w, _uid: uid() }));
+    } else {
+      currentProtocol = { id: null, student_id: studentId, titulo: 'Protocolo de treino', status: 'rascunho', workouts: [] };
+    }
+    renderProtocol();
+    $('builderArea').style.display = 'block';
+  }
+
+  function renderProtocol() {
+    $('tituloInput').value = currentProtocol.titulo || '';
+    $('protocolStatus').style.display = currentProtocol.id ? 'block' : 'none';
+    if (currentProtocol.id) {
+      $('statusTag').textContent = currentProtocol.status;
+      $('statusTag').className = 'status-tag ' + currentProtocol.status;
+    }
+    renderWorkouts();
+  }
+
+  function renderWorkouts() {
+    const container = $('workoutsContainer');
+    if (!currentProtocol.workouts.length) {
+      container.innerHTML = '<div class="card"><div class="empty">Nenhum treino adicionado ainda.</div></div>';
+      return;
+    }
+    container.innerHTML = currentProtocol.workouts.map(w => `
+      <div class="workout-block" data-workout-id="${w._uid}">
+        <div class="workout-block-header">
+          <input type="text" value="${escapeHtml(w.name)}" data-role="workout-name" data-workout-id="${w._uid}">
+          <button class="btn danger small" data-role="remove-workout" data-workout-id="${w._uid}">Remover</button>
+        </div>
+        <div class="exercises-list">
+          ${w.exercises.length ? w.exercises.map((ex, i) => `
+            <div class="exercise-row">
+              <div>
+                <div>${escapeHtml(ex.nome)}</div>
+                <div class="ex-meta">${ex.sets}x${ex.reps} · descanso ${ex.rest}s</div>
+              </div>
+              <button class="btn danger small" data-role="remove-exercise" data-workout-id="${w._uid}" data-idx="${i}">×</button>
+            </div>
+          `).join('') : '<div class="empty">Nenhum exercício ainda.</div>'}
+        </div>
+        <div class="search-box">
+          <input type="text" placeholder="Buscar exercício por nome..." data-role="search-input" data-workout-id="${w._uid}" autocomplete="off">
+          <div class="search-results" data-role="search-results" data-workout-id="${w._uid}" style="display:none;"></div>
+        </div>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('[data-role="workout-name"]').forEach(inp => {
+      inp.addEventListener('input', (e) => {
+        const w = currentProtocol.workouts.find(x => x._uid === e.target.dataset.workoutId);
+        if (w) w.name = e.target.value;
+      });
+    });
+    container.querySelectorAll('[data-role="remove-workout"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        currentProtocol.workouts = currentProtocol.workouts.filter(x => x._uid !== e.target.dataset.workoutId);
+        renderWorkouts();
+      });
+    });
+    container.querySelectorAll('[data-role="remove-exercise"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const w = currentProtocol.workouts.find(x => x._uid === e.target.dataset.workoutId);
+        if (w) w.exercises.splice(Number(e.target.dataset.idx), 1);
+        renderWorkouts();
+      });
+    });
+    container.querySelectorAll('[data-role="search-input"]').forEach(inp => {
+      inp.addEventListener('input', (e) => {
+        clearTimeout(searchDebounce);
+        const workoutId = e.target.dataset.workoutId;
+        const query = e.target.value.trim();
+        const resultsBox = container.querySelector(`[data-role="search-results"][data-workout-id="${workoutId}"]`);
+        if (query.length < 2) { resultsBox.style.display = 'none'; return; }
+        searchDebounce = setTimeout(() => searchExercises(query, workoutId, resultsBox), 300);
+      });
+    });
+  }
+
+  async function searchExercises(query, workoutId, resultsBox) {
+    const { data, error } = await supa
+      .from('exercise_library')
+      .select('exercise_id, nome, grupo_muscular, gif_url, exercise_ref')
+      .ilike('nome', `%${query}%`)
+      .limit(15);
+
+    if (error) { console.error(error.message); return; }
+    if (!data || !data.length) {
+      resultsBox.innerHTML = '<div class="search-result-item">Nenhum exercício encontrado.</div>';
+      resultsBox.style.display = 'block';
+      return;
+    }
+    resultsBox.innerHTML = data.map(ex => `
+      <div class="search-result-item" data-exercise-id="${ex.exercise_id}">
+        ${escapeHtml(ex.nome)}
+        <div class="grupo">${escapeHtml(ex.grupo_muscular || '')}</div>
+      </div>
+    `).join('');
+    resultsBox.style.display = 'block';
+
+    resultsBox.querySelectorAll('.search-result-item[data-exercise-id]').forEach(item => {
+      item.addEventListener('click', () => {
+        const ex = data.find(x => String(x.exercise_id) === item.dataset.exerciseId);
+        addExerciseToWorkout(workoutId, ex);
+        resultsBox.style.display = 'none';
+      });
+    });
+  }
+
+  function addExerciseToWorkout(workoutId, ex) {
+    const w = currentProtocol.workouts.find(x => x._uid === workoutId);
+    if (!w) return;
+    w.exercises.push({
+      nome: ex.nome,
+      exercise_id: ex.exercise_id,
+      exercise_ref: ex.exercise_ref,
+      media: ex.gif_url,
+      mediaType: 'img',
+      sets: 3,
+      reps: '12',
+      rest: 75,
+    });
+    renderWorkouts();
+  }
+
+  $('addWorkoutBtn').addEventListener('click', () => {
+    const letter = String.fromCharCode(65 + currentProtocol.workouts.length);
+    currentProtocol.workouts.push({ _uid: uid(), id: letter, name: `Treino ${letter}`, exercises: [] });
+    renderWorkouts();
+  });
+
+  function stripInternalFields(workouts) {
+    return workouts.map(w => ({ id: w.id, name: w.name, exercises: w.exercises }));
+  }
+
+  async function saveProtocol(status) {
+    currentProtocol.titulo = $('tituloInput').value.trim() || 'Protocolo de treino';
+    const payload = {
+      professional_id: professional.id,
+      student_id: currentProtocol.student_id,
+      titulo: currentProtocol.titulo,
+      status,
+      workouts: stripInternalFields(currentProtocol.workouts),
+      publicado_em: status === 'publicado' ? new Date().toISOString() : currentProtocol.publicado_em || null,
+    };
+
+    let result;
+    if (currentProtocol.id) {
+      result = await supa.from('training_protocols').update(payload).eq('id', currentProtocol.id).select().single();
+    } else {
+      result = await supa.from('training_protocols').insert(payload).select().single();
+    }
+
+    if (result.error) {
+      console.error(result.error.message);
+      toast('Erro ao salvar: ' + result.error.message);
+      return;
+    }
+    currentProtocol.id = result.data.id;
+    currentProtocol.status = result.data.status;
+    renderProtocol();
+    toast(status === 'publicado' ? 'Protocolo publicado para o aluno.' : 'Rascunho salvo.');
+  }
+
+  $('saveDraftBtn').addEventListener('click', () => saveProtocol('rascunho'));
+  $('publishBtn').addEventListener('click', () => saveProtocol('publicado'));
+
+  boot();
+</script>
+</body>
+</html>

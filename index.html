@@ -122,6 +122,7 @@
           <div class="student-name">${escapeHtml(s.nome)}</div>
           <div class="student-email">${escapeHtml(s.email)}</div>
         </div>
+        <a class="btn secondary" style="padding:7px 12px;font-size:12px;" href="treinos.html?student_id=${s.id}">Montar treino</a>
       </div>
     `).join('');
   }

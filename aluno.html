@@ -482,6 +482,26 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   function nextWorkoutIndex() {
     return history.length % protocol.workouts.length;
   }
+  function daysSinceStart() {
+    if (!protocol.publicado_em) return 0;
+    const start = new Date(protocol.publicado_em);
+    const startMid = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const nowMid = new Date();
+    const now = new Date(nowMid.getFullYear(), nowMid.getMonth(), nowMid.getDate());
+    return Math.max(0, Math.floor((now - startMid) / 86400000));
+  }
+  function currentCycleWeek() {
+    if (!protocol.duracao_semanas) return 0;
+    return Math.min(Math.floor(daysSinceStart() / 7), protocol.duracao_semanas - 1);
+  }
+  function cycleEnded() {
+    if (!protocol.duracao_semanas) return false;
+    return Math.floor(daysSinceStart() / 7) >= protocol.duracao_semanas;
+  }
+  function exerciseWeekConfig(ex) {
+    if (ex.weeks && ex.weeks.length) return ex.weeks[Math.min(currentCycleWeek(), ex.weeks.length - 1)];
+    return { sets: ex.sets || 3, reps: ex.reps || '12', rest: ex.rest || 60, nota: '' };
+  }
   function completedCount() {
     return history.filter(h => !(h.detail && h.detail.incomplete)).length;
   }
@@ -702,10 +722,14 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     }
     const nextIdx = nextWorkoutIndex();
     const w = protocol.workouts[nextIdx];
-    const totalSets = w.exercises.reduce((a,ex) => a + Number(ex.sets||0), 0);
+    const totalSets = w.exercises.reduce((a,ex) => a + Number(exerciseWeekConfig(ex).sets||0), 0);
+    const cycleBadge = protocol.duracao_semanas
+      ? `<div class="section-label" style="margin-top:0">${cycleEnded() ? 'Ciclo concluído — fale com seu personal' : `Semana ${currentCycleWeek()+1} de ${protocol.duracao_semanas}`}</div>`
+      : '';
 
     let html = `
-      <div class="section-label">Próximo treino</div>
+      ${cycleBadge}
+      <div class="section-label" ${cycleBadge ? 'style="margin-top:0"' : ''}>Próximo treino</div>
       <div class="next-workout" onclick="openOverview(${nextIdx})">
         <div class="nw-tag">Treino ${escapeHtml(w.id)}</div>
         <div class="nw-name">${escapeHtml(w.name)}</div>
@@ -724,7 +748,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     const list = $('workoutsList');
     protocol.workouts.forEach((wo, idx) => {
       const isNext = idx === nextIdx;
-      const sets = wo.exercises.reduce((a,ex) => a + Number(ex.sets||0), 0);
+      const sets = wo.exercises.reduce((a,ex) => a + Number(exerciseWeekConfig(ex).sets||0), 0);
       const card = document.createElement('div');
       card.className = 'wk-card' + (isNext ? ' is-next' : '');
       card.onclick = () => openOverview(idx);
@@ -780,7 +804,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     hideNav();
     state.workoutIndex = idx;
     const w = protocol.workouts[idx];
-    const totalSets = w.exercises.reduce((a,ex) => a + Number(ex.sets||0), 0);
+    const totalSets = w.exercises.reduce((a,ex) => a + Number(exerciseWeekConfig(ex).sets||0), 0);
 
     $('ovTitle').textContent = 'Treino ' + w.id;
     $('ovName').textContent = w.name;
@@ -789,16 +813,16 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     $('ovTime').textContent = '~' + Math.max(1, Math.round(totalSets * 1.4));
 
     const listEl = $('ovExList');
-    listEl.innerHTML = w.exercises.map((ex,i) => `
+    listEl.innerHTML = w.exercises.map((ex,i) => { const cfg = exerciseWeekConfig(ex); return `
       <div class="ex-list-item">
         <div class="ex-li-num">${i+1}</div>
         <div class="ex-thumb">${mediaThumb(ex)}</div>
         <div class="ex-li-info">
           <div class="eli-name">${escapeHtml(ex.nome)}</div>
-          <div class="eli-sets">${ex.sets}x${escapeHtml(String(ex.reps))} · descanso ${ex.rest}s</div>
+          <div class="eli-sets">${cfg.sets}x${escapeHtml(String(cfg.reps))}${cfg.nota ? ' · ' + escapeHtml(cfg.nota) : ''} · descanso ${cfg.rest}s</div>
         </div>
       </div>
-    `).join('');
+    `; }).join('');
     showScreen('overview');
   }
   function mediaThumb(ex) {
@@ -813,9 +837,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     state.currentExercise = 0;
     state.startTime = Date.now();
     state.rating = null;
-    state.sessionData = w.exercises.map(ex => ({
-      sets: Array.from({ length: Number(ex.sets) || 1 }, () => ({ done:false, carga: lastCargaFor(ex.nome), reps: String(ex.reps || '') }))
-    }));
+    state.sessionData = w.exercises.map(ex => {
+      const cfg = exerciseWeekConfig(ex);
+      return { sets: Array.from({ length: Number(cfg.sets) || 1 }, () => ({ done:false, carga: lastCargaFor(ex.nome), reps: String(cfg.reps || '') })) };
+    });
     $('execWoName').textContent = w.name;
     buildExecProgress();
     renderExercise();
@@ -843,6 +868,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     const i = state.currentExercise;
     const ex = w.exercises[i];
     const sd = state.sessionData[i];
+    const cfg = exerciseWeekConfig(ex);
 
     $('execCounter2').textContent = `${i+1}/${w.exercises.length}`;
 
@@ -855,7 +881,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         <button class="set-check" onclick="toggleSet(${si})">✓</button>
         <span class="set-num">Série ${si+1}</span>
         <div class="set-inputs">
-          <div class="set-field"><input type="number" inputmode="decimal" placeholder="${escapeHtml(String(ex.reps||''))}" value="${escapeHtml(set.reps)}" onchange="updateSetField(${si},'reps',this.value)"><label>reps</label></div>
+          <div class="set-field"><input type="number" inputmode="decimal" placeholder="${escapeHtml(String(cfg.reps||''))}" value="${escapeHtml(set.reps)}" onchange="updateSetField(${si},'reps',this.value)"><label>reps</label></div>
           <div class="set-field"><input type="number" inputmode="decimal" placeholder="kg" value="${escapeHtml(set.carga)}" onchange="updateSetField(${si},'carga',this.value)"><label>carga</label></div>
         </div>
       </div>`).join('');
@@ -866,7 +892,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       <div class="exec-counter">Exercício ${i+1} de ${w.exercises.length}</div>
       <div class="exec-name">${escapeHtml(ex.nome)}</div>
       <div class="exec-media">${media}</div>
-      <div class="sets-head"><span class="sh-title">Séries</span><span class="sh-target">Meta: ${ex.sets}x${escapeHtml(String(ex.reps))} · descanso ${ex.rest}s</span></div>
+      <div class="sets-head"><span class="sh-title">Séries</span><span class="sh-target">Meta: ${cfg.sets}x${escapeHtml(String(cfg.reps))}${cfg.nota ? ' · ' + escapeHtml(cfg.nota) : ''} · descanso ${cfg.rest}s</span></div>
       ${setsHtml}
       ${noteHtml}`;
 
@@ -885,7 +911,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     updateExecProgress();
     if (sd.sets[si].done) {
       const remaining = sd.sets.filter(s => !s.done).length;
-      if (remaining > 0) startRest(Number(ex.rest) || 60, `Série ${si+2} de ${sd.sets.length}`);
+      if (remaining > 0) startRest(Number(exerciseWeekConfig(ex).rest) || 60, `Série ${si+2} de ${sd.sets.length}`);
     }
   }
   function updateSetField(si, field, val) { state.sessionData[state.currentExercise].sets[si][field] = val; }

@@ -54,6 +54,17 @@
   .status-tag { font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; text-transform:uppercase; }
   .status-tag.rascunho { background:#FFF4E5; color:#8A5A00; }
   .status-tag.publicado { background:#E7F7F1; color:#1B7A55; }
+  .periodization-row { display:grid; grid-template-columns:2fr 1fr; gap:8px; margin-bottom:10px; }
+  .periodization-hint { font-size:12px; color:var(--muted); margin:-4px 0 12px; line-height:1.5; }
+  .ex-name-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+  .exercise-row-multi { padding:10px 0; border-bottom:1px solid var(--line); }
+  .exercise-row-multi:last-child { border-bottom:none; }
+  .week-grid { overflow-x:auto; }
+  .week-grid table { border-collapse:collapse; font-size:12px; }
+  .week-grid th, .week-grid td { padding:3px 4px; text-align:center; white-space:nowrap; }
+  .week-grid th { color:var(--muted); font-weight:700; font-size:10px; text-transform:uppercase; }
+  .week-grid td:first-child, .week-grid th:first-child { text-align:left; color:var(--muted); padding-right:8px; }
+  .week-grid .ex-field-input { width:40px; }
 </style>
 </head>
 <body>
@@ -79,7 +90,26 @@
           <label>Título do protocolo</label>
           <input type="text" id="tituloInput" placeholder="Ex: Ciclo 1 — Hipertrofia">
         </div>
-        <button class="btn secondary" id="addWorkoutBtn">+ Adicionar treino (A, B, C...)</button>
+        <div class="periodization-row">
+          <div class="field" style="margin-bottom:0;">
+            <label>Periodização</label>
+            <select id="periodizacaoSelect">
+              <option value="manual">Nenhuma (manual)</option>
+              <option value="linear">Linear</option>
+              <option value="ondulatoria_diaria">Ondulatória diária</option>
+              <option value="ondulatoria_semanal">Ondulatória semanal</option>
+              <option value="blocos">Em blocos</option>
+              <option value="reversa">Reversa</option>
+            </select>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Duração (semanas)</label>
+            <input type="number" id="duracaoInput" min="2" max="16" value="4">
+          </div>
+        </div>
+        <div class="periodization-hint" id="periodizationHint"></div>
+        <button class="btn secondary" id="applyPeriodizationBtn">Aplicar periodização aos exercícios</button>
+        <button class="btn secondary" id="addWorkoutBtn" style="margin-left:8px;">+ Adicionar treino (A, B, C...)</button>
       </div>
 
       <div id="workoutsContainer"></div>
@@ -98,9 +128,80 @@
   const $ = (id) => document.getElementById(id);
 
   let professional = null;
-  let currentProtocol = null; // { id, student_id, titulo, status, workouts: [...] }
+  let currentProtocol = null; // { id, student_id, titulo, status, periodizacao, duracao_semanas, workouts: [...] }
   let searchDebounce = null;
   let muscleGroups = [];
+
+  const PERIODIZATION_HINTS = {
+    manual: 'Sets/reps/descanso fixos, sem progressão automática — você ajusta na mão quando quiser.',
+    linear: 'Volume cai e a intensidade sobe ao longo do ciclo; última semana é deload. Boa pra iniciantes e foco em força.',
+    ondulatoria_diaria: 'Cada treino do loop (A, B, C...) recebe um perfil diferente — pesado, moderado, leve — em vez de progressão por semana.',
+    ondulatoria_semanal: 'Alterna semana de força, hipertrofia e resistência em um ciclo de 3 semanas que se repete.',
+    blocos: 'Divide o ciclo em 3 fases: acumulação (volume), intensificação e realização (pico).',
+    reversa: 'O oposto da linear: volume sobe e a intensidade cai ao longo do ciclo.',
+  };
+  const PERIODIZATION_DEFAULT_WEEKS = {
+    linear: 4, ondulatoria_semanal: 6, blocos: 9, reversa: 4,
+  };
+
+  function defaultWeek() {
+    return { sets: 3, reps: '12', rest: 75, nota: '' };
+  }
+
+  function generateWeeks(technique, base, duration, workoutIndex) {
+    const baseSets = Number(base.sets) || 3;
+    const baseReps = parseInt(base.reps, 10) || 12;
+    const baseRest = Number(base.rest) || 60;
+    const reps = (n) => String(Math.max(3, Math.round(n)));
+
+    if (technique === 'linear') {
+      const weeks = [];
+      for (let w = 0; w < duration; w++) {
+        if (w === duration - 1 && duration > 1) {
+          weeks.push({ sets: Math.max(2, baseSets - 1), reps: reps(baseReps + 2), rest: baseRest, nota: 'Deload' });
+        } else {
+          const t = duration > 2 ? w / (duration - 2) : 0;
+          weeks.push({ sets: baseSets + (w >= Math.ceil((duration - 1) / 2) ? 1 : 0), reps: reps(baseReps - t * Math.max(0, baseReps - 5)), rest: baseRest + w * 10, nota: '' });
+        }
+      }
+      return weeks;
+    }
+    if (technique === 'reversa') {
+      const weeks = [];
+      for (let w = 0; w < duration; w++) {
+        const t = duration > 1 ? w / (duration - 1) : 0;
+        weeks.push({ sets: Math.max(2, baseSets - Math.round(t)), reps: reps(baseReps - 3 + t * 8), rest: Math.max(20, baseRest - w * 10), nota: '' });
+      }
+      return weeks;
+    }
+    if (technique === 'ondulatoria_semanal') {
+      const perfis = [
+        { sets: baseSets + 1, reps: reps(baseReps - 4), rest: baseRest + 20, nota: 'Força' },
+        { sets: baseSets, reps: reps(baseReps), rest: baseRest, nota: 'Hipertrofia' },
+        { sets: Math.max(2, baseSets - 1), reps: reps(baseReps + 6), rest: Math.max(20, baseRest - 20), nota: 'Resistência' },
+      ];
+      return Array.from({ length: duration }, (_, w) => ({ ...perfis[w % 3] }));
+    }
+    if (technique === 'blocos') {
+      const weeks = [];
+      const third = Math.max(1, Math.round(duration / 3));
+      for (let w = 0; w < duration; w++) {
+        if (w < third) weeks.push({ sets: baseSets + 1, reps: reps(baseReps + 2), rest: baseRest, nota: 'Acumulação' });
+        else if (w < third * 2) weeks.push({ sets: baseSets, reps: reps(baseReps), rest: baseRest + 15, nota: 'Intensificação' });
+        else weeks.push({ sets: Math.max(2, baseSets - 1), reps: reps(Math.max(3, baseReps - 4)), rest: baseRest + 30, nota: 'Realização' });
+      }
+      return weeks;
+    }
+    if (technique === 'ondulatoria_diaria') {
+      const perfis = [
+        { sets: baseSets + 1, reps: reps(baseReps - 4), rest: baseRest + 20, nota: 'Pesado' },
+        { sets: baseSets, reps: reps(baseReps), rest: baseRest, nota: 'Moderado' },
+        { sets: Math.max(2, baseSets - 1), reps: reps(baseReps + 6), rest: Math.max(20, baseRest - 20), nota: 'Leve' },
+      ];
+      return [perfis[workoutIndex % 3]];
+    }
+    return [{ sets: baseSets, reps: String(baseReps), rest: baseRest, nota: '' }];
+  }
 
   function toast(msg) {
     const t = document.createElement('div');
@@ -177,7 +278,7 @@
       currentProtocol = data;
       currentProtocol.workouts = (data.workouts || []).map(w => ({ ...w, _uid: uid() }));
     } else {
-      currentProtocol = { id: null, student_id: studentId, titulo: 'Protocolo de treino', status: 'rascunho', workouts: [] };
+      currentProtocol = { id: null, student_id: studentId, titulo: 'Protocolo de treino', status: 'rascunho', periodizacao: 'manual', duracao_semanas: null, workouts: [] };
     }
     renderProtocol();
     $('builderArea').style.display = 'block';
@@ -190,7 +291,77 @@
       $('statusTag').textContent = currentProtocol.status;
       $('statusTag').className = 'status-tag ' + currentProtocol.status;
     }
+    $('periodizacaoSelect').value = currentProtocol.periodizacao || 'manual';
+    $('duracaoInput').value = currentProtocol.duracao_semanas || PERIODIZATION_DEFAULT_WEEKS[currentProtocol.periodizacao] || 4;
+    updatePeriodizationUI();
     renderWorkouts();
+  }
+
+  function updatePeriodizationUI() {
+    const technique = $('periodizacaoSelect').value;
+    $('periodizationHint').textContent = PERIODIZATION_HINTS[technique] || '';
+    const usesDuration = !['manual', 'ondulatoria_diaria'].includes(technique);
+    $('duracaoInput').disabled = !usesDuration;
+    $('duracaoInput').parentElement.style.opacity = usesDuration ? '1' : '.5';
+  }
+
+  $('periodizacaoSelect').addEventListener('change', () => {
+    const technique = $('periodizacaoSelect').value;
+    if (PERIODIZATION_DEFAULT_WEEKS[technique]) $('duracaoInput').value = PERIODIZATION_DEFAULT_WEEKS[technique];
+    updatePeriodizationUI();
+  });
+
+  $('applyPeriodizationBtn').addEventListener('click', () => {
+    if (!currentProtocol.workouts.length) { toast('Adicione treinos e exercícios antes de aplicar a periodização.'); return; }
+    const technique = $('periodizacaoSelect').value;
+    const usesDuration = !['manual', 'ondulatoria_diaria'].includes(technique);
+    const duration = usesDuration ? Math.max(2, Number($('duracaoInput').value) || 4) : 1;
+    currentProtocol.periodizacao = technique;
+    currentProtocol.duracao_semanas = usesDuration ? duration : null;
+    currentProtocol.workouts.forEach((w, wIdx) => {
+      w.exercises.forEach(ex => {
+        const base = (ex.weeks && ex.weeks[0]) || defaultWeek();
+        ex.weeks = generateWeeks(technique, base, duration, wIdx);
+      });
+    });
+    renderWorkouts();
+    toast('Periodização aplicada — confira e ajuste as semanas se quiser.');
+  });
+
+  function renderExerciseRow(w, ex, i) {
+    const weeks = ex.weeks && ex.weeks.length ? ex.weeks : [{ sets: ex.sets || 3, reps: ex.reps || '12', rest: ex.rest || 60, nota: '' }];
+    if (weeks.length <= 1) {
+      const wk = weeks[0];
+      return `
+        <div class="exercise-row exercise-row-edit">
+          <div class="ex-name-col">${escapeHtml(ex.nome)}</div>
+          <div class="ex-fields">
+            <input type="number" min="1" class="ex-field-input" value="${escapeHtml(wk.sets)}" data-role="wk-sets" data-workout-id="${w._uid}" data-idx="${i}" data-week="0" title="Séries">
+            <span class="ex-field-x">×</span>
+            <input type="text" class="ex-field-input" value="${escapeHtml(wk.reps)}" data-role="wk-reps" data-workout-id="${w._uid}" data-idx="${i}" data-week="0" title="Repetições">
+            <input type="number" min="0" step="5" class="ex-field-input ex-field-rest" value="${escapeHtml(wk.rest)}" data-role="wk-rest" data-workout-id="${w._uid}" data-idx="${i}" data-week="0" title="Descanso (segundos)">
+            <span class="ex-field-unit">s</span>
+          </div>
+          <button class="btn danger small" data-role="remove-exercise" data-workout-id="${w._uid}" data-idx="${i}">×</button>
+        </div>`;
+    }
+    return `
+      <div class="exercise-row-multi">
+        <div class="ex-name-row">
+          <div class="ex-name-col">${escapeHtml(ex.nome)}</div>
+          <button class="btn danger small" data-role="remove-exercise" data-workout-id="${w._uid}" data-idx="${i}">×</button>
+        </div>
+        <div class="week-grid">
+          <table>
+            <thead><tr><th></th>${weeks.map((wk, wi) => `<th>${wk.nota ? escapeHtml(wk.nota) : 'S' + (wi + 1)}</th>`).join('')}</tr></thead>
+            <tbody>
+              <tr><td>Séries</td>${weeks.map((wk, wi) => `<td><input type="number" min="1" class="ex-field-input" value="${escapeHtml(wk.sets)}" data-role="wk-sets" data-workout-id="${w._uid}" data-idx="${i}" data-week="${wi}"></td>`).join('')}</tr>
+              <tr><td>Reps</td>${weeks.map((wk, wi) => `<td><input type="text" class="ex-field-input" value="${escapeHtml(wk.reps)}" data-role="wk-reps" data-workout-id="${w._uid}" data-idx="${i}" data-week="${wi}"></td>`).join('')}</tr>
+              <tr><td>Desc.(s)</td>${weeks.map((wk, wi) => `<td><input type="number" min="0" step="5" class="ex-field-input" value="${escapeHtml(wk.rest)}" data-role="wk-rest" data-workout-id="${w._uid}" data-idx="${i}" data-week="${wi}"></td>`).join('')}</tr>
+            </tbody>
+          </table>
+        </div>
+      </div>`;
   }
 
   function renderWorkouts() {
@@ -206,19 +377,7 @@
           <button class="btn danger small" data-role="remove-workout" data-workout-id="${w._uid}">Remover</button>
         </div>
         <div class="exercises-list">
-          ${w.exercises.length ? w.exercises.map((ex, i) => `
-            <div class="exercise-row exercise-row-edit">
-              <div class="ex-name-col">${escapeHtml(ex.nome)}</div>
-              <div class="ex-fields">
-                <input type="number" min="1" class="ex-field-input" value="${escapeHtml(ex.sets)}" data-role="ex-sets" data-workout-id="${w._uid}" data-idx="${i}" title="Séries">
-                <span class="ex-field-x">×</span>
-                <input type="text" class="ex-field-input" value="${escapeHtml(ex.reps)}" data-role="ex-reps" data-workout-id="${w._uid}" data-idx="${i}" title="Repetições">
-                <input type="number" min="0" step="5" class="ex-field-input ex-field-rest" value="${escapeHtml(ex.rest)}" data-role="ex-rest" data-workout-id="${w._uid}" data-idx="${i}" title="Descanso (segundos)">
-                <span class="ex-field-unit">s</span>
-              </div>
-              <button class="btn danger small" data-role="remove-exercise" data-workout-id="${w._uid}" data-idx="${i}">×</button>
-            </div>
-          `).join('') : '<div class="empty">Nenhum exercício ainda.</div>'}
+          ${w.exercises.length ? w.exercises.map((ex, i) => renderExerciseRow(w, ex, i)).join('') : '<div class="empty">Nenhum exercício ainda.</div>'}
         </div>
         <div class="search-box">
           <div class="row three" style="grid-template-columns:2fr 1fr;">
@@ -252,15 +411,18 @@
         renderWorkouts();
       });
     });
-    container.querySelectorAll('[data-role="ex-sets"], [data-role="ex-reps"], [data-role="ex-rest"]').forEach(inp => {
+    container.querySelectorAll('[data-role="wk-sets"], [data-role="wk-reps"], [data-role="wk-rest"]').forEach(inp => {
       inp.addEventListener('change', (e) => {
         const w = currentProtocol.workouts.find(x => x._uid === e.target.dataset.workoutId);
         if (!w) return;
         const ex = w.exercises[Number(e.target.dataset.idx)];
         if (!ex) return;
-        if (e.target.dataset.role === 'ex-sets') ex.sets = Number(e.target.value) || 1;
-        if (e.target.dataset.role === 'ex-reps') ex.reps = e.target.value;
-        if (e.target.dataset.role === 'ex-rest') ex.rest = Number(e.target.value) || 0;
+        if (!ex.weeks || !ex.weeks.length) ex.weeks = [defaultWeek()];
+        const wk = ex.weeks[Number(e.target.dataset.week)];
+        if (!wk) return;
+        if (e.target.dataset.role === 'wk-sets') wk.sets = Number(e.target.value) || 1;
+        if (e.target.dataset.role === 'wk-reps') wk.reps = e.target.value;
+        if (e.target.dataset.role === 'wk-rest') wk.rest = Number(e.target.value) || 0;
       });
     });
     container.querySelectorAll('[data-role="search-input"]').forEach(inp => {
@@ -321,9 +483,7 @@
       exercise_ref: ex.exercise_ref,
       media: ex.gif_url,
       mediaType: 'img',
-      sets: 3,
-      reps: '12',
-      rest: 75,
+      weeks: [defaultWeek()],
     });
     renderWorkouts();
   }
@@ -345,6 +505,8 @@
       student_id: currentProtocol.student_id,
       titulo: currentProtocol.titulo,
       status,
+      periodizacao: currentProtocol.periodizacao || 'manual',
+      duracao_semanas: currentProtocol.duracao_semanas || null,
       workouts: stripInternalFields(currentProtocol.workouts),
       publicado_em: status === 'publicado' ? new Date().toISOString() : currentProtocol.publicado_em || null,
     };

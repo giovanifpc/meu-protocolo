@@ -181,6 +181,32 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .lcc-tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 .lcc-chart{overflow-x:auto;scrollbar-width:none}
 .lcc-chart::-webkit-scrollbar{display:none}
+
+/* CONQUISTAS */
+.ach-summary{background:linear-gradient(135deg,rgba(45,107,228,.1),var(--card));border:1px solid rgba(45,107,228,.3);border-radius:var(--radius);padding:20px;margin-bottom:6px;text-align:center}
+.ach-summary .as-big{font-size:34px;font-weight:800;color:var(--primary)}
+.ach-summary .as-lbl{font-size:13px;color:var(--muted);margin-top:4px}
+.ach-summary .as-bar{height:8px;background:var(--elev);border-radius:6px;overflow:hidden;margin-top:14px}
+.ach-summary .as-fill{height:100%;background:linear-gradient(90deg,var(--primary-dim),var(--primary));border-radius:6px;transition:.5s}
+.badge-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.badge-item{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px 8px;text-align:center}
+.badge-item.locked{opacity:.4}
+.badge-item .bi-ico{font-size:28px;margin-bottom:6px;height:32px;display:flex;align-items:center;justify-content:center}
+.badge-item .bi-name{font-size:10px;color:var(--muted);font-weight:600;line-height:1.3}
+.badge-item.earned .bi-name{color:var(--primary-dim);font-weight:700}
+
+/* PERFIL */
+.profile-head{display:flex;flex-direction:column;align-items:center;padding:12px 0 20px}
+.profile-avatar{width:64px;height:64px;border-radius:50%;background:var(--primary);color:#fff;font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.profile-name{font-size:20px;font-weight:800;margin-top:14px}
+.profile-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.menu-item{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:11px;color:var(--text);width:100%;text-align:left;font-family:var(--font);font-size:14px;cursor:pointer}
+.menu-item:active{background:var(--card-2);transform:scale(.98)}
+.menu-ico{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;background:var(--elev)}
+.menu-info{flex:1}
+.menu-info .mi-title{font-size:15px;font-weight:700}
+.menu-info .mi-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.profile-foot{text-align:center;font-size:11px;color:var(--faint);line-height:1.7;margin-top:24px;padding:0 20px}
 </style>
 </head>
 <body>
@@ -204,6 +230,38 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   <div class="content" id="historyContent"></div>
 </section>
 
+<!-- ===== CONQUISTAS ===== -->
+<section class="screen" id="achievements">
+  <div class="topbar">
+    <span class="brand">Conquistas</span>
+  </div>
+  <div class="content">
+    <div class="ach-summary" id="achSummary"></div>
+    <div class="section-label">Conquistas</div>
+    <div class="badge-grid" id="badgeGrid"></div>
+  </div>
+</section>
+
+<!-- ===== PERFIL ===== -->
+<section class="screen" id="profile">
+  <div class="topbar">
+    <span class="brand">Perfil</span>
+  </div>
+  <div class="content">
+    <div class="profile-head">
+      <div class="profile-avatar" id="profileAvatar">A</div>
+      <div class="profile-name" id="profileName">Aluno</div>
+      <div class="profile-sub" id="profileSub">—</div>
+    </div>
+    <div class="section-label">Conta</div>
+    <button class="menu-item" id="profileLogoutBtn">
+      <div class="menu-ico">🚪</div>
+      <div class="menu-info"><div class="mi-title">Sair</div><div class="mi-sub">Encerrar sessão</div></div>
+    </button>
+    <div class="profile-foot" id="profileFoot"></div>
+  </div>
+</section>
+
 <!-- ===== BOTTOM NAV ===== -->
 <nav class="bottom-nav" id="bottomNav" style="display:none">
   <button class="nav-btn active" id="navHome" onclick="goTab('home')">
@@ -211,6 +269,12 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   </button>
   <button class="nav-btn" id="navHistory" onclick="goTab('history')">
     <span class="nav-ico">📊</span><span class="nav-lbl">Histórico</span>
+  </button>
+  <button class="nav-btn" id="navAchievements" onclick="goTab('achievements')">
+    <span class="nav-ico">🏅</span><span class="nav-lbl">Conquistas</span>
+  </button>
+  <button class="nav-btn" id="navProfile" onclick="goTab('profile')">
+    <span class="nav-ico">👤</span><span class="nav-lbl">Perfil</span>
   </button>
 </nav>
 
@@ -332,7 +396,12 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     $('bottomNav').style.display = 'flex';
     $('navHome').classList.toggle('active', tab === 'home');
     $('navHistory').classList.toggle('active', tab === 'history');
-    if (tab === 'history') buildHistory(); else buildHome();
+    $('navAchievements').classList.toggle('active', tab === 'achievements');
+    $('navProfile').classList.toggle('active', tab === 'profile');
+    if (tab === 'history') buildHistory();
+    else if (tab === 'achievements') buildAchievements();
+    else if (tab === 'profile') buildProfile();
+    else buildHome();
     showScreen(tab);
   }
   function goHome() { goTab('home'); }
@@ -534,6 +603,53 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       tabsEl.appendChild(t);
     });
     renderChart(exNames[0]);
+  }
+
+  /* ---- CONQUISTAS ---- */
+  function hasEvolution() {
+    const byEx = {};
+    [...history].reverse().forEach(h => {
+      (h.detail?.exercises || []).forEach(ex => {
+        const cargas = (ex.sets || []).filter(s => s.done && s.carga).map(s => parseFloat(s.carga) || 0);
+        const max = cargas.length ? Math.max(...cargas) : 0;
+        if (max > 0) { if (!byEx[ex.nome]) byEx[ex.nome] = []; byEx[ex.nome].push(max); }
+      });
+    });
+    return Object.values(byEx).some(a => a.length >= 2 && a[a.length-1] > a[0]);
+  }
+  const BADGES = [
+    { id: 'first',   ico: '🎉', name: 'Primeiro treino',    test: () => completedCount() >= 1 },
+    { id: 'loop',    ico: '🔁', name: '1ª volta completa',  test: () => protocol && history.length >= protocol.workouts.length },
+    { id: 'five',    ico: '🔥', name: '5 treinos',          test: () => completedCount() >= 5 },
+    { id: 'streak2', ico: '📅', name: '2 semanas seguidas', test: () => weekStreak() >= 2 },
+    { id: 'ten',     ico: '⚡', name: '10 treinos',          test: () => completedCount() >= 10 },
+    { id: 'evoluiu', ico: '📈', name: 'Subiu de carga',     test: () => hasEvolution() },
+    { id: 'streak4', ico: '💎', name: '4 semanas seguidas', test: () => weekStreak() >= 4 },
+    { id: 'loops3',  ico: '🌀', name: '3 voltas completas', test: () => protocol && history.length >= protocol.workouts.length * 3 },
+    { id: 'twenty',  ico: '🏆', name: '20 treinos',          test: () => completedCount() >= 20 },
+  ];
+  function earnedBadgeIds() { return BADGES.filter(b => b.test()).map(b => b.id); }
+  function buildAchievements() {
+    const earned = earnedBadgeIds();
+    $('achSummary').innerHTML = `
+      <div class="as-big">${earned.length}/${BADGES.length}</div>
+      <div class="as-lbl">conquistas desbloqueadas</div>
+      <div class="as-bar"><div class="as-fill" style="width:${Math.round(earned.length/BADGES.length*100)}%"></div></div>`;
+    $('badgeGrid').innerHTML = BADGES.map(b => {
+      const isEarned = earned.includes(b.id);
+      return `<div class="badge-item ${isEarned ? 'earned' : 'locked'}">
+        <div class="bi-ico">${isEarned ? b.ico : '🔒'}</div>
+        <div class="bi-name">${escapeHtml(b.name)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  /* ---- PERFIL ---- */
+  function buildProfile() {
+    $('profileAvatar').textContent = (student.nome || '?').trim().charAt(0).toUpperCase();
+    $('profileName').textContent = student.nome;
+    $('profileSub').textContent = student.professionals?.display_name ? `Aluno(a) de ${student.professionals.display_name}` : student.email || '';
+    $('profileFoot').innerHTML = `Meu Protocolo<br>${completedCount()} treino(s) concluído(s) · ${earnedBadgeIds().length}/${BADGES.length} conquistas`;
   }
 
   /* ---- HOME ---- */
@@ -771,9 +887,14 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       }
     };
 
+    const earnedBefore = earnedBadgeIds();
     const { error } = await supa.from('training_history').insert(record);
     if (error) { toast('Erro ao salvar treino: ' + error.message); }
-    else { history.unshift(record); }
+    else {
+      history.unshift(record);
+      const newBadges = BADGES.filter(b => !earnedBefore.includes(b.id) && b.test());
+      newBadges.forEach((b,i) => setTimeout(() => toast(`${b.ico} Conquista: ${b.name}`), 1200 + i * 2000));
+    }
 
     $('fsEx').textContent = exDone;
     $('fsSets').textContent = setsDone;
@@ -801,10 +922,12 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     state.rating = btn.dataset.val;
   }
 
-  $('logoutBtn').addEventListener('click', async () => {
+  async function doLogout() {
     await supa.auth.signOut();
     window.location.href = 'login.html';
-  });
+  }
+  $('logoutBtn').addEventListener('click', doLogout);
+  $('profileLogoutBtn').addEventListener('click', doLogout);
 
   boot();
 </script>

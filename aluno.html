@@ -207,6 +207,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .menu-info .mi-title{font-size:15px;font-weight:700}
 .menu-info .mi-sub{font-size:12px;color:var(--muted);margin-top:2px}
 .profile-foot{text-align:center;font-size:11px;color:var(--faint);line-height:1.7;margin-top:24px;padding:0 20px}
+
+/* NUTRI */
+.nutri-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:16px}
+.nutri-text{font-size:14px;line-height:1.6;color:var(--text);white-space:pre-wrap}
 </style>
 </head>
 <body>
@@ -228,6 +232,14 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     <span class="brand">Histórico</span>
   </div>
   <div class="content" id="historyContent"></div>
+</section>
+
+<!-- ===== NUTRI ===== -->
+<section class="screen" id="nutri">
+  <div class="topbar">
+    <span class="brand">Nutri</span>
+  </div>
+  <div class="content" id="nutriContent"></div>
 </section>
 
 <!-- ===== CONQUISTAS ===== -->
@@ -269,6 +281,9 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   </button>
   <button class="nav-btn" id="navHistory" onclick="goTab('history')">
     <span class="nav-ico">📊</span><span class="nav-lbl">Histórico</span>
+  </button>
+  <button class="nav-btn" id="navNutri" onclick="goTab('nutri')">
+    <span class="nav-ico">🥗</span><span class="nav-lbl">Nutri</span>
   </button>
   <button class="nav-btn" id="navAchievements" onclick="goTab('achievements')">
     <span class="nav-ico">🏅</span><span class="nav-lbl">Conquistas</span>
@@ -373,6 +388,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   let student = null;
   let protocol = null;
   let history = [];
+  let nutritionGuidance = null;
   let state = { workoutIndex:0, currentExercise:0, sessionData:[], startTime:null, restInterval:null, restRemaining:0, restTotal:0, rating:null };
 
   function toast(msg) {
@@ -396,9 +412,11 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     $('bottomNav').style.display = 'flex';
     $('navHome').classList.toggle('active', tab === 'home');
     $('navHistory').classList.toggle('active', tab === 'history');
+    $('navNutri').classList.toggle('active', tab === 'nutri');
     $('navAchievements').classList.toggle('active', tab === 'achievements');
     $('navProfile').classList.toggle('active', tab === 'profile');
     if (tab === 'history') buildHistory();
+    else if (tab === 'nutri') buildNutri();
     else if (tab === 'achievements') buildAchievements();
     else if (tab === 'profile') buildProfile();
     else buildHome();
@@ -434,29 +452,30 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       .limit(1)
       .maybeSingle();
 
-    if (protoErr) { renderHomeError('Erro ao carregar seu protocolo: ' + protoErr.message); return; }
-    if (!proto || !proto.workouts || !proto.workouts.length) {
-      renderHomeEmpty(`Olá, ${student.nome}! Seu protocolo de treino ainda não foi publicado. Assim que seu personal configurar, ele aparecerá aqui.`);
-      return;
+    if (protoErr) { console.error('Falha ao carregar protocolo:', protoErr.message); }
+    if (proto && proto.workouts && proto.workouts.length) {
+      protocol = proto;
+      const { data: hist } = await supa
+        .from('training_history')
+        .select('*')
+        .eq('student_id', student.id)
+        .eq('protocol_id', protocol.id)
+        .order('completed_at', { ascending: false });
+      history = hist || [];
     }
-    protocol = proto;
 
-    const { data: hist } = await supa
-      .from('training_history')
+    const { data: guidance } = await supa
+      .from('nutrition_guidance')
       .select('*')
       .eq('student_id', student.id)
-      .eq('protocol_id', protocol.id)
-      .order('completed_at', { ascending: false });
-    history = hist || [];
+      .maybeSingle();
+    nutritionGuidance = guidance || null;
 
     goTab('home');
   }
 
   function renderHomeError(msg) {
     $('homeContent').innerHTML = `<div class="empty-state"><div class="es-ico">⚠️</div><div class="es-txt">${escapeHtml(msg)}</div></div>`;
-  }
-  function renderHomeEmpty(msg) {
-    $('homeContent').innerHTML = `<div class="empty-state"><div class="es-ico">🗓️</div><div class="es-txt">${escapeHtml(msg)}</div></div>`;
   }
 
   /* ---- helpers de progresso ---- */
@@ -652,8 +671,35 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     $('profileFoot').innerHTML = `Meu Protocolo<br>${completedCount()} treino(s) concluído(s) · ${earnedBadgeIds().length}/${BADGES.length} conquistas`;
   }
 
+  /* ---- NUTRI ---- */
+  function buildNutri() {
+    const area = $('nutriContent');
+    if (!nutritionGuidance || (!nutritionGuidance.orientacao && !nutritionGuidance.pdf_path)) {
+      area.innerHTML = `<div class="empty-state"><div class="es-ico">🥗</div><div class="es-txt">Sua orientação nutricional ainda não foi configurada.<br>Assim que seu personal disponibilizar, ela aparecerá aqui.</div></div>`;
+      return;
+    }
+    area.innerHTML = `
+      <div class="nutri-card">
+        <div class="section-label" style="margin-top:0">Orientação atual</div>
+        <div class="nutri-text">${nutritionGuidance.orientacao ? escapeHtml(nutritionGuidance.orientacao) : 'Sem orientação em texto — veja o PDF abaixo.'}</div>
+      </div>
+      ${nutritionGuidance.pdf_path ? `<button class="btn btn-primary" id="viewNutriPdfBtn">📄 Ver plano em PDF</button>` : ''}
+    `;
+    if (nutritionGuidance.pdf_path) {
+      $('viewNutriPdfBtn').addEventListener('click', async () => {
+        const { data, error } = await supa.storage.from('nutri-pdfs').createSignedUrl(nutritionGuidance.pdf_path, 300);
+        if (error) { toast('Erro ao abrir o PDF: ' + error.message); return; }
+        window.open(data.signedUrl, '_blank');
+      });
+    }
+  }
+
   /* ---- HOME ---- */
   function buildHome() {
+    if (!protocol) {
+      $('homeContent').innerHTML = `<div class="empty-state"><div class="es-ico">🗓️</div><div class="es-txt">Olá, ${escapeHtml(student.nome)}! Seu protocolo de treino ainda não foi publicado.<br>Assim que seu personal configurar, ele aparecerá aqui.</div></div>`;
+      return;
+    }
     const nextIdx = nextWorkoutIndex();
     const w = protocol.workouts[nextIdx];
     const totalSets = w.exercises.reduce((a,ex) => a + Number(ex.sets||0), 0);

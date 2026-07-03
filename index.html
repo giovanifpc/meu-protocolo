@@ -122,7 +122,10 @@
           <div class="student-name">${escapeHtml(s.nome)}</div>
           <div class="student-email">${escapeHtml(s.email)}</div>
         </div>
-        <a class="btn secondary" style="padding:7px 12px;font-size:12px;" href="treinos.html?student_id=${s.id}">Montar treino</a>
+        <div style="display:flex; gap:6px;">
+          <a class="btn secondary" style="padding:7px 12px;font-size:12px;" href="treinos.html?student_id=${s.id}">Montar treino</a>
+          <a class="btn secondary" style="padding:7px 12px;font-size:12px;" href="nutri.html?student_id=${s.id}">Nutri</a>
+        </div>
       </div>
     `).join('');
   }

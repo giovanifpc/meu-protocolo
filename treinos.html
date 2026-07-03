@@ -82,6 +82,13 @@
       <div id="protocolStatus" style="display:none;">
         <span class="status-tag" id="statusTag"></span>
       </div>
+      <div id="duplicateArea" style="display:none; margin-top:12px; padding-top:12px; border-top:1px dashed var(--line);">
+        <div class="field" style="margin-bottom:8px;">
+          <label>Duplicar protocolo de outro aluno</label>
+          <select id="duplicateSourceSelect"></select>
+        </div>
+        <button class="btn secondary small" id="duplicateBtn" type="button">Duplicar pra este aluno</button>
+      </div>
     </div>
 
     <div id="builderArea" style="display:none;">
@@ -230,6 +237,7 @@
 
     await loadStudents();
     await loadMuscleGroups();
+    await loadProtocolsByStudent();
 
     const params = new URLSearchParams(window.location.search);
     const preselect = params.get('student_id');
@@ -239,17 +247,64 @@
     }
   }
 
+  let studentsById = {};
+  let latestProtocolByStudent = {};
+
   async function loadStudents() {
     const { data, error } = await supa.from('students').select('*').eq('professional_id', professional.id).order('nome');
     const select = $('studentSelect');
     if (error || !data) return;
     data.forEach(s => {
+      studentsById[s.id] = s;
       const opt = document.createElement('option');
       opt.value = s.id;
       opt.textContent = s.nome;
       select.appendChild(opt);
     });
   }
+
+  async function loadProtocolsByStudent() {
+    const { data, error } = await supa
+      .from('training_protocols')
+      .select('id, student_id, titulo, status, periodizacao, duracao_semanas, workouts, created_at')
+      .eq('professional_id', professional.id)
+      .order('created_at', { ascending: false });
+    if (error || !data) return;
+    latestProtocolByStudent = {};
+    data.forEach(p => {
+      if (!latestProtocolByStudent[p.student_id]) latestProtocolByStudent[p.student_id] = p;
+    });
+  }
+
+  function updateDuplicateArea(currentStudentId) {
+    const candidates = Object.values(latestProtocolByStudent).filter(p => p.student_id !== currentStudentId);
+    const area = $('duplicateArea');
+    if (!candidates.length) { area.style.display = 'none'; return; }
+    const select = $('duplicateSourceSelect');
+    select.innerHTML = candidates.map(p => {
+      const nome = studentsById[p.student_id]?.nome || '—';
+      return `<option value="${p.student_id}">${escapeHtml(nome)} — ${escapeHtml(p.titulo)}</option>`;
+    }).join('');
+    area.style.display = 'block';
+  }
+
+  $('duplicateBtn').addEventListener('click', () => {
+    const sourceId = $('duplicateSourceSelect').value;
+    const source = latestProtocolByStudent[sourceId];
+    if (!source) return;
+    if (currentProtocol.workouts.length && !confirm('Isso substitui os treinos que você já montou aqui (ainda não salvos). Continuar?')) return;
+
+    currentProtocol.titulo = source.titulo + ' (cópia)';
+    currentProtocol.periodizacao = source.periodizacao || 'manual';
+    currentProtocol.duracao_semanas = source.duracao_semanas || null;
+    currentProtocol.workouts = (source.workouts || []).map(w => ({
+      ...w,
+      _uid: uid(),
+      exercises: (w.exercises || []).map(ex => ({ ...ex, weeks: (ex.weeks || []).map(wk => ({ ...wk })) })),
+    }));
+    renderProtocol();
+    toast('Protocolo duplicado — revise e publique quando estiver pronto.');
+  });
 
   async function loadMuscleGroups() {
     const { data, error } = await supa.from('exercise_library').select('grupo_muscular');
@@ -259,11 +314,13 @@
 
   $('studentSelect').addEventListener('change', async (e) => {
     const studentId = e.target.value;
-    if (!studentId) { $('builderArea').style.display = 'none'; return; }
+    if (!studentId) { $('builderArea').style.display = 'none'; $('duplicateArea').style.display = 'none'; return; }
+    updateDuplicateArea(studentId);
     await loadOrCreateProtocol(studentId);
   });
 
   async function loadOrCreateProtocol(studentId) {
+    updateDuplicateArea(studentId);
     const { data, error } = await supa
       .from('training_protocols')
       .select('*')

@@ -95,13 +95,16 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 - `onboarding.html` — primeiro acesso do profissional cria a própria linha em `professionals` (trial de 14 dias)
 - `index.html` — painel do profissional: banner de trial, cadastro rápido de aluno, lista de alunos
 - `treinos.html` — montagem de protocolo de treino: busca de exercício, edição de sets/reps/descanso
-- `aluno.html` — mostra branding do profissional (`primary_color`/`display_name`) e o protocolo de treino publicado
 - E-mail transacional: domínio `meuprotocolo.app` (Cloudflare Registrar) verificado no Resend, SMTP customizado configurado no Supabase, templates "Confirm signup" e "Magic Link or OTP" editados com `{{ .Token }}`
 - Bug de RLS que impedia o profissional recém-cadastrado de ler a própria linha após o onboarding (loop onboarding ↔ painel) — corrigido
+- `aluno.html` — **app do aluno, Fase 1 (execução de treino)**: reescrito para replicar os recursos do Training da Fox Performance (repo `giovanifpc/fox-app`, arquivo `training.html`), só trocando a identidade visual pro tema claro do Meu Protocolo. Implementado: Home (próximo treino do loop A/B/C..., estatísticas de treinos concluídos/semanas seguidas), Overview (pré-treino com lista de exercícios), Exec (execução com séries, campos de reps/carga — carga pré-preenchida com a última registrada —, timer de descanso configurável por exercício), Finish (resumo + avaliação do treino), tudo salvo em `training_history.detail` (JSONB, sem precisar de migration nova). Posição no loop e streak são calculados a partir do histórico no banco (sem depender de localStorage), diferente do Fox que usa `localStorage` como fonte da verdade — decisão deliberada pra funcionar corretamente entre dispositivos diferentes. Simplificações conscientes em relação ao Fox nesta fase: sem conceito de ciclo/semana calendário (o protocolo já define sets/reps/descanso fixos por exercício), sem aquecimento/alongamento, sem exercício tipo cardio, sem gráfico de carga, sem badges/streak visual, confirmações de saída/pendência usando `confirm()` nativo em vez de modal customizado
 
 **Ainda não implementado (próximos passos):**
+- App do aluno — Fase 2: tela de Histórico (grid de progresso + gráfico de carga por exercício) e bottom nav
+- App do aluno — Fase 3: Conquistas/badges, streak visual, Perfil, geração de relatório
 - Webhook Mercado Pago (cobrança automática ao fim do trial — trial deve exigir cartão cadastrado desde o cadastro, ver master doc seção 4)
 - Chatbot de suporte via IA (item 1 do master doc)
+- Configurações/branding do profissional (hoje `logo_url`/`primary_color`/`display_name` só existem no banco, sem tela pra editar)
 - PWA completo (manifest, ícones, service worker)
 - Política de Privacidade / Termos de Uso
 - Rate limiting, headers de segurança, backup automático (item 13 do master doc)

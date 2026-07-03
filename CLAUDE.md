@@ -83,20 +83,27 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
-Projeto em setup inicial (2026-07-01): repositório e projeto Supabase criados.
+Última atualização: 2026-07-03. Ver `ATUALIZACAO-2026-07-02.md` para o relato detalhado da sessão de setup de e-mail transacional.
 
 **Já implementado:**
-- Schema SQL: `supabase_01_professionals.sql`, `supabase_02_students.sql`, `supabase_03_auth_functions.sql` — **rodar em ordem numérica** no SQL Editor do Supabase (auth_functions depende de students já existir, students depende de professionals)
-- `login.html` — OTP por e-mail (mesmo padrão do Fox, evita bug de PWA no iOS), roteia para `index.html` (profissional), `aluno.html` (aluno) ou `onboarding.html` (novo cadastro)
+- Schema SQL: `supabase_01_professionals.sql`, `supabase_02_students.sql`, `supabase_03_auth_functions.sql` — já rodados no Supabase
+- `supabase_04_fix_rls_recursion.sql` — corrige recursão infinita entre as policies de RLS de `professionals` e `students` (função `SECURITY DEFINER` isolando a leitura cruzada)
+- `supabase_05_exercise_library.sql` — biblioteca de exercícios (seed de dados)
+- `supabase_06_training.sql` — schema de protocolo de treino: `training_protocols` (rascunho/publicado/arquivado, `workouts` em JSONB) e `training_history` (sessões realizadas pelo aluno), RLS completo
+- `supabase_07_search_fix.sql` — busca de exercício ignorando acento/maiúsculas (`unaccent`)
+- `login.html` — OTP por e-mail (mesmo padrão do Fox, evita bug de PWA no iOS), roteia para `index.html` (profissional), `aluno.html` (aluno) ou `onboarding.html` (novo cadastro). Funcionando de ponta a ponta, incluindo o e-mail com código chegando via SMTP customizado
 - `onboarding.html` — primeiro acesso do profissional cria a própria linha em `professionals` (trial de 14 dias)
 - `index.html` — painel do profissional: banner de trial, cadastro rápido de aluno, lista de alunos
-- `aluno.html` — placeholder do aluno (mostra branding do profissional via `primary_color`/`display_name`, aguardando protocolo publicado)
+- `treinos.html` — montagem de protocolo de treino: busca de exercício, edição de sets/reps/descanso
+- `aluno.html` — mostra branding do profissional (`primary_color`/`display_name`) e o protocolo de treino publicado
+- E-mail transacional: domínio `meuprotocolo.app` (Cloudflare Registrar) verificado no Resend, SMTP customizado configurado no Supabase, templates "Confirm signup" e "Magic Link or OTP" editados com `{{ .Token }}`
+- Bug de RLS que impedia o profissional recém-cadastrado de ler a própria linha após o onboarding (loop onboarding ↔ painel) — corrigido
 
 **Ainda não implementado (próximos passos):**
-- Rodar o SQL no Supabase (passo manual — Code não tem credenciais de DB)
-- Protocolo de treino (schema + tela) — reaproveitar formato JSON validado no Fox como ponto de partida
-- Webhook Mercado Pago (cobrança automática ao fim do trial)
+- Webhook Mercado Pago (cobrança automática ao fim do trial — trial deve exigir cartão cadastrado desde o cadastro, ver master doc seção 4)
 - Chatbot de suporte via IA (item 1 do master doc)
 - PWA completo (manifest, ícones, service worker)
 - Política de Privacidade / Termos de Uso
 - Rate limiting, headers de segurança, backup automático (item 13 do master doc)
+- Painel/acesso master: master doc não pede CRUD de tenants, só 2FA + recuperação de emergência (item 14) — escopo exato de uma eventual visão agregada de métricas ainda não decidido com o usuário
+- Nota: o master doc completo (`MEU-PROTOCOLO-MASTER.md`) só existe no PC do usuário — não está disponível em sessões remotas (celular/web) a menos que seja colado na conversa ou commitado no repo

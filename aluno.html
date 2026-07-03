@@ -694,6 +694,41 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     });
   }
 
+  /* ---- MÍDIA DE EXERCÍCIO (fallback entre variações do link do Drive) ---- */
+  function driveFileId(url) {
+    const text = String(url || '');
+    let m = text.match(/[?&]id=([^&]+)/);
+    if (m) return decodeURIComponent(m[1]);
+    m = text.match(/\/file\/d\/([^/]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function exerciseMediaCandidates(url) {
+    const id = driveFileId(url);
+    if (!id) return [url];
+    return [
+      'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(id),
+      'https://drive.google.com/uc?export=view&id=' + encodeURIComponent(id),
+      'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w900',
+    ];
+  }
+  function mediaImgMarkup(src, alt, fallbackHtml) {
+    const candidates = exerciseMediaCandidates(src);
+    return `<img src="${escapeHtml(candidates[0])}" alt="${escapeHtml(alt)}" loading="lazy" data-src-list="${encodeURIComponent(JSON.stringify(candidates))}" data-src-idx="0" data-fallback-html="${encodeURIComponent(fallbackHtml)}" onerror="swapExerciseImage(this)">`;
+  }
+  function swapExerciseImage(img) {
+    try {
+      const list = JSON.parse(decodeURIComponent(img.getAttribute('data-src-list') || '[]'));
+      const idx = Number(img.getAttribute('data-src-idx') || 0) + 1;
+      if (list[idx]) {
+        img.setAttribute('data-src-idx', String(idx));
+        img.src = list[idx];
+        return;
+      }
+    } catch (e) {}
+    const fallback = decodeURIComponent(img.getAttribute('data-fallback-html') || '');
+    if (img.parentNode) img.parentNode.innerHTML = fallback || '<span class="ph">🏋️</span>';
+  }
+
   /* ---- OVERVIEW ---- */
   function openOverview(idx) {
     hideNav();
@@ -721,7 +756,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     showScreen('overview');
   }
   function mediaThumb(ex) {
-    if (ex.media) return `<img src="${escapeHtml(ex.media)}" alt="" onerror="this.parentElement.innerHTML='<span class=ph>🏋️</span>'">`;
+    if (ex.media) return mediaImgMarkup(ex.media, '', '<span class="ph">🏋️</span>');
     return `<span class="ph">🏋️</span>`;
   }
 
@@ -766,7 +801,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     $('execCounter2').textContent = `${i+1}/${w.exercises.length}`;
 
     const media = ex.media
-      ? `<img src="${escapeHtml(ex.media)}" alt="${escapeHtml(ex.nome)}" onerror="this.parentElement.innerHTML='<div class=media-ph><span class=ph-ico>🏋️</span>Vídeo indisponível.</div>'">`
+      ? mediaImgMarkup(ex.media, ex.nome, '<div class="media-ph"><span class="ph-ico">🏋️</span>Vídeo indisponível.</div>')
       : `<div class="media-ph"><span class="ph-ico">🏋️</span>Vídeo em breve.</div>`;
 
     const setsHtml = sd.sets.map((set,si) => `

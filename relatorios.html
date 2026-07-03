@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meu Protocolo — Relatórios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg:#F8F9FA; --primary:#2D6BE4; --accent:#3BB08F; --text:#1E2A3A;
+    --line:#E2E5EA; --card:#FFFFFF; --muted:#6B7684; --danger:#C0392B; --font:'Inter', sans-serif;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font-family:var(--font); }
+  header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--card); border-bottom:1px solid var(--line); }
+  header h1 { font-size:18px; font-weight:700; margin:0; }
+  main { max-width:720px; margin:0 auto; padding:20px 20px 90px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:16px; }
+  .card h2 { font-size:15px; margin:0 0 12px; }
+  .field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+  .field label { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .field select { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; color:var(--text); font-family:var(--font); }
+  .field select:focus { outline:none; border-color:var(--primary); }
+  .btn { padding:10px 16px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; border:none; background:var(--primary); color:#fff; font-family:var(--font); }
+  .btn.secondary { background:var(--bg); color:var(--text); border:1px solid var(--line); }
+  .btn.small { padding:7px 12px; font-size:12px; }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+  .empty { color:var(--muted); font-size:13px; text-align:center; padding:16px 0; }
+  #reportOutput { width:100%; min-height:360px; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:14px; font-family:ui-monospace, 'SF Mono', Consolas, monospace; font-size:12.5px; line-height:1.6; color:var(--text); white-space:pre-wrap; resize:vertical; }
+  .actions-row { display:flex; gap:8px; margin-top:10px; }
+  .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:#23263a; color:#fff; padding:10px 18px; border-radius:10px; font-size:13px; z-index:999; }
+  .bottom-nav { position:fixed; bottom:0; left:0; right:0; max-width:720px; margin:0 auto; height:64px; background:var(--card); border-top:1px solid var(--line); display:flex; z-index:60; }
+  .nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; color:var(--muted); text-decoration:none; font-family:var(--font); padding-top:6px; }
+  .nav-btn .nav-ico { font-size:20px; line-height:1; }
+  .nav-btn .nav-lbl { font-size:10px; font-weight:700; }
+  .nav-btn.active { color:var(--primary); }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Relatórios</h1>
+  </header>
+
+  <main>
+    <div class="card">
+      <div class="field">
+        <label>Aluno</label>
+        <select id="studentSelect"><option value="">Selecione um aluno...</option></select>
+      </div>
+      <button class="btn" id="generateBtn" disabled>Gerar relatório</button>
+    </div>
+
+    <div class="card" id="outputCard" style="display:none;">
+      <h2 id="outputTitle">Relatório</h2>
+      <textarea id="reportOutput" readonly></textarea>
+      <div class="actions-row">
+        <button class="btn secondary small" id="copyBtn">Copiar</button>
+        <button class="btn secondary small" id="downloadBtn">Baixar .txt</button>
+      </div>
+    </div>
+  </main>
+
+  <nav class="bottom-nav">
+    <a class="nav-btn" href="index.html"><span class="nav-ico">🏠</span><span class="nav-lbl">Início</span></a>
+    <a class="nav-btn" href="alunos.html"><span class="nav-ico">👥</span><span class="nav-lbl">Alunos</span></a>
+    <a class="nav-btn active" href="relatorios.html"><span class="nav-ico">📄</span><span class="nav-lbl">Relatórios</span></a>
+    <a class="nav-btn" href="perfil.html"><span class="nav-ico">⚙️</span><span class="nav-lbl">Config</span></a>
+  </nav>
+
+<script>
+  const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';
+  const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const $ = (id) => document.getElementById(id);
+
+  let professional = null;
+  let students = [];
+
+  function toast(msg) {
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+
+  async function boot() {
+    const { data: { session } } = await supa.auth.getSession();
+    if (!session) { window.location.href = 'login.html'; return; }
+
+    const { data: pro, error } = await supa.from('professionals').select('*').eq('email', session.user.email).maybeSingle();
+    if (error) { console.error(error.message); return; }
+    if (!pro) { window.location.href = 'onboarding.html'; return; }
+    professional = pro;
+
+    const { data } = await supa.from('students').select('id, nome').eq('professional_id', professional.id).order('nome');
+    students = data || [];
+    const select = $('studentSelect');
+    students.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.nome;
+      select.appendChild(opt);
+    });
+  }
+
+  $('studentSelect').addEventListener('change', (e) => {
+    $('generateBtn').disabled = !e.target.value;
+    $('outputCard').style.display = 'none';
+  });
+
+  function fmtDate(d) {
+    return new Date(d).toLocaleDateString('pt-BR');
+  }
+
+  function buildReport(student, protocol, history) {
+    const now = new Date();
+    const lines = [];
+    lines.push(`RELATÓRIO DE TREINO — ${student.nome}`);
+    lines.push(`Gerado em ${fmtDate(now)} por ${professional.display_name}`);
+    lines.push('');
+    lines.push('== RESUMO ==');
+
+    const completed = history.filter(h => !(h.detail && h.detail.incomplete));
+    const incomplete = history.length - completed.length;
+    const adherence = history.length ? Math.round((completed.length / history.length) * 100) : 0;
+    const last = history[0];
+    const daysSinceLast = last ? Math.floor((now - new Date(last.completed_at)) / 86400000) : null;
+
+    lines.push(`Protocolo atual: ${protocol ? protocol.titulo : 'nenhum protocolo publicado'}`);
+    if (protocol) {
+      lines.push(`Periodização: ${protocol.periodizacao || 'manual'}${protocol.duracao_semanas ? ` (${protocol.duracao_semanas} semanas)` : ''}`);
+    }
+    lines.push(`Total de sessões registradas: ${history.length}`);
+    lines.push(`Sessões completas: ${completed.length} (${adherence}%) · Incompletas: ${incomplete}`);
+    lines.push(`Última sessão: ${last ? `${fmtDate(last.completed_at)} (há ${daysSinceLast} dia(s))` : 'nunca treinou'}`);
+    lines.push('');
+
+    lines.push('== EVOLUÇÃO DE CARGA ==');
+    const byEx = {};
+    [...history].reverse().forEach(h => {
+      (h.detail?.exercises || []).forEach(ex => {
+        const cargas = (ex.sets || []).filter(s => s.done && s.carga).map(s => parseFloat(s.carga) || 0);
+        const max = cargas.length ? Math.max(...cargas) : 0;
+        if (max > 0) { if (!byEx[ex.nome]) byEx[ex.nome] = []; byEx[ex.nome].push(max); }
+      });
+    });
+    const evolucoes = Object.entries(byEx).filter(([, v]) => v.length >= 2).map(([nome, v]) => ({ nome, ini: v[0], fim: v[v.length - 1] }));
+    if (!evolucoes.length) {
+      lines.push('Sem dados suficientes ainda (precisa de pelo menos 2 sessões com carga registrada por exercício).');
+    } else {
+      evolucoes.forEach(e => {
+        const diff = e.fim - e.ini;
+        const sinal = diff > 0 ? '+' : '';
+        lines.push(`${e.nome}: ${e.ini}kg → ${e.fim}kg (${sinal}${diff}kg)`);
+      });
+    }
+    lines.push('');
+
+    lines.push('== HISTÓRICO DE SESSÕES (mais recente primeiro) ==');
+    if (!history.length) {
+      lines.push('Nenhuma sessão registrada ainda.');
+    } else {
+      const ratingMap = { cansado: 'Cansado', normal: 'Normal', otimo: 'Ótimo' };
+      history.forEach(h => {
+        const setsDone = h.detail?.sets_done ?? '-';
+        const status = h.detail?.incomplete ? 'Incompleto' : 'Completo';
+        const rating = h.detail?.rating ? ` · Avaliação: ${ratingMap[h.detail.rating] || h.detail.rating}` : '';
+        lines.push(`${fmtDate(h.completed_at)} — Treino ${h.workout_id} (${h.workout_name}) — ${setsDone} séries, ${h.minutes}min — ${status}${rating}`);
+      });
+    }
+
+    return lines.join('\n');
+  }
+
+  $('generateBtn').addEventListener('click', async () => {
+    const studentId = $('studentSelect').value;
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
+    $('generateBtn').disabled = true;
+    $('generateBtn').textContent = 'Gerando...';
+
+    const { data: protocol } = await supa
+      .from('training_protocols')
+      .select('*')
+      .eq('student_id', studentId)
+      .eq('status', 'publicado')
+      .order('publicado_em', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const { data: history, error: histErr } = await supa
+      .from('training_history')
+      .select('*')
+      .eq('student_id', studentId)
+      .order('completed_at', { ascending: false });
+
+    $('generateBtn').disabled = false;
+    $('generateBtn').textContent = 'Gerar relatório';
+
+    if (histErr) { toast('Erro ao carregar histórico: ' + histErr.message); return; }
+
+    const report = buildReport(student, protocol, history || []);
+    $('outputTitle').textContent = `Relatório — ${student.nome}`;
+    $('reportOutput').value = report;
+    $('outputCard').style.display = 'block';
+  });
+
+  $('copyBtn').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText($('reportOutput').value);
+      toast('Copiado.');
+    } catch (e) {
+      $('reportOutput').select();
+      document.execCommand('copy');
+      toast('Copiado.');
+    }
+  });
+
+  $('downloadBtn').addEventListener('click', () => {
+    const studentName = $('studentSelect').selectedOptions[0]?.textContent || 'aluno';
+    const blob = new Blob([$('reportOutput').value], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `relatorio-${studentName.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().slice(0,10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  boot();
+</script>
+</body>
+</html>

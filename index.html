@@ -17,24 +17,26 @@
   header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--card); border-bottom:1px solid var(--line); }
   header h1 { font-size:18px; font-weight:700; margin:0; }
   .trial-banner { background:#FFF4E5; border-bottom:1px solid #F5C98B; color:#8A5A00; font-size:13px; padding:8px 20px; text-align:center; }
-  main { max-width:720px; margin:0 auto; padding:20px; }
+  main { max-width:720px; margin:0 auto; padding:20px 20px 90px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:16px; }
   .card h2 { font-size:15px; margin:0 0 12px; }
-  .student-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--line); }
-  .student-row:last-child { border-bottom:none; }
-  .student-name { font-weight:600; font-size:14px; }
-  .student-email { font-size:12px; color:var(--muted); }
+  .stat-row { display:flex; gap:12px; margin-bottom:16px; }
+  .stat-card { flex:1; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 10px; text-align:center; }
+  .stat-card .num { font-size:24px; font-weight:700; color:var(--primary); line-height:1; }
+  .stat-card .lbl { font-size:11px; color:var(--muted); margin-top:6px; }
+  .attention-row { display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  .attention-row:last-child { border-bottom:none; }
+  .attention-name { font-weight:600; }
+  .attention-days { color:#8A5A00; font-size:12px; }
   .empty { color:var(--muted); font-size:13px; text-align:center; padding:20px 0; }
-  .field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
-  .field label { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
-  .field input { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; color:var(--text); font-family:var(--font); }
-  .field input:focus { outline:none; border-color:var(--primary); }
-  .btn { padding:10px 16px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; border:none; background:var(--primary); color:#fff; font-family:var(--font); }
+  .btn { padding:10px 16px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; border:none; background:var(--primary); color:#fff; font-family:var(--font); text-decoration:none; display:inline-block; }
   .btn.secondary { background:var(--bg); color:var(--text); border:1px solid var(--line); }
-  .btn:disabled { opacity:.5; cursor:not-allowed; }
-  .msg { font-size:13px; margin-top:8px; }
-  .msg.error { color:var(--danger); }
-  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#23263a; color:#fff; padding:10px 18px; border-radius:10px; font-size:13px; z-index:999; }
+  .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:#23263a; color:#fff; padding:10px 18px; border-radius:10px; font-size:13px; z-index:999; }
+  .bottom-nav { position:fixed; bottom:0; left:0; right:0; max-width:720px; margin:0 auto; height:64px; background:var(--card); border-top:1px solid var(--line); display:flex; z-index:60; }
+  .nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; color:var(--muted); text-decoration:none; font-family:var(--font); padding-top:6px; }
+  .nav-btn .nav-ico { font-size:20px; line-height:1; }
+  .nav-btn .nav-lbl { font-size:10px; font-weight:700; }
+  .nav-btn.active { color:var(--primary); }
 </style>
 </head>
 <body>
@@ -45,25 +47,27 @@
   </header>
 
   <main>
-    <div class="card">
-      <h2>Adicionar aluno</h2>
-      <div class="field">
-        <label>Nome</label>
-        <input type="text" id="newStudentName" placeholder="Nome do aluno">
-      </div>
-      <div class="field">
-        <label>E-mail</label>
-        <input type="email" id="newStudentEmail" placeholder="aluno@email.com">
-      </div>
-      <button class="btn" id="addStudentBtn">Adicionar aluno</button>
-      <div class="msg error" id="addStudentMsg"></div>
+    <div class="stat-row">
+      <div class="stat-card"><div class="num" id="statStudents">—</div><div class="lbl">alunos</div></div>
+      <div class="stat-card"><div class="num" id="statWeek">—</div><div class="lbl">treinos essa semana</div></div>
     </div>
 
     <div class="card">
-      <h2>Meus alunos</h2>
-      <div id="studentsList"><div class="empty">Carregando...</div></div>
+      <h2>Precisam de atenção</h2>
+      <div id="attentionList"><div class="empty">Carregando...</div></div>
+    </div>
+
+    <div class="card" style="text-align:center;">
+      <a class="btn" href="alunos.html">Ver todos os alunos</a>
     </div>
   </main>
+
+  <nav class="bottom-nav">
+    <a class="nav-btn active" href="index.html"><span class="nav-ico">🏠</span><span class="nav-lbl">Início</span></a>
+    <a class="nav-btn" href="alunos.html"><span class="nav-ico">👥</span><span class="nav-lbl">Alunos</span></a>
+    <a class="nav-btn" href="relatorios.html"><span class="nav-ico">📄</span><span class="nav-lbl">Relatórios</span></a>
+    <a class="nav-btn" href="perfil.html"><span class="nav-ico">⚙️</span><span class="nav-lbl">Config</span></a>
+  </nav>
 
 <script>
   const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
@@ -72,14 +76,6 @@
   const $ = (id) => document.getElementById(id);
 
   let professional = null;
-
-  function toast(msg) {
-    const t = document.createElement('div');
-    t.className = 'toast';
-    t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(() => t.remove(), 3000);
-  }
 
   function escapeHtml(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -108,48 +104,54 @@
         : 'Seu trial terminou. A cobrança automática deve ocorrer em breve.';
     }
 
-    await loadStudents();
+    await loadDashboard();
   }
 
-  async function loadStudents() {
-    const { data, error } = await supa.from('students').select('*').eq('professional_id', professional.id).order('created_at', { ascending: false });
-    const list = $('studentsList');
-    if (error) { list.innerHTML = `<div class="empty">Erro ao carregar alunos.</div>`; return; }
-    if (!data || data.length === 0) { list.innerHTML = `<div class="empty">Nenhum aluno cadastrado ainda.</div>`; return; }
-    list.innerHTML = data.map(s => `
-      <div class="student-row">
-        <div>
-          <div class="student-name">${escapeHtml(s.nome)}</div>
-          <div class="student-email">${escapeHtml(s.email)}</div>
-        </div>
-        <div style="display:flex; gap:6px;">
-          <a class="btn secondary" style="padding:7px 12px;font-size:12px;" href="treinos.html?student_id=${s.id}">Montar treino</a>
-          <a class="btn secondary" style="padding:7px 12px;font-size:12px;" href="nutri.html?student_id=${s.id}">Nutri</a>
-        </div>
+  async function loadDashboard() {
+    const { data: students, error: studentsErr } = await supa.from('students').select('id, nome').eq('professional_id', professional.id);
+    if (studentsErr || !students) { $('attentionList').innerHTML = '<div class="empty">Erro ao carregar alunos.</div>'; return; }
+
+    $('statStudents').textContent = students.length;
+
+    if (!students.length) {
+      $('statWeek').textContent = '0';
+      $('attentionList').innerHTML = '<div class="empty">Cadastre seu primeiro aluno pra começar.</div>';
+      return;
+    }
+
+    const studentIds = students.map(s => s.id);
+    const { data: history } = await supa
+      .from('training_history')
+      .select('student_id, completed_at')
+      .in('student_id', studentIds)
+      .order('completed_at', { ascending: false });
+
+    const sevenDaysAgo = Date.now() - 7 * 86400000;
+    const weekCount = (history || []).filter(h => new Date(h.completed_at).getTime() >= sevenDaysAgo).length;
+    $('statWeek').textContent = weekCount;
+
+    const lastByStudent = {};
+    (history || []).forEach(h => {
+      if (!lastByStudent[h.student_id]) lastByStudent[h.student_id] = h.completed_at;
+    });
+
+    const attention = students.map(s => {
+      const last = lastByStudent[s.id];
+      const days = last ? Math.floor((Date.now() - new Date(last).getTime()) / 86400000) : null;
+      return { nome: s.nome, days };
+    }).filter(s => s.days === null || s.days >= 7).sort((a, b) => (b.days ?? 999) - (a.days ?? 999));
+
+    if (!attention.length) {
+      $('attentionList').innerHTML = '<div class="empty">Todo mundo treinando em dia. 🎉</div>';
+      return;
+    }
+    $('attentionList').innerHTML = attention.map(s => `
+      <div class="attention-row">
+        <span class="attention-name">${escapeHtml(s.nome)}</span>
+        <span class="attention-days">${s.days === null ? 'nunca treinou' : `há ${s.days} dias`}</span>
       </div>
     `).join('');
   }
-
-  $('addStudentBtn').addEventListener('click', async () => {
-    const nome = $('newStudentName').value.trim();
-    const email = $('newStudentEmail').value.trim().toLowerCase();
-    $('addStudentMsg').textContent = '';
-    if (!nome || !email || !email.includes('@')) {
-      $('addStudentMsg').textContent = 'Preencha nome e e-mail válidos.';
-      return;
-    }
-    $('addStudentBtn').disabled = true;
-    const { error } = await supa.from('students').insert({ professional_id: professional.id, nome, email });
-    $('addStudentBtn').disabled = false;
-    if (error) {
-      $('addStudentMsg').textContent = 'Erro: ' + error.message;
-      return;
-    }
-    $('newStudentName').value = '';
-    $('newStudentEmail').value = '';
-    toast('Aluno adicionado.');
-    await loadStudents();
-  });
 
   $('logoutBtn').addEventListener('click', async () => {
     await supa.auth.signOut();

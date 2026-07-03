@@ -120,11 +120,10 @@
     }
 
     const studentIds = students.map(s => s.id);
-    const { data: history } = await supa
-      .from('training_history')
-      .select('student_id, completed_at')
-      .in('student_id', studentIds)
-      .order('completed_at', { ascending: false });
+    const [{ data: history }, { data: notes }] = await Promise.all([
+      supa.from('training_history').select('student_id, completed_at').in('student_id', studentIds).order('completed_at', { ascending: false }),
+      supa.from('student_notes').select('student_id, status').eq('professional_id', professional.id),
+    ]);
 
     const sevenDaysAgo = Date.now() - 7 * 86400000;
     const weekCount = (history || []).filter(h => new Date(h.completed_at).getTime() >= sevenDaysAgo).length;
@@ -134,12 +133,16 @@
     (history || []).forEach(h => {
       if (!lastByStudent[h.student_id]) lastByStudent[h.student_id] = h.completed_at;
     });
+    const statusByStudent = {};
+    (notes || []).forEach(n => { statusByStudent[n.student_id] = n.status; });
 
-    const attention = students.map(s => {
-      const last = lastByStudent[s.id];
-      const days = last ? Math.floor((Date.now() - new Date(last).getTime()) / 86400000) : null;
-      return { nome: s.nome, days };
-    }).filter(s => s.days === null || s.days >= 7).sort((a, b) => (b.days ?? 999) - (a.days ?? 999));
+    const attention = students
+      .filter(s => (statusByStudent[s.id] || 'ativo') === 'ativo')
+      .map(s => {
+        const last = lastByStudent[s.id];
+        const days = last ? Math.floor((Date.now() - new Date(last).getTime()) / 86400000) : null;
+        return { nome: s.nome, days };
+      }).filter(s => s.days === null || s.days >= 7).sort((a, b) => (b.days ?? 999) - (a.days ?? 999));
 
     if (!attention.length) {
       $('attentionList').innerHTML = '<div class="empty">Todo mundo treinando em dia. 🎉</div>';

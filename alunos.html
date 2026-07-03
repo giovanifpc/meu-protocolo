@@ -19,10 +19,20 @@
   main { max-width:720px; margin:0 auto; padding:20px 20px 90px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:16px; }
   .card h2 { font-size:15px; margin:0 0 12px; }
-  .student-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--line); gap:8px; }
-  .student-row:last-child { border-bottom:none; }
+  .student-item { border-bottom:1px solid var(--line); padding:10px 0; }
+  .student-item:last-child { border-bottom:none; }
+  .student-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .student-name-row { display:flex; align-items:center; gap:8px; }
   .student-name { font-weight:600; font-size:14px; }
   .student-email { font-size:12px; color:var(--muted); }
+  .status-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .status-dot.ativo { background:var(--accent); }
+  .status-dot.pausado { background:#D9A441; }
+  .status-dot.inativo { background:var(--muted); }
+  .notes-panel { display:none; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); }
+  .notes-panel.open { display:block; }
+  .notes-panel select, .notes-panel textarea { width:100%; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:8px 10px; font-size:13px; color:var(--text); font-family:var(--font); margin-bottom:8px; }
+  .notes-panel textarea { min-height:70px; resize:vertical; }
   .empty { color:var(--muted); font-size:13px; text-align:center; padding:20px 0; }
   .field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
   .field label { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
@@ -107,23 +117,70 @@
     await loadStudents();
   }
 
+  const STATUS_LABELS = { ativo: 'Ativo', pausado: 'Pausado', inativo: 'Inativo' };
+  let notesByStudent = {};
+
   async function loadStudents() {
     const { data, error } = await supa.from('students').select('*').eq('professional_id', professional.id).order('created_at', { ascending: false });
     const list = $('studentsList');
     if (error) { list.innerHTML = `<div class="empty">Erro ao carregar alunos.</div>`; return; }
     if (!data || data.length === 0) { list.innerHTML = `<div class="empty">Nenhum aluno cadastrado ainda.</div>`; return; }
-    list.innerHTML = data.map(s => `
-      <div class="student-row">
-        <div>
-          <div class="student-name">${escapeHtml(s.nome)}</div>
-          <div class="student-email">${escapeHtml(s.email)}</div>
+
+    const { data: notes } = await supa.from('student_notes').select('*').eq('professional_id', professional.id);
+    notesByStudent = {};
+    (notes || []).forEach(n => { notesByStudent[n.student_id] = n; });
+
+    list.innerHTML = data.map(s => {
+      const note = notesByStudent[s.id] || { status: 'ativo', nota: '' };
+      return `
+      <div class="student-item">
+        <div class="student-row">
+          <div class="student-name-row">
+            <span class="status-dot ${note.status}" title="${STATUS_LABELS[note.status]}"></span>
+            <div>
+              <div class="student-name">${escapeHtml(s.nome)}</div>
+              <div class="student-email">${escapeHtml(s.email)}</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <a class="btn secondary" style="padding:7px 12px;font-size:12px;" href="treinos.html?student_id=${s.id}">Treino</a>
+            <a class="btn secondary" style="padding:7px 12px;font-size:12px;" href="nutri.html?student_id=${s.id}">Nutri</a>
+            <button class="btn secondary" style="padding:7px 12px;font-size:12px;" data-role="toggle-notes" data-student-id="${s.id}">📝</button>
+          </div>
         </div>
-        <div style="display:flex; gap:6px;">
-          <a class="btn secondary" style="padding:7px 12px;font-size:12px;" href="treinos.html?student_id=${s.id}">Montar treino</a>
-          <a class="btn secondary" style="padding:7px 12px;font-size:12px;" href="nutri.html?student_id=${s.id}">Nutri</a>
+        <div class="notes-panel" id="notesPanel-${s.id}">
+          <select data-role="note-status" data-student-id="${s.id}">
+            ${Object.entries(STATUS_LABELS).map(([v, l]) => `<option value="${v}" ${note.status === v ? 'selected' : ''}>${l}</option>`).join('')}
+          </select>
+          <textarea data-role="note-text" data-student-id="${s.id}" placeholder="Nota privada sobre esse aluno (só você vê)...">${escapeHtml(note.nota || '')}</textarea>
+          <button class="btn small" style="padding:7px 12px;font-size:12px;" data-role="save-note" data-student-id="${s.id}">Salvar</button>
         </div>
       </div>
-    `).join('');
+    `; }).join('');
+
+    list.querySelectorAll('[data-role="toggle-notes"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        $('notesPanel-' + btn.dataset.studentId).classList.toggle('open');
+      });
+    });
+    list.querySelectorAll('[data-role="save-note"]').forEach(btn => {
+      btn.addEventListener('click', () => saveNote(btn.dataset.studentId));
+    });
+  }
+
+  async function saveNote(studentId) {
+    const status = document.querySelector(`[data-role="note-status"][data-student-id="${studentId}"]`).value;
+    const nota = document.querySelector(`[data-role="note-text"][data-student-id="${studentId}"]`).value.trim();
+    const existing = notesByStudent[studentId];
+
+    const payload = { professional_id: professional.id, student_id: studentId, status, nota };
+    const result = existing
+      ? await supa.from('student_notes').update(payload).eq('id', existing.id)
+      : await supa.from('student_notes').insert(payload);
+
+    if (result.error) { toast('Erro ao salvar: ' + result.error.message); return; }
+    toast('Nota salva.');
+    await loadStudents();
   }
 
   $('addStudentBtn').addEventListener('click', async () => {

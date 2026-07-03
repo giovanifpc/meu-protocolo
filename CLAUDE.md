@@ -108,9 +108,9 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 - Testado em produção (`meuprotocolo.app`) pelo usuário: fluxo completo de execução de treino e histórico rodando ponta a ponta
 - **Painel do profissional reestruturado com nav inferior**: `index.html` virou dashboard "Início" (nº de alunos, treinos na semana, lista "precisam de atenção" — quem não treina há 7+ dias ou nunca treinou); lista de alunos + cadastro moveram pra `alunos.html`; `perfil.html` novo (branding: nome exibido, cor principal, logo — mais logout); `relatorios.html` novo. `treinos.html`/`nutri.html` continuam como sub-telas por aluno (sem nav, acessadas a partir de `alunos.html`), sem nav inferior própria
 - `relatorios.html` — gera relatório em **texto estruturado** (não PDF) por aluno: resumo (protocolo atual, periodização, adesão %, última sessão), evolução de carga por exercício, histórico de sessões. Botões copiar e baixar `.txt`. Formato texto foi escolha deliberada — é o que cola melhor em uma IA externa pra análise, diferente de um PDF visual
+- `supabase_10_student_notes.sql` — tabela `student_notes` (status ativo/pausado/inativo + nota privada por aluno). **Sem policy de leitura pro aluno** — é informação privada do profissional, por isso é tabela separada em vez de colunas em `students` (cuja RLS dá select pro próprio aluno). **Ainda não rodado no Supabase** (passo manual). `alunos.html` mostra bolinha colorida de status por aluno + painel expansível (botão 📝) com dropdown de status e textarea de nota. Dashboard (`index.html`) exclui alunos pausados/inativos da lista "precisam de atenção"
 
 **Ainda não implementado (próximos passos):**
-- Notas/tags/status do aluno na lista (`alunos.html`)
 - Templates de treino — duplicar protocolo entre alunos
 - Geração de treino por IA usando o histórico do aluno (precisa de Supabase Edge Function + API key da Anthropic — não dá pra chamar a API da Claude direto do client)
 - Webhook Mercado Pago (cobrança automática ao fim do trial — trial deve exigir cartão cadastrado desde o cadastro, ver master doc seção 4)

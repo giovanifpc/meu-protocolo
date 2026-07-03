@@ -93,6 +93,16 @@
 
     <div id="builderArea" style="display:none;">
       <div class="card">
+        <h2>Gerar treino com IA</h2>
+        <div class="field">
+          <label>Objetivo / observações (opcional)</label>
+          <textarea id="aiObjetivoInput" rows="2" style="width:100%; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; color:var(--text); font-family:var(--font); resize:vertical;" placeholder="Ex: foco em hipertrofia de posterior, aluno relatou dor no ombro direito, evitar supino..."></textarea>
+        </div>
+        <button class="btn secondary" id="generateAiBtn" type="button">Gerar sugestão com IA</button>
+        <div class="msg" id="aiMsg"></div>
+      </div>
+
+      <div class="card">
         <div class="field">
           <label>Título do protocolo</label>
           <input type="text" id="tituloInput" placeholder="Ex: Ciclo 1 — Hipertrofia">
@@ -305,6 +315,57 @@
     renderProtocol();
     toast('Protocolo duplicado — revise e publique quando estiver pronto.');
   });
+
+  $('generateAiBtn').addEventListener('click', async () => {
+    if (!currentProtocol.student_id) return;
+    if (currentProtocol.workouts.length && !confirm('Isso substitui os treinos que você já montou aqui (ainda não salvos). Continuar?')) return;
+
+    const objetivo = $('aiObjetivoInput').value.trim();
+    $('generateAiBtn').disabled = true;
+    $('generateAiBtn').textContent = 'Gerando... (pode levar até 30s)';
+    $('aiMsg').textContent = '';
+    $('aiMsg').className = 'msg';
+
+    const { data, error } = await supa.functions.invoke('generate-workout', {
+      body: { student_id: currentProtocol.student_id, objetivo },
+    });
+
+    $('generateAiBtn').disabled = false;
+    $('generateAiBtn').textContent = 'Gerar sugestão com IA';
+
+    if (error || !data || data.error) {
+      $('aiMsg').textContent = 'Erro ao gerar: ' + (data?.error || error?.message || 'erro desconhecido');
+      $('aiMsg').className = 'msg error';
+      return;
+    }
+
+    const workouts = [];
+    for (const w of (data.workouts || [])) {
+      const exercises = [];
+      for (const ex of (w.exercises || [])) {
+        const match = await matchExerciseByName(ex.nome);
+        exercises.push({
+          nome: match ? match.nome : ex.nome,
+          exercise_id: match?.exercise_id,
+          exercise_ref: match?.exercise_ref,
+          media: match?.gif_url,
+          mediaType: 'img',
+          weeks: [{ sets: Number(ex.sets) || 3, reps: String(ex.reps || '12'), rest: Number(ex.rest) || 60, nota: '' }],
+        });
+      }
+      workouts.push({ _uid: uid(), id: w.id || String.fromCharCode(65 + workouts.length), name: w.name, exercises });
+    }
+
+    currentProtocol.titulo = data.titulo || currentProtocol.titulo;
+    currentProtocol.workouts = workouts;
+    renderProtocol();
+    toast('Sugestão gerada pela IA — revise os exercícios e as cargas antes de publicar.');
+  });
+
+  async function matchExerciseByName(nome) {
+    const { data } = await supa.rpc('search_exercise_library', { q: nome });
+    return (data && data[0]) || null;
+  }
 
   async function loadMuscleGroups() {
     const { data, error } = await supa.from('exercise_library').select('grupo_muscular');

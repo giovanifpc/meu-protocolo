@@ -83,38 +83,86 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
-Última atualização: 2026-07-03. Ver `ATUALIZACAO-2026-07-02.md` para o relato detalhado da sessão de setup de e-mail transacional.
+Última atualização: 2026-07-07 (sessão longa via celular/web — ver detalhamento completo abaixo). Ver também `ATUALIZACAO-2026-07-02.md` (sessão anterior, setup de e-mail transacional).
 
-**Já implementado:**
-- Schema SQL: `supabase_01_professionals.sql`, `supabase_02_students.sql`, `supabase_03_auth_functions.sql` — já rodados no Supabase
-- `supabase_04_fix_rls_recursion.sql` — corrige recursão infinita entre as policies de RLS de `professionals` e `students` (função `SECURITY DEFINER` isolando a leitura cruzada)
-- `supabase_05_exercise_library.sql` — biblioteca de exercícios (seed de dados)
-- `supabase_06_training.sql` — schema de protocolo de treino: `training_protocols` (rascunho/publicado/arquivado, `workouts` em JSONB) e `training_history` (sessões realizadas pelo aluno), RLS completo
-- `supabase_07_search_fix.sql` — busca de exercício ignorando acento/maiúsculas (`unaccent`)
-- `login.html` — OTP por e-mail (mesmo padrão do Fox, evita bug de PWA no iOS), roteia para `index.html` (profissional), `aluno.html` (aluno) ou `onboarding.html` (novo cadastro). Funcionando de ponta a ponta, incluindo o e-mail com código chegando via SMTP customizado
+### ⚠️ Pendências imediatas — retomar no notebook
+
+Tudo abaixo já está commitado e com o front-end no ar em produção, mas depende de passos manuais que só dá pra fazer com acesso de terminal (Supabase CLI) ou direto no painel do Supabase. Nenhuma sessão remota (celular/web) consegue completar isso — ver "Limitação de rede" mais abaixo.
+
+1. **Rodar 3 migrations SQL pendentes no SQL Editor do Supabase**, em ordem:
+   - `supabase_08_nutrition.sql` (tabela `nutrition_guidance` + bucket `nutri-pdfs`)
+   - `supabase_09_periodization.sql` (colunas `periodizacao`/`duracao_semanas` em `training_protocols`)
+   - `supabase_10_student_notes.sql` (tabela `student_notes`)
+   - (Se alguma já tiver sido rodada manualmente entre sessões, `create table if not exists` faz as outras rodarem sem erro mesmo repetindo.)
+2. **Deploy da Edge Function de geração de treino por IA** (só funciona com a CLI local, testado e confirmado que não dá pra fazer de sessão remota):
+   ```
+   cd meu-protocolo
+   supabase link --project-ref yumqmramxbahkfxsthtt
+   supabase functions deploy generate-workout
+   supabase secrets set ANTHROPIC_API_KEY=<chave da Anthropic — pode reaproveitar a mesma já usada no projeto Fox>
+   ```
+3. **Segurança**: um Supabase Personal Access Token (`sbp_...`) foi gerado e colado no chat nesta sessão pra eu tentar fazer o deploy remotamente (não funcionou — ver limitação abaixo). **Confirmar que foi revogado** em `supabase.com/dashboard/account/tokens`, se ainda não foi.
+4. Depois do deploy: testar em `treinos.html` → selecionar aluno → "Gerar sugestão com IA".
+
+### Limitação de rede descoberta nesta sessão (guardar pra não repetir a tentativa)
+
+Sessões remotas (celular/web) rodam num sandbox com todo tráfego HTTPS saindo por um proxy da Anthropic. Ferramentas que respeitam `HTTPS_PROXY` (curl, npm, node fetch) funcionam normalmente — por isso deu pra rodar `npm install -g supabase` e alcançar `api.supabase.com` via curl (200 OK). Mas o **binário da Supabase CLI é Go compilado que ignora as variáveis de proxy** — `supabase link`/`deploy` falham com erro de rede mesmo com o token de acesso correto. Uma tentativa de forçar a rota via `proxychains` foi **ativamente recusada pelo proxy** ("method CONNECT not permitted") — é bloqueio de política, não bug, então não vale tentar contornar de novo. Conclusão prática: **qualquer comando `supabase` que fale com a API remota (`link`, `functions deploy`, `secrets set`, `db push` contra o projeto remoto) só funciona rodando localmente** (notebook, onde a CLI já funciona bem pro projeto Fox) ou numa sessão de Claude Code que rode nesse ambiente local. SQL direto (colar no SQL Editor do navegador) e o próprio deploy do site (GitHub Pages) não têm esse problema — continuam funcionando normal de qualquer sessão.
+
+### Deploy do GitHub Pages — instabilidade observada
+
+Duas vezes nesta sessão o deploy automático (`pages build and deployment`) falhou com erro transitório de infraestrutura do GitHub ("Deployment failed, try again later"), sem relação com o conteúdo do commit (o job de build sempre passou normal, só o job de deploy falhou). **Conserto que funcionou nas duas vezes**: criar um commit vazio (`git commit --allow-empty`) e dar push — isso dispara uma rodada nova de build+deploy do zero e resolve. Se o site não atualizar alguns minutos depois de um push, checar `github.com/giovanifpc/meu-protocolo/actions` antes de assumir que é bug no código.
+
+### Já implementado, por área
+
+**Auth / onboarding** (sessões anteriores)
+- `login.html` — OTP por e-mail, roteia pra `index.html` (profissional), `aluno.html` (aluno) ou `onboarding.html` (novo cadastro). Funcionando ponta a ponta com SMTP customizado (Resend)
 - `onboarding.html` — primeiro acesso do profissional cria a própria linha em `professionals` (trial de 14 dias)
-- `index.html` — painel do profissional: banner de trial, cadastro rápido de aluno, lista de alunos
-- `treinos.html` — montagem de protocolo de treino: busca de exercício, edição de sets/reps/descanso
-- GIFs de exercício não animavam em navegador real (link direto do Google Drive falha ao decodificar como `<img>` com frequência) — corrigido replicando a técnica do Fox: 3 variações da URL do Drive (`uc?export=download`, `uc?export=view`, `thumbnail?sz=w900`) com fallback automático via `onerror`, aplicado no Overview e no Exec do `aluno.html`
-- `supabase_08_nutrition.sql` — área Nutri: tabela `nutrition_guidance` (orientação em texto + referência do PDF, uma linha por aluno) e bucket privado de Storage `nutri-pdfs` (RLS por aluno, acesso só via signed URL — dado sensível de saúde). **Ainda não rodado no Supabase** (passo manual)
-- `nutri.html` — tela do profissional: seleciona aluno, edita orientação em texto, envia/substitui PDF do plano nutricional
-- `aluno.html` — aba "Nutri" (bottom nav): mostra a orientação atual e botão "Ver plano em PDF" (abre signed URL, expira em 5min). Funciona mesmo sem protocolo de treino publicado — `boot()` não bloqueia mais o app inteiro nesse caso, só a Home mostra o estado vazio
-- `supabase_09_periodization.sql` — colunas `periodizacao` e `duracao_semanas` em `training_protocols`. **Ainda não rodado no Supabase** (passo manual)
-- Periodização no `treinos.html`: dropdown com 6 técnicas (Linear, Ondulatória diária, Ondulatória semanal, Em blocos, Reversa, Manual) baseadas em pesquisa das práticas mais comuns do mercado (ver fontes no histórico da sessão). Botão "Aplicar periodização" gera automaticamente um array `weeks[]` (sets/reps/descanso por semana) por exercício a partir do valor atual como base — grade fica editável depois. Ondulatória diária é a exceção: em vez de variar por semana, varia por treino do loop (A=pesado, B=moderado, C=leve), já que o protocolo não tem calendário fixo. Exercícios sem periodização continuam com a UI simples de sempre (weeks com 1 item só)
-- `aluno.html` reconhece a semana do ciclo (calculada a partir de `publicado_em` + `duracao_semanas`) e usa o `weeks[semana]` correto no Overview/Exec — com fallback pro formato antigo (`sets`/`reps`/`rest` direto no exercício) pra protocolos publicados antes dessa mudança. Home mostra "Semana X de Y" e banner de ciclo concluído quando aplicável
-- E-mail transacional: domínio `meuprotocolo.app` (Cloudflare Registrar) verificado no Resend, SMTP customizado configurado no Supabase, templates "Confirm signup" e "Magic Link or OTP" editados com `{{ .Token }}`
-- Bug de RLS que impedia o profissional recém-cadastrado de ler a própria linha após o onboarding (loop onboarding ↔ painel) — corrigido
-- `aluno.html` — **app do aluno, Fases 1, 2 e 3 completas**: reescrito para replicar os recursos do Training da Fox Performance (repo `giovanifpc/fox-app`, arquivo `training.html`), só trocando a identidade visual pro tema claro do Meu Protocolo. Fase 1 — execução: Home (próximo treino do loop A/B/C..., estatísticas), Overview (pré-treino), Exec (séries, reps/carga com última carga pré-preenchida, timer de descanso por exercício), Finish (resumo + avaliação), tudo salvo em `training_history.detail` (JSONB, sem migration). Fase 2 — histórico: bottom nav, tela de Histórico com resumo, lista de treinos realizados e gráfico de evolução de carga por exercício (SVG, abas por exercício, exige ≥2 sessões com carga registrada pra aparecer). Fase 3 — Conquistas (9 badges computados a partir do histórico, com toast de "nova conquista" ao finalizar um treino que desbloqueia uma) e Perfil (nome, vínculo com o profissional, resumo de progresso, logout). Posição no loop e streak são calculados a partir do histórico no banco (sem depender de localStorage), diferente do Fox que usa `localStorage` como fonte da verdade — decisão deliberada pra funcionar corretamente entre dispositivos diferentes. Simplificações conscientes em relação ao Fox: sem conceito de ciclo/semana calendário, sem aquecimento/alongamento, sem exercício tipo cardio, sem grid de progresso semanal (específico da periodização de 8 semanas do Fox), sem geração de relatório PDF nem fluxo de "reiniciar ciclo"/compartilhar no WhatsApp (dependem de dados que o Meu Protocolo não tem — telefone do profissional, conceito de ciclo — e não foram pedidos), confirmações de saída/pendência usando `confirm()` nativo em vez de modal customizado
-- Testado em produção (`meuprotocolo.app`) pelo usuário: fluxo completo de execução de treino e histórico rodando ponta a ponta
-- **Painel do profissional reestruturado com nav inferior**: `index.html` virou dashboard "Início" (nº de alunos, treinos na semana, lista "precisam de atenção" — quem não treina há 7+ dias ou nunca treinou); lista de alunos + cadastro moveram pra `alunos.html`; `perfil.html` novo (branding: nome exibido, cor principal, logo — mais logout); `relatorios.html` novo. `treinos.html`/`nutri.html` continuam como sub-telas por aluno (sem nav, acessadas a partir de `alunos.html`), sem nav inferior própria
-- `relatorios.html` — gera relatório em **texto estruturado** (não PDF) por aluno: resumo (protocolo atual, periodização, adesão %, última sessão), evolução de carga por exercício, histórico de sessões. Botões copiar e baixar `.txt`. Formato texto foi escolha deliberada — é o que cola melhor em uma IA externa pra análise, diferente de um PDF visual
-- `supabase_10_student_notes.sql` — tabela `student_notes` (status ativo/pausado/inativo + nota privada por aluno). **Sem policy de leitura pro aluno** — é informação privada do profissional, por isso é tabela separada em vez de colunas em `students` (cuja RLS dá select pro próprio aluno). **Ainda não rodado no Supabase** (passo manual). `alunos.html` mostra bolinha colorida de status por aluno + painel expansível (botão 📝) com dropdown de status e textarea de nota. Dashboard (`index.html`) exclui alunos pausados/inativos da lista "precisam de atenção"
-- `treinos.html` — duplicar protocolo de outro aluno: card "Duplicar protocolo de outro aluno" aparece quando existe pelo menos um outro aluno com protocolo salvo; clona workouts/exercícios/periodização (com `_uid` novo por treino) como rascunho novo pro aluno selecionado, sem alterar o protocolo de origem
-- **Geração de treino por IA** (`supabase/functions/generate-workout/index.ts`, Supabase Edge Function): usa o JWT de quem chama pra criar um client autenticado como o profissional (respeita RLS normalmente, sem service role key), busca `training_history` (últimas 20 sessões) + protocolo anterior do aluno, monta um prompt com esse contexto + o objetivo/observação que o profissional digitou, chama a API da Claude (`claude-sonnet-5`) pedindo JSON estruturado, devolve pro client. `treinos.html` recebe a sugestão, casa cada nome de exercício sugerido com a biblioteca via `search_exercise_library` (pra puxar `exercise_id`/gif) e carrega como rascunho novo — nunca salva sozinho, sempre exige revisão e publicação manual. **Ainda não implantada** — precisa rodar `supabase functions deploy generate-workout` e `supabase secrets set ANTHROPIC_API_KEY=...` (a chave pode ser a mesma já usada no projeto Fox — só a chave é reaproveitada, nenhum dado ou infra dos dois projetos se mistura). Esse projeto nunca foi linkado via Supabase CLI ainda, então o primeiro deploy precisa de `supabase link` antes
+- E-mail transacional: domínio `meuprotocolo.app` verificado no Resend, SMTP configurado no Supabase, templates com `{{ .Token }}`
+- Bug de RLS do loop onboarding↔painel — corrigido
 
-**Ainda não implementado (próximos passos):**
+**Schema SQL rodado no Supabase** (`supabase_01` a `supabase_07`)
+- `01_professionals`, `02_students`, `03_auth_functions` — base multi-tenant
+- `04_fix_rls_recursion` — corrige recursão infinita de RLS entre `professionals`/`students`
+- `05_exercise_library` — biblioteca de exercícios (seed, ~1550 itens, reaproveitados do Fox)
+- `06_training` — `training_protocols` + `training_history`, RLS completo
+- `07_search_fix` — busca de exercício ignorando acento (`unaccent`)
+
+**Schema SQL escrito mas NÃO rodado ainda** (ver checklist de pendências no topo)
+- `08_nutrition`, `09_periodization`, `10_student_notes`
+
+**Painel do profissional** — reestruturado com nav inferior nesta sessão
+- `index.html` — dashboard "Início": nº de alunos, treinos na semana, lista "precisam de atenção" (quem não treina há 7+ dias ou nunca treinou, excluindo alunos pausados/inativos)
+- `alunos.html` — lista de alunos + cadastro (antes vivia em `index.html`). Cada aluno tem bolinha de status (ativo/pausado/inativo) e painel expansível (botão 📝) com nota privada + status — guardados em `student_notes`, **sem policy de leitura pro aluno** (informação privada do profissional)
+- `perfil.html` — branding (nome exibido, cor principal, logo) + logout. Fechava uma lacuna antiga (campos existiam no banco, sem tela pra editar)
+- `relatorios.html` — gera relatório em **texto estruturado** (não PDF) por aluno: resumo, adesão %, evolução de carga, histórico de sessões. Botões copiar/baixar `.txt` — formato deliberado pra colar em IA externa
+- `treinos.html` / `nutri.html` continuam como sub-telas por aluno (chegam a partir de `alunos.html`), sem nav inferior própria — mesmo padrão do Overview/Exec no app do aluno
+
+**Protocolo de treino** (`treinos.html`)
+- Montagem: busca de exercício (ignora acento/maiúsculas), edição de sets/reps/descanso
+- GIF de exercício: corrigido problema de não animar em navegador real (link cru do Google Drive falha ao decodificar como `<img>` com frequência) — 3 variações de URL (`uc?export=download`, `uc?export=view`, `thumbnail?sz=w900`) com fallback automático via `onerror`, mesma técnica do Fox
+- **Periodização**: dropdown com 6 técnicas (Linear, Ondulatória diária, Ondulatória semanal, Em blocos, Reversa, Manual). Botão "Aplicar periodização" gera automaticamente `weeks[]` (sets/reps/descanso por semana) por exercício a partir do valor atual como base — grade fica editável depois, nunca é uma trava. Ondulatória diária é a exceção: varia por treino do loop (A=pesado, B=moderado, C=leve) em vez de por semana, já que o protocolo não tem calendário fixo
+- **Duplicar protocolo de outro aluno**: aparece quando existe pelo menos um outro aluno com protocolo salvo; clona workouts/exercícios/periodização como rascunho novo, sem alterar o protocolo de origem
+- **Gerar treino com IA**: card que chama a Edge Function `generate-workout` (ver pendência de deploy no topo) — profissional digita objetivo/observação, recebe sugestão baseada no histórico do aluno, carregada como rascunho pra revisão manual antes de publicar
+
+**App do aluno** (`aluno.html`) — reescrito nesta sessão pra ter paridade de recursos com o Training da Fox (repo `giovanifpc/fox-app`), com a identidade visual clara do Meu Protocolo
+- Fase 1 (execução): Home (próximo treino do loop, estatísticas), Overview (pré-treino), Exec (séries, reps/carga com última carga pré-preenchida, timer de descanso), Finish (resumo + avaliação) — tudo em `training_history.detail` (JSONB)
+- Fase 2 (histórico): bottom nav, tela de Histórico (resumo, lista de treinos, gráfico de evolução de carga por exercício em SVG)
+- Fase 3 (conquistas/perfil): 9 badges com toast de desbloqueio, tela de Perfil
+- Reconhece a semana do ciclo (a partir de `publicado_em` + `duracao_semanas`) e usa `weeks[semana]` correto — com fallback pro formato antigo (protocolos publicados antes da periodização existir continuam funcionando sem migração de dado)
+- Aba "Nutri": orientação em texto + botão "Ver plano em PDF" (signed URL, expira em 5min). Funciona mesmo sem protocolo de treino publicado ainda — `boot()` não bloqueia mais o app inteiro nesse caso
+- Loop de treinos e streak calculados a partir do histórico no banco (não `localStorage`) — decisão deliberada pra funcionar entre dispositivos diferentes, diferente do Fox
+- Simplificações conscientes vs. Fox: sem ciclo/semana calendário fixo (a periodização já resolve isso de outro jeito), sem aquecimento/alongamento, sem exercício tipo cardio, sem grid de progresso semanal do Fox, sem relatório PDF nem "reiniciar ciclo"/WhatsApp do Fox (dependem de dado que não existe aqui — telefone do profissional, conceito de ciclo — e não foram pedidos), `confirm()` nativo em vez de modal customizado
+- Testado em produção pelo usuário: execução de treino, histórico e Nutri rodando ponta a ponta
+
+**Área Nutri**
+- `nutrition_guidance` (schema pendente de rodar — item 8 da lista) + bucket privado `nutri-pdfs`, acesso só via signed URL
+- `nutri.html`: profissional escreve orientação + sobe/substitui PDF
+- Aba "Nutri" no `aluno.html`: ver acima
+
+### Ainda não implementado (backlog maior, sem trabalho iniciado)
+
 - Webhook Mercado Pago (cobrança automática ao fim do trial — trial deve exigir cartão cadastrado desde o cadastro, ver master doc seção 4)
-- Chatbot de suporte via IA (item 1 do master doc)
+- Chatbot de suporte via IA pro aluno final (item 1 do master doc — diferente da geração de treino por IA pro profissional, que já está feita)
 - PWA completo (manifest, ícones, service worker)
 - Política de Privacidade / Termos de Uso
 - Rate limiting, headers de segurança, backup automático (item 13 do master doc)

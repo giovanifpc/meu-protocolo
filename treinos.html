@@ -334,7 +334,14 @@
     $('generateAiBtn').textContent = 'Gerar sugestão com IA';
 
     if (error || !data || data.error) {
-      $('aiMsg').textContent = 'Erro ao gerar: ' + (data?.error || error?.message || 'erro desconhecido');
+      let motivo = data?.error || error?.message || 'erro desconhecido';
+      if (error?.context?.json) {
+        try {
+          const body = await error.context.json();
+          if (body?.error) motivo = body.error;
+        } catch {}
+      }
+      $('aiMsg').textContent = 'Erro ao gerar: ' + motivo;
       $('aiMsg').className = 'msg error';
       return;
     }

@@ -28,9 +28,13 @@
   .field input:focus, .field select:focus, .field textarea:focus { outline:none; border-color:var(--primary); }
   .field textarea { resize:vertical; min-height:80px; line-height:1.5; }
   .row { display:grid; gap:8px; }
+  .row > * { min-width:0; }
   .row.two { grid-template-columns:1fr 1fr; }
   .row.three { grid-template-columns:1fr 1fr 1fr; }
   .row.four { grid-template-columns:1fr 1fr 1fr 1fr; }
+  @media (max-width: 480px) {
+    .row.three, .row.four { grid-template-columns:1fr 1fr; }
+  }
   .btn { padding:10px 16px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; border:none; background:var(--primary); color:#fff; font-family:var(--font); }
   .btn.secondary { background:var(--bg); color:var(--text); border:1px solid var(--line); }
   .btn.small { padding:7px 12px; font-size:12px; }
@@ -52,6 +56,7 @@
   .result-box { background:var(--bg); border:1px dashed var(--line); border-radius:10px; padding:12px 14px; margin-top:10px; font-size:13px; }
   .result-box .rb-num { font-size:20px; font-weight:700; color:var(--primary); }
   .photo-slots { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .photo-slots > * { min-width:0; }
   .photo-slot { text-align:center; }
   .photo-slot img, .photo-slot .ph-placeholder { width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:10px; background:var(--bg); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:11px; }
   .photo-slot label { display:block; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; margin:6px 0 4px; }

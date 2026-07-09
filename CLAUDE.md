@@ -83,7 +83,13 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
-Última atualização: 2026-07-09 (3ª sessão do dia, notebook — pacote de "comodidades pro profissional": alertas de adesão/pagamento, anamnese, biblioteca de modelos, agenda leve, PWA e push notifications). Ver também `ATUALIZACAO-2026-07-02.md` (sessão anterior, setup de e-mail transacional).
+Última atualização: 2026-07-09 (3ª sessão do dia, notebook — pacote de "comodidades pro profissional" + logo definitivo da marca). Ver também `ATUALIZACAO-2026-07-02.md` (sessão anterior, setup de e-mail transacional).
+
+### Logo da marca definido (2026-07-09)
+
+`logo.png` (raiz do repo) é o logo oficial — monograma "MP" com anel, fundo transparente, cores exatas da paleta. Veio de uma imagem gerada pelo usuário no Gemini; eu só recolori pra bater com `#2D6BE4`/`#3BB08F` (preservando a composição, sem redesenhar). Ícones do PWA em `icons/` são gerados a partir dele via `scripts/generate_icons.py` — se o logo mudar de novo, editar `logo.png` e rodar esse script de novo. Favicon (`icons/favicon-32.png`) agora está em todas as páginas, não só no app do aluno.
+
+Histórico da exploração (só pra não repetir tentativas que não funcionaram): tentei gerar variações originais (haltere, monograma simples, monograma com anel entrelaçado desenhado à mão via PIL) antes disso — o usuário rejeitou por não ficarem com acabamento profissional (ficou "desenho de criança no Paint" na tentativa de entrelaçar letras via polígono). Desenhar letterform customizado com boa qualidade não é viável só com primitivas de desenho via código — precisa de ferramenta vetorial de verdade. A solução que funcionou foi recolorir uma imagem que o usuário já tinha (gerada no Gemini), não desenhar do zero.
 
 ### Pacote de comodidades pro profissional (2026-07-09, 3ª sessão)
 

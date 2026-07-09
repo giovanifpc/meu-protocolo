@@ -94,7 +94,16 @@ Pedido do profissional 0: hoje ele faz a avaliação (adipômetro + bioimpedânc
 - **Fórmulas**: coeficientes conferidos contra a literatura (Jackson & Pollock 1978/1980, Faulkner 1968, Guedes 1994) antes de implementar, dada a sensibilidade de errar um cálculo de saúde — ver `avaliacoes.html`, objeto `SKINFOLD_PROTOCOLS`. Conversão densidade → % gordura sempre por Siri.
 - **`aluno.html`**: nova seção "Avaliação física" dentro da tela de Histórico (somente leitura) — resumo atual + delta + mesmo gráfico de barras + lista de avaliações finalizadas.
 - **Navegação reorganizada**: `alunos.html` agora tem 3 links por aluno (Treino / Avaliação / Nutri) em vez de 2. Dentro de `treinos.html`/`avaliacoes.html`/`nutri.html`, uma barra de abas (`#studentTabbar`) aparece assim que um aluno é selecionado, permitindo trocar de área sem voltar pra lista — o padrão usado por apps consolidados do mercado (Trainerize, MFit Personal).
-- **Não testado interativamente pelo usuário ainda** (login OTP não é possível a partir desta sessão) — validado apenas por: sintaxe de todos os scripts, aritmética das fórmulas contra valores de teste plausíveis, e smoke test de carregamento das páginas (sem erros de console, redirecionamento de auth funcionando). Precisa de teste ponta a ponta em produção: preencher uma avaliação completa (dobras + bioimpedância + perimetria + foto), finalizar, e conferir a visão do aluno.
+- **Testado em produção pelo usuário** — funcionando. Único ajuste necessário: grid de 3 colunas do formulário (dados gerais, dobras, fotos) estourava a tela no celular (`<input type="date">`/`type="file"` têm largura mínima intrínseca maior que 1fr do grid) — corrigido com `min-width:0` nos itens da grade + colapso pra 2 colunas abaixo de 480px.
+
+### Layout do aluno — deixado mais profissional (2026-07-09, mesma sessão)
+
+Pedido do usuário: nav inferior com ícones de emoji coloridos ("infantilizada"), e a seção de Avaliação física enterrada no final da tela de Histórico depois da lista de treinos.
+
+- **Ícones da nav inferior**: trocados de emoji (🏠📊🥗👤) pra SVG inline monocromático (`stroke="currentColor"`, estilo Feather/Lucide) — desenhados e conferidos visualmente no preview antes de aplicar (casa, gráfico de barras, garfo+faca, usuário). Isso também corrigiu um bug latente: `.nav-btn.active { color: var(--primary) }` nunca pintava o ícone porque emoji ignora a propriedade `color` do CSS — só o texto embaixo mudava de cor.
+- **"Conquistas" saiu da nav e virou seção dentro do Perfil** (nav caiu de 5 pra 4 ícones: Início/Histórico/Nutri/Perfil) — mais alinhado ao padrão de apps de coaching sérios (Trainerize/TrueCoach não têm gamificação como aba própria).
+- **Histórico ganhou sub-abas** ("Evolução de carga" / "Avaliação física") — um controle segmentado no topo troca o conteúdo abaixo, no lugar da avaliação física ficar empilhada depois da lista de treinos. Mesmo padrão da aba "Progress" do Trainerize (sub-tabs pra Habits/Photos/Measurements/Workouts).
+- Validado via preview isolado reaproveitando o CSS/HTML reais do arquivo (login OTP impede teste end-to-end fora do notebook) — precisa de conferência visual do usuário em produção.
 
 ### Resolvido nesta sessão (2026-07-09)
 

@@ -16,6 +16,9 @@
   body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font-family:var(--font); }
   header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--card); border-bottom:1px solid var(--line); gap:12px; }
   header h1 { font-size:17px; font-weight:700; margin:0; }
+  .tabbar { display:none; gap:4px; padding:8px 20px; background:var(--card); border-bottom:1px solid var(--line); max-width:720px; margin:0 auto; }
+  .tab-link { flex:1; text-align:center; padding:8px 4px; border-radius:8px; font-size:12px; font-weight:700; color:var(--muted); text-decoration:none; }
+  .tab-link.active { background:var(--primary); color:#fff; }
   main { max-width:720px; margin:0 auto; padding:20px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:16px; }
   .card h2 { font-size:15px; margin:0 0 12px; }
@@ -72,6 +75,12 @@
     <h1>Montar treino</h1>
     <a href="alunos.html" class="btn secondary small">‹ Alunos</a>
   </header>
+
+  <div class="tabbar" id="studentTabbar">
+    <a href="#" id="tabTreino" class="tab-link active">Treino</a>
+    <a href="#" id="tabAvaliacao" class="tab-link">Avaliação</a>
+    <a href="#" id="tabNutri" class="tab-link">Nutrição</a>
+  </div>
 
   <main>
     <div class="card">
@@ -236,6 +245,14 @@
     return 'w' + Math.random().toString(36).slice(2, 9);
   }
 
+  function updateTabbar(studentId) {
+    const bar = $('studentTabbar');
+    if (!studentId) { bar.style.display = 'none'; return; }
+    bar.style.display = 'flex';
+    $('tabAvaliacao').href = 'avaliacoes.html?student_id=' + studentId;
+    $('tabNutri').href = 'nutri.html?student_id=' + studentId;
+  }
+
   async function boot() {
     const { data: { session } } = await supa.auth.getSession();
     if (!session) { window.location.href = 'login.html'; return; }
@@ -253,6 +270,7 @@
     const preselect = params.get('student_id');
     if (preselect) {
       $('studentSelect').value = preselect;
+      updateTabbar(preselect);
       await loadOrCreateProtocol(preselect);
     }
   }
@@ -382,6 +400,7 @@
 
   $('studentSelect').addEventListener('change', async (e) => {
     const studentId = e.target.value;
+    updateTabbar(studentId);
     if (!studentId) { $('builderArea').style.display = 'none'; $('duplicateArea').style.display = 'none'; return; }
     updateDuplicateArea(studentId);
     await loadOrCreateProtocol(studentId);

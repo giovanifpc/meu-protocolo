@@ -83,7 +83,18 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
-Última atualização: 2026-07-09 (sessão no notebook — CLI do Supabase local funcionando, deploy da Edge Function concluído e depurado). Ver também `ATUALIZACAO-2026-07-02.md` (sessão anterior, setup de e-mail transacional).
+Última atualização: 2026-07-09 (2ª sessão do dia, notebook — nova área de Avaliação física + reorganização de navegação do aluno selecionado). Ver também `ATUALIZACAO-2026-07-02.md` (sessão anterior, setup de e-mail transacional).
+
+### Avaliação física — nova área (2026-07-09)
+
+Pedido do profissional 0: hoje ele faz a avaliação (adipômetro + bioimpedância) na planilha/papel; o app deve fazer as contas.
+
+- **Schema**: `supabase_11_physical_assessment.sql`, tabela `physical_assessments` (RLS: profissional CRUD total; aluno só lê avaliações com `status = 'finalizada'`) + bucket privado `assessment-photos` (mesmo padrão do `nutri-pdfs`, acesso via signed URL). Sexo e idade ficam na própria avaliação, não em `students` — idade muda a cada avaliação e isso evitou alterar o cadastro do aluno por um dado usado só aqui. **Já aplicada em produção** (rodada via `supabase db query --linked --file`, confirmada via REST API).
+- **`avaliacoes.html`** (novo, painel do profissional): protocolo de dobras cutâneas selecionável (Pollock 3, Pollock 7, Faulkner 4, Guedes 3 — profissional escolhe antes de digitar os números, cada um pede sites diferentes dependendo do sexo), bioimpedância (campos manuais — **nenhuma balança do mercado tem API pra terceiros**, então é sempre o profissional digitando o que aparece no visor), perimetria (12 medidas), 3 fotos (frente/lado/costas). Rascunho → Finalizar, igual ao padrão já usado em `training_protocols`. Card de evolução (peso e %gordura, delta desde a última + gráfico de barras) quando há 2+ avaliações finalizadas.
+- **Fórmulas**: coeficientes conferidos contra a literatura (Jackson & Pollock 1978/1980, Faulkner 1968, Guedes 1994) antes de implementar, dada a sensibilidade de errar um cálculo de saúde — ver `avaliacoes.html`, objeto `SKINFOLD_PROTOCOLS`. Conversão densidade → % gordura sempre por Siri.
+- **`aluno.html`**: nova seção "Avaliação física" dentro da tela de Histórico (somente leitura) — resumo atual + delta + mesmo gráfico de barras + lista de avaliações finalizadas.
+- **Navegação reorganizada**: `alunos.html` agora tem 3 links por aluno (Treino / Avaliação / Nutri) em vez de 2. Dentro de `treinos.html`/`avaliacoes.html`/`nutri.html`, uma barra de abas (`#studentTabbar`) aparece assim que um aluno é selecionado, permitindo trocar de área sem voltar pra lista — o padrão usado por apps consolidados do mercado (Trainerize, MFit Personal).
+- **Não testado interativamente pelo usuário ainda** (login OTP não é possível a partir desta sessão) — validado apenas por: sintaxe de todos os scripts, aritmética das fórmulas contra valores de teste plausíveis, e smoke test de carregamento das páginas (sem erros de console, redirecionamento de auth funcionando). Precisa de teste ponta a ponta em produção: preencher uma avaliação completa (dobras + bioimpedância + perimetria + foto), finalizar, e conferir a visão do aluno.
 
 ### Resolvido nesta sessão (2026-07-09)
 
@@ -123,12 +134,12 @@ Duas vezes nesta sessão o deploy automático (`pages build and deployment`) fal
 - `09_periodization` — colunas `periodizacao`/`duracao_semanas` em `training_protocols`
 - `10_student_notes` — tabela `student_notes`
 
-**Painel do profissional** — reestruturado com nav inferior nesta sessão
+**Painel do profissional** — reestruturado com nav inferior em sessão anterior, navegação por aluno reorganizada nesta sessão
 - `index.html` — dashboard "Início": nº de alunos, treinos na semana, lista "precisam de atenção" (quem não treina há 7+ dias ou nunca treinou, excluindo alunos pausados/inativos)
-- `alunos.html` — lista de alunos + cadastro (antes vivia em `index.html`). Cada aluno tem bolinha de status (ativo/pausado/inativo) e painel expansível (botão 📝) com nota privada + status — guardados em `student_notes`, **sem policy de leitura pro aluno** (informação privada do profissional)
+- `alunos.html` — lista de alunos + cadastro (antes vivia em `index.html`). Cada aluno tem bolinha de status (ativo/pausado/inativo), 3 links de área (Treino / Avaliação / Nutri) e painel expansível (botão 📝) com nota privada + status — guardados em `student_notes`, **sem policy de leitura pro aluno** (informação privada do profissional)
 - `perfil.html` — branding (nome exibido, cor principal, logo) + logout. Fechava uma lacuna antiga (campos existiam no banco, sem tela pra editar)
 - `relatorios.html` — gera relatório em **texto estruturado** (não PDF) por aluno: resumo, adesão %, evolução de carga, histórico de sessões. Botões copiar/baixar `.txt` — formato deliberado pra colar em IA externa
-- `treinos.html` / `nutri.html` continuam como sub-telas por aluno (chegam a partir de `alunos.html`), sem nav inferior própria — mesmo padrão do Overview/Exec no app do aluno
+- `treinos.html` / `avaliacoes.html` / `nutri.html` são sub-telas por aluno (chegam a partir de `alunos.html`), com a barra `#studentTabbar` pra trocar de área mantendo o aluno selecionado — sem nav inferior própria, mesmo padrão do Overview/Exec no app do aluno
 
 **Protocolo de treino** (`treinos.html`)
 - Montagem: busca de exercício (ignora acento/maiúsculas), edição de sets/reps/descanso
@@ -151,6 +162,11 @@ Duas vezes nesta sessão o deploy automático (`pages build and deployment`) fal
 - `nutrition_guidance` + bucket privado `nutri-pdfs`, acesso só via signed URL
 - `nutri.html`: profissional escreve orientação + sobe/substitui PDF
 - Aba "Nutri" no `aluno.html`: ver acima
+
+**Avaliação física** — ver detalhamento completo em "Avaliação física — nova área" acima
+- `physical_assessments` + bucket `assessment-photos`
+- `avaliacoes.html`: dobras cutâneas (4 protocolos) + bioimpedância manual + perimetria + fotos, rascunho/finalizar, comparativo de evolução
+- Seção "Avaliação física" na tela de Histórico do `aluno.html`: somente leitura, resumo + evolução
 
 ### Ainda não implementado (backlog maior, sem trabalho iniciado)
 

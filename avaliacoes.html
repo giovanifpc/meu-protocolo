@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meu Protocolo — Avaliação física</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg:#F8F9FA; --primary:#2D6BE4; --accent:#3BB08F; --text:#1E2A3A;
+    --line:#E2E5EA; --card:#FFFFFF; --muted:#6B7684; --danger:#C0392B; --font:'Inter', sans-serif;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font-family:var(--font); }
+  header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--card); border-bottom:1px solid var(--line); gap:12px; }
+  header h1 { font-size:17px; font-weight:700; margin:0; }
+  .tabbar { display:none; gap:4px; padding:8px 20px; background:var(--card); border-bottom:1px solid var(--line); max-width:720px; margin:0 auto; }
+  .tab-link { flex:1; text-align:center; padding:8px 4px; border-radius:8px; font-size:12px; font-weight:700; color:var(--muted); text-decoration:none; }
+  .tab-link.active { background:var(--primary); color:#fff; }
+  main { max-width:720px; margin:0 auto; padding:20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:16px; }
+  .card h2 { font-size:15px; margin:0 0 12px; }
+  .field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+  .field label { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .field input, .field select, .field textarea { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; color:var(--text); font-family:var(--font); }
+  .field input:focus, .field select:focus, .field textarea:focus { outline:none; border-color:var(--primary); }
+  .field textarea { resize:vertical; min-height:80px; line-height:1.5; }
+  .row { display:grid; gap:8px; }
+  .row.two { grid-template-columns:1fr 1fr; }
+  .row.three { grid-template-columns:1fr 1fr 1fr; }
+  .row.four { grid-template-columns:1fr 1fr 1fr 1fr; }
+  .btn { padding:10px 16px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; border:none; background:var(--primary); color:#fff; font-family:var(--font); }
+  .btn.secondary { background:var(--bg); color:var(--text); border:1px solid var(--line); }
+  .btn.small { padding:7px 12px; font-size:12px; }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+  .msg { font-size:13px; margin-top:8px; }
+  .msg.error { color:var(--danger); }
+  .empty { color:var(--muted); font-size:13px; text-align:center; padding:16px 0; }
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#23263a; color:#fff; padding:10px 18px; border-radius:10px; font-size:13px; z-index:999; }
+  .status-tag { font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; text-transform:uppercase; }
+  .status-tag.rascunho { background:#FFF4E5; color:#8A5A00; }
+  .status-tag.finalizada { background:#E7F7F1; color:#1B7A55; }
+  .assessment-item { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 0; border-bottom:1px solid var(--line); cursor:pointer; }
+  .assessment-item:last-child { border-bottom:none; }
+  .assessment-item:hover { background:var(--bg); }
+  .ai-main { font-size:14px; font-weight:700; }
+  .ai-meta { font-size:12px; color:var(--muted); margin-top:2px; }
+  .section-sub { font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin:16px 0 10px; }
+  .section-sub:first-child { margin-top:0; }
+  .result-box { background:var(--bg); border:1px dashed var(--line); border-radius:10px; padding:12px 14px; margin-top:10px; font-size:13px; }
+  .result-box .rb-num { font-size:20px; font-weight:700; color:var(--primary); }
+  .photo-slots { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .photo-slot { text-align:center; }
+  .photo-slot img, .photo-slot .ph-placeholder { width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:10px; background:var(--bg); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:11px; }
+  .photo-slot label { display:block; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; margin:6px 0 4px; }
+  .photo-slot input[type=file] { font-size:10px; width:100%; }
+  .evo-stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+  .evo-stat { background:var(--bg); border-radius:10px; padding:10px 12px; }
+  .evo-stat .es-num { font-size:18px; font-weight:700; }
+  .evo-stat .es-lbl { font-size:11px; color:var(--muted); }
+  .evo-stat .es-delta { font-size:12px; font-weight:700; margin-left:6px; }
+  .evo-tabs { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+  .evo-tab { padding:6px 10px; border-radius:8px; font-size:12px; font-weight:700; background:var(--bg); border:1px solid var(--line); color:var(--muted); cursor:pointer; }
+  .evo-tab.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Avaliação física</h1>
+    <a href="alunos.html" class="btn secondary small">‹ Alunos</a>
+  </header>
+
+  <div class="tabbar" id="studentTabbar">
+    <a href="#" id="tabTreino" class="tab-link">Treino</a>
+    <a href="#" id="tabAvaliacao" class="tab-link active">Avaliação</a>
+    <a href="#" id="tabNutri" class="tab-link">Nutrição</a>
+  </div>
+
+  <main>
+    <div class="card">
+      <div class="field">
+        <label>Aluno</label>
+        <select id="studentSelect"><option value="">Selecione um aluno...</option></select>
+      </div>
+    </div>
+
+    <div id="contentArea" style="display:none;">
+      <div id="evolutionArea"></div>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <h2 style="margin:0;">Avaliações</h2>
+          <button class="btn secondary small" id="newAssessmentBtn" type="button">+ Nova avaliação</button>
+        </div>
+        <div id="assessmentList"></div>
+      </div>
+
+      <div class="card" id="formArea" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <h2 style="margin:0;" id="formTitle">Nova avaliação</h2>
+          <span class="status-tag" id="formStatusTag"></span>
+        </div>
+
+        <div class="section-sub">Dados gerais</div>
+        <div class="row three">
+          <div class="field"><label>Data</label><input type="date" id="dataInput"></div>
+          <div class="field"><label>Sexo</label>
+            <select id="sexoInput">
+              <option value="F">Feminino</option>
+              <option value="M">Masculino</option>
+            </select>
+          </div>
+          <div class="field"><label>Idade</label><input type="number" id="idadeInput" min="10" max="110"></div>
+        </div>
+        <div class="row two">
+          <div class="field"><label>Peso (kg)</label><input type="number" step="0.1" id="pesoInput"></div>
+          <div class="field"><label>Altura (cm)</label><input type="number" step="0.1" id="alturaInput"></div>
+        </div>
+
+        <div class="section-sub">Dobras cutâneas (adipômetro)</div>
+        <div class="field">
+          <label>Protocolo usado</label>
+          <select id="protocoloInput">
+            <option value="">Nenhum (não medir dobras nesta avaliação)</option>
+            <option value="pollock3">Pollock 3 dobras</option>
+            <option value="pollock7">Pollock 7 dobras</option>
+            <option value="faulkner4">Faulkner 4 dobras</option>
+            <option value="guedes3">Guedes 3 dobras</option>
+          </select>
+        </div>
+        <div class="row three" id="skinfoldGrid"></div>
+        <div class="result-box" id="skinfoldResult" style="display:none;"></div>
+
+        <div class="section-sub">Bioimpedância (digitar os valores do visor da balança)</div>
+        <div class="row two" id="bioGrid"></div>
+
+        <div class="section-sub">Perimetria (cm)</div>
+        <div class="row three" id="periGrid"></div>
+
+        <div class="section-sub">Fotos</div>
+        <div class="photo-slots" id="photoSlots"></div>
+
+        <div class="section-sub">Observações</div>
+        <div class="field">
+          <textarea id="observacoesInput" placeholder="Ex: aluno relatou retenção de líquido nesta semana, medir em jejum na próxima..."></textarea>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
+          <button class="btn secondary" id="saveDraftBtn" type="button">Salvar rascunho</button>
+          <button class="btn" id="finalizeBtn" type="button">Finalizar avaliação</button>
+          <button class="btn secondary" id="cancelFormBtn" type="button">Cancelar</button>
+        </div>
+        <div class="msg" id="formMsg"></div>
+      </div>
+    </div>
+  </main>
+
+<script>
+  const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';
+  const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const $ = (id) => document.getElementById(id);
+
+  let professional = null;
+  let currentStudentId = null;
+  let assessments = [];
+  let currentAssessment = null; // registro sendo editado no formulário
+
+  // Fórmulas validadas contra a literatura de fisiologia do exercício (Jackson &
+  // Pollock 1978/1980, Faulkner 1968, Guedes 1994). Conversão densidade → %
+  // gordura sempre por Siri, que é o padrão usado junto com esses protocolos.
+  const SKINFOLD_PROTOCOLS = {
+    pollock3: {
+      label: 'Pollock 3 dobras',
+      sites: { M: ['peitoral', 'abdominal', 'coxa'], F: ['triceps', 'suprailiaca', 'coxa'] },
+      needsAge: true,
+      density(sexo, sum, idade) {
+        return sexo === 'M'
+          ? 1.10938 - 0.0008267 * sum + 0.0000016 * sum * sum - 0.0002574 * idade
+          : 1.0994921 - 0.0009929 * sum + 0.0000023 * sum * sum - 0.0001392 * idade;
+      },
+    },
+    pollock7: {
+      label: 'Pollock 7 dobras',
+      sites: {
+        M: ['peitoral', 'axilar_media', 'triceps', 'subescapular', 'abdominal', 'suprailiaca', 'coxa'],
+        F: ['peitoral', 'axilar_media', 'triceps', 'subescapular', 'abdominal', 'suprailiaca', 'coxa'],
+      },
+      needsAge: true,
+      density(sexo, sum, idade) {
+        return sexo === 'M'
+          ? 1.112 - 0.00043499 * sum + 0.00000055 * sum * sum - 0.00028826 * idade
+          : 1.097 - 0.00046971 * sum + 0.00000056 * sum * sum - 0.00012828 * idade;
+      },
+    },
+    faulkner4: {
+      label: 'Faulkner 4 dobras',
+      sites: { M: ['triceps', 'subescapular', 'suprailiaca', 'abdominal'], F: ['triceps', 'subescapular', 'suprailiaca', 'abdominal'] },
+      needsAge: false,
+      directPercent(sum) { return sum * 0.153 + 5.783; },
+    },
+    guedes3: {
+      label: 'Guedes 3 dobras',
+      sites: { M: ['triceps', 'suprailiaca', 'abdominal'], F: ['coxa', 'suprailiaca', 'subescapular'] },
+      needsAge: false,
+      density(sexo, sum) {
+        const log10 = Math.log10(sum);
+        return sexo === 'M' ? 1.17136 - 0.06706 * log10 : 1.16650 - 0.07063 * log10;
+      },
+    },
+  };
+  const SITE_LABELS = {
+    peitoral: 'Peitoral', abdominal: 'Abdominal', coxa: 'Coxa', triceps: 'Tríceps',
+    suprailiaca: 'Supra-ilíaca', axilar_media: 'Axilar média', subescapular: 'Subescapular',
+  };
+  function densityToFatPercent(bd) { return (495 / bd) - 450; }
+
+  const BIO_FIELDS = [
+    { key: 'percentual_gordura', label: '% de gordura', unit: '%' },
+    { key: 'massa_magra_kg', label: 'Massa magra', unit: 'kg' },
+    { key: 'agua_corporal_pct', label: 'Água corporal', unit: '%' },
+    { key: 'gordura_visceral', label: 'Gordura visceral', unit: '' },
+    { key: 'taxa_metabolica_basal', label: 'Taxa metabólica basal', unit: 'kcal' },
+    { key: 'massa_ossea_kg', label: 'Massa óssea', unit: 'kg' },
+    { key: 'idade_metabolica', label: 'Idade metabólica', unit: 'anos' },
+  ];
+  const PERI_FIELDS = [
+    { key: 'torax', label: 'Tórax' },
+    { key: 'cintura', label: 'Cintura' },
+    { key: 'abdomen', label: 'Abdômen' },
+    { key: 'quadril', label: 'Quadril' },
+    { key: 'braco_direito_relaxado', label: 'Braço dir. (relaxado)' },
+    { key: 'braco_direito_contraido', label: 'Braço dir. (contraído)' },
+    { key: 'braco_esquerdo_relaxado', label: 'Braço esq. (relaxado)' },
+    { key: 'braco_esquerdo_contraido', label: 'Braço esq. (contraído)' },
+    { key: 'coxa_direita', label: 'Coxa direita' },
+    { key: 'coxa_esquerda', label: 'Coxa esquerda' },
+    { key: 'panturrilha_direita', label: 'Panturrilha dir.' },
+    { key: 'panturrilha_esquerda', label: 'Panturrilha esq.' },
+  ];
+  const PHOTO_SLOTS = [
+    { key: 'frente', label: 'Frente' },
+    { key: 'lado', label: 'Lado' },
+    { key: 'costas', label: 'Costas' },
+  ];
+
+  function toast(msg) {
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function todayISO() { return new Date().toISOString().slice(0, 10); }
+
+  function updateTabbar(studentId) {
+    const bar = $('studentTabbar');
+    if (!studentId) { bar.style.display = 'none'; return; }
+    bar.style.display = 'flex';
+    $('tabTreino').href = 'treinos.html?student_id=' + studentId;
+    $('tabNutri').href = 'nutri.html?student_id=' + studentId;
+  }
+
+  async function boot() {
+    const { data: { session } } = await supa.auth.getSession();
+    if (!session) { window.location.href = 'login.html'; return; }
+
+    const { data: pro, error } = await supa.from('professionals').select('*').eq('email', session.user.email).maybeSingle();
+    if (error) { console.error(error.message); return; }
+    if (!pro) { window.location.href = 'onboarding.html'; return; }
+    professional = pro;
+
+    await loadStudents();
+
+    const params = new URLSearchParams(window.location.search);
+    const preselect = params.get('student_id');
+    if (preselect) {
+      $('studentSelect').value = preselect;
+      await selectStudent(preselect);
+    }
+  }
+
+  async function loadStudents() {
+    const { data, error } = await supa.from('students').select('*').eq('professional_id', professional.id).order('nome');
+    const select = $('studentSelect');
+    if (error || !data) return;
+    data.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.nome;
+      select.appendChild(opt);
+    });
+  }
+
+  $('studentSelect').addEventListener('change', (e) => selectStudent(e.target.value));
+
+  async function selectStudent(studentId) {
+    currentStudentId = studentId;
+    updateTabbar(studentId);
+    if (!studentId) { $('contentArea').style.display = 'none'; return; }
+    $('contentArea').style.display = 'block';
+    $('formArea').style.display = 'none';
+    await loadAssessments();
+  }
+
+  async function loadAssessments() {
+    const { data, error } = await supa
+      .from('physical_assessments')
+      .select('*')
+      .eq('student_id', currentStudentId)
+      .order('avaliado_em', { ascending: false })
+      .order('created_at', { ascending: false });
+    if (error) { console.error(error.message); toast('Erro ao carregar avaliações.'); return; }
+    assessments = data || [];
+    renderAssessmentList();
+    renderEvolution();
+  }
+
+  function pctGordura(a) {
+    const v = a.bioimpedancia?.percentual_gordura ?? a.resultado_dobras?.percentual_gordura;
+    return v == null || v === '' ? null : Number(v);
+  }
+
+  function renderAssessmentList() {
+    const el = $('assessmentList');
+    if (!assessments.length) { el.innerHTML = '<div class="empty">Nenhuma avaliação registrada ainda.</div>'; return; }
+    el.innerHTML = assessments.map(a => {
+      const d = new Date(a.avaliado_em + 'T00:00:00');
+      const pct = pctGordura(a);
+      const partes = [];
+      if (a.peso_kg) partes.push(`${a.peso_kg}kg`);
+      if (pct != null) partes.push(`${pct.toFixed(1)}% gordura`);
+      return `
+        <div class="assessment-item" data-id="${a.id}">
+          <div>
+            <div class="ai-main">${d.toLocaleDateString('pt-BR')}</div>
+            <div class="ai-meta">${partes.join(' · ') || 'Sem dados de composição ainda'}</div>
+          </div>
+          <span class="status-tag ${a.status}">${a.status === 'finalizada' ? 'Finalizada' : 'Rascunho'}</span>
+        </div>`;
+    }).join('');
+    el.querySelectorAll('.assessment-item').forEach(item => {
+      item.addEventListener('click', () => openAssessment(item.dataset.id));
+    });
+  }
+
+  function renderEvolution() {
+    const finalized = assessments.filter(a => a.status === 'finalizada').slice().reverse();
+    const el = $('evolutionArea');
+    if (finalized.length < 2) { el.innerHTML = ''; return; }
+    const last = finalized[finalized.length - 1];
+    const prev = finalized[finalized.length - 2];
+    const pctLast = pctGordura(last), pctPrev = pctGordura(prev);
+    const pesoDelta = (last.peso_kg != null && prev.peso_kg != null) ? (last.peso_kg - prev.peso_kg) : null;
+    const pctDelta = (pctLast != null && pctPrev != null) ? (pctLast - pctPrev) : null;
+    const deltaTxt = (d, unit) => d == null ? '' : `<span class="es-delta" style="color:${d <= 0 ? 'var(--accent)' : 'var(--danger)'}">${d > 0 ? '+' : ''}${d.toFixed(1)}${unit}</span>`;
+
+    el.innerHTML = `
+      <div class="card">
+        <h2>Evolução</h2>
+        <div class="evo-stats">
+          <div class="evo-stat"><div class="es-lbl">Peso atual</div><div class="es-num">${last.peso_kg ?? '—'}kg ${deltaTxt(pesoDelta, 'kg')}</div></div>
+          <div class="evo-stat"><div class="es-lbl">% Gordura atual</div><div class="es-num">${pctLast != null ? pctLast.toFixed(1) + '%' : '—'} ${deltaTxt(pctDelta, '%')}</div></div>
+        </div>
+        <div class="evo-tabs" id="evoTabs"></div>
+        <div id="evoChart"></div>
+      </div>`;
+
+    const metrics = [
+      { key: 'peso', label: 'Peso (kg)', data: finalized.filter(a => a.peso_kg != null).map(a => ({ v: a.peso_kg, date: a.avaliado_em })) },
+      { key: 'pct', label: '% Gordura', data: finalized.filter(a => pctGordura(a) != null).map(a => ({ v: pctGordura(a), date: a.avaliado_em })) },
+    ].filter(m => m.data.length >= 2);
+
+    const tabsEl = $('evoTabs');
+    metrics.forEach((m, i) => {
+      const t = document.createElement('button');
+      t.className = 'evo-tab' + (i === 0 ? ' active' : '');
+      t.textContent = m.label;
+      t.addEventListener('click', () => {
+        tabsEl.querySelectorAll('.evo-tab').forEach(x => x.classList.remove('active'));
+        t.classList.add('active');
+        renderMetricChart(m.data);
+      });
+      tabsEl.appendChild(t);
+    });
+    if (metrics.length) renderMetricChart(metrics[0].data);
+    else $('evoChart').innerHTML = '<div class="empty">Ainda não há dados suficientes pra montar o gráfico.</div>';
+  }
+
+  function renderMetricChart(data) {
+    const vals = data.map(p => p.v);
+    const maxV = Math.max(...vals) || 1;
+    const W = Math.max(data.length * 48, 200);
+    const H = 110, PB = 28, PT = 10, PL = 4, PR = 4, barW = 32;
+    const gap = (W - PL - PR - data.length * barW) / (data.length + 1);
+    let bars = '', values = '', labels = '';
+    data.forEach((p, i) => {
+      const x = PL + gap * (i + 1) + barW * i;
+      const barH = Math.max(6, Math.round((p.v / maxV) * (H - PB - PT)));
+      const y = H - PB - barH;
+      const isMax = p.v === maxV;
+      bars += `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" rx="5" fill="${isMax ? 'var(--primary)' : 'rgba(45,107,228,.45)'}"/>`;
+      values += `<text x="${x + barW/2}" y="${y-4}" text-anchor="middle" font-size="9" font-weight="700" fill="var(--text)">${p.v.toFixed(1)}</text>`;
+      const d = new Date(p.date + 'T00:00:00');
+      labels += `<text x="${x + barW/2}" y="${H-8}" text-anchor="middle" font-size="9" fill="var(--muted)">${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}</text>`;
+    });
+    $('evoChart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:${W}px;display:block">${bars}${values}${labels}</svg>`;
+  }
+
+  $('newAssessmentBtn').addEventListener('click', () => openAssessment(null));
+  $('cancelFormBtn').addEventListener('click', () => { $('formArea').style.display = 'none'; });
+
+  function openAssessment(id) {
+    currentAssessment = id ? assessments.find(a => a.id === id) : {
+      id: null, student_id: currentStudentId, avaliado_em: todayISO(), sexo: 'F', idade: null,
+      peso_kg: null, altura_cm: null, protocolo_dobras: null, dobras: {}, resultado_dobras: {},
+      bioimpedancia: {}, perimetria: {}, fotos: [], observacoes: '', status: 'rascunho',
+    };
+    const a = currentAssessment;
+
+    $('formTitle').textContent = id ? 'Editar avaliação' : 'Nova avaliação';
+    $('formStatusTag').textContent = a.status === 'finalizada' ? 'Finalizada' : 'Rascunho';
+    $('formStatusTag').className = 'status-tag ' + a.status;
+    $('finalizeBtn').style.display = a.status === 'finalizada' ? 'none' : 'inline-block';
+    $('saveDraftBtn').textContent = a.status === 'finalizada' ? 'Salvar alterações' : 'Salvar rascunho';
+
+    $('dataInput').value = a.avaliado_em;
+    $('sexoInput').value = a.sexo || 'F';
+    $('idadeInput').value = a.idade ?? '';
+    $('pesoInput').value = a.peso_kg ?? '';
+    $('alturaInput').value = a.altura_cm ?? '';
+    $('protocoloInput').value = a.protocolo_dobras || '';
+    $('observacoesInput').value = a.observacoes || '';
+    $('formMsg').textContent = '';
+    $('formMsg').className = 'msg';
+
+    renderSkinfoldGrid();
+    renderBioGrid();
+    renderPeriGrid();
+    renderPhotoSlots();
+    $('formArea').style.display = 'block';
+    $('formArea').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function renderSkinfoldGrid() {
+    const protocolo = $('protocoloInput').value;
+    const sexo = $('sexoInput').value;
+    const grid = $('skinfoldGrid');
+    if (!protocolo || !SKINFOLD_PROTOCOLS[protocolo]) {
+      grid.innerHTML = '';
+      $('skinfoldResult').style.display = 'none';
+      return;
+    }
+    const proto = SKINFOLD_PROTOCOLS[protocolo];
+    const sites = proto.sites[sexo];
+    const valores = currentAssessment.dobras || {};
+    grid.innerHTML = sites.map(s => `
+      <div class="field">
+        <label>${SITE_LABELS[s] || s} (mm)</label>
+        <input type="number" step="0.1" class="skinfold-input" data-site="${s}" value="${valores[s] ?? ''}">
+      </div>`).join('');
+    grid.querySelectorAll('.skinfold-input').forEach(inp => inp.addEventListener('input', computeSkinfoldResult));
+    computeSkinfoldResult();
+  }
+
+  function computeSkinfoldResult() {
+    const protocolo = $('protocoloInput').value;
+    const sexo = $('sexoInput').value;
+    const box = $('skinfoldResult');
+    if (!protocolo || !SKINFOLD_PROTOCOLS[protocolo]) { box.style.display = 'none'; return; }
+    const proto = SKINFOLD_PROTOCOLS[protocolo];
+    const sites = proto.sites[sexo];
+    const valores = {};
+    let completo = true;
+    document.querySelectorAll('.skinfold-input').forEach(inp => {
+      const v = parseFloat(inp.value);
+      if (!inp.value || isNaN(v)) completo = false;
+      valores[inp.dataset.site] = v;
+    });
+    if (!completo) { box.style.display = 'none'; return; }
+
+    const idade = parseInt($('idadeInput').value, 10);
+    if (proto.needsAge && !idade) {
+      box.style.display = 'block';
+      box.innerHTML = 'Informe a idade do aluno pra calcular o resultado deste protocolo.';
+      return;
+    }
+    const sum = sites.reduce((acc, s) => acc + valores[s], 0);
+    let pct, densidade = null;
+    if (proto.directPercent) {
+      pct = proto.directPercent(sum);
+    } else {
+      densidade = proto.density(sexo, sum, idade);
+      pct = densityToFatPercent(densidade);
+    }
+    const peso = parseFloat($('pesoInput').value);
+    const massaGorda = peso ? (peso * pct / 100) : null;
+    const massaMagra = peso ? (peso - massaGorda) : null;
+
+    box.style.display = 'block';
+    box.innerHTML = `
+      <span class="rb-num">${pct.toFixed(1)}%</span> de gordura corporal
+      ${densidade ? ` · densidade ${densidade.toFixed(4)}` : ''}
+      ${massaGorda != null ? `<br>${massaGorda.toFixed(1)}kg de gordura · ${massaMagra.toFixed(1)}kg de massa magra` : ''}`;
+
+    currentAssessment._skinfoldPct = pct;
+    currentAssessment._skinfoldDensidade = densidade;
+    currentAssessment._skinfoldValores = valores;
+  }
+
+  $('protocoloInput').addEventListener('change', renderSkinfoldGrid);
+  $('sexoInput').addEventListener('change', renderSkinfoldGrid);
+  $('idadeInput').addEventListener('input', computeSkinfoldResult);
+  $('pesoInput').addEventListener('input', computeSkinfoldResult);
+
+  function renderBioGrid() {
+    const grid = $('bioGrid');
+    const valores = currentAssessment.bioimpedancia || {};
+    grid.innerHTML = BIO_FIELDS.map(f => `
+      <div class="field">
+        <label>${f.label}${f.unit ? ' (' + f.unit + ')' : ''}</label>
+        <input type="number" step="0.1" class="bio-input" data-key="${f.key}" value="${valores[f.key] ?? ''}">
+      </div>`).join('');
+  }
+
+  function renderPeriGrid() {
+    const grid = $('periGrid');
+    const valores = currentAssessment.perimetria || {};
+    grid.innerHTML = PERI_FIELDS.map(f => `
+      <div class="field">
+        <label>${f.label}</label>
+        <input type="number" step="0.1" class="peri-input" data-key="${f.key}" value="${valores[f.key] ?? ''}">
+      </div>`).join('');
+  }
+
+  function renderPhotoSlots() {
+    const wrap = $('photoSlots');
+    const fotos = currentAssessment.fotos || [];
+    wrap.innerHTML = PHOTO_SLOTS.map(slot => {
+      const existing = fotos.find(f => f.tipo === slot.key);
+      return `
+        <div class="photo-slot" data-tipo="${slot.key}">
+          <div class="ph-preview">${existing ? '<div class="ph-placeholder">📷 enviada</div>' : '<div class="ph-placeholder">Sem foto</div>'}</div>
+          <label>${slot.label}</label>
+          <input type="file" accept="image/*" class="photo-input" data-tipo="${slot.key}">
+          ${existing ? `<button type="button" class="btn secondary small view-photo-btn" data-path="${existing.path}" style="margin-top:4px;width:100%;">Ver</button>` : ''}
+        </div>`;
+    }).join('');
+    wrap.querySelectorAll('.view-photo-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const { data, error } = await supa.storage.from('assessment-photos').createSignedUrl(btn.dataset.path, 300);
+        if (error) { toast('Erro ao abrir foto: ' + error.message); return; }
+        window.open(data.signedUrl, '_blank');
+      });
+    });
+  }
+
+  function collectFormData() {
+    const bioimpedancia = {};
+    document.querySelectorAll('.bio-input').forEach(inp => { if (inp.value !== '') bioimpedancia[inp.dataset.key] = parseFloat(inp.value); });
+    const perimetria = {};
+    document.querySelectorAll('.peri-input').forEach(inp => { if (inp.value !== '') perimetria[inp.dataset.key] = parseFloat(inp.value); });
+
+    const protocolo = $('protocoloInput').value;
+    let dobras = {}, resultado_dobras = {};
+    if (protocolo && currentAssessment._skinfoldValores) {
+      dobras = currentAssessment._skinfoldValores;
+      resultado_dobras = { percentual_gordura: currentAssessment._skinfoldPct };
+      if (currentAssessment._skinfoldDensidade != null) resultado_dobras.densidade = currentAssessment._skinfoldDensidade;
+    }
+
+    return {
+      professional_id: professional.id,
+      student_id: currentStudentId,
+      avaliado_em: $('dataInput').value || todayISO(),
+      sexo: $('sexoInput').value,
+      idade: $('idadeInput').value ? parseInt($('idadeInput').value, 10) : null,
+      peso_kg: $('pesoInput').value ? parseFloat($('pesoInput').value) : null,
+      altura_cm: $('alturaInput').value ? parseFloat($('alturaInput').value) : null,
+      protocolo_dobras: protocolo || null,
+      dobras,
+      resultado_dobras,
+      bioimpedancia,
+      perimetria,
+      observacoes: $('observacoesInput').value.trim(),
+    };
+  }
+
+  async function uploadPendingPhotos(assessmentId) {
+    const fotos = (currentAssessment.fotos || []).slice();
+    const fileInputs = document.querySelectorAll('.photo-input');
+    for (const inp of fileInputs) {
+      const file = inp.files[0];
+      if (!file) continue;
+      const tipo = inp.dataset.tipo;
+      const path = `${currentStudentId}/${assessmentId}/${tipo}-${Date.now()}.${file.name.split('.').pop()}`;
+      const { error } = await supa.storage.from('assessment-photos').upload(path, file);
+      if (error) { toast(`Erro ao enviar foto (${tipo}): ` + error.message); continue; }
+      const old = fotos.find(f => f.tipo === tipo);
+      if (old) await supa.storage.from('assessment-photos').remove([old.path]);
+      const idx = fotos.findIndex(f => f.tipo === tipo);
+      if (idx >= 0) fotos[idx] = { tipo, path }; else fotos.push({ tipo, path });
+    }
+    return fotos;
+  }
+
+  async function saveAssessment(finalize) {
+    const btn = finalize ? $('finalizeBtn') : $('saveDraftBtn');
+    btn.disabled = true;
+    $('formMsg').textContent = '';
+    $('formMsg').className = 'msg';
+
+    const payload = collectFormData();
+    if (finalize) { payload.status = 'finalizada'; payload.finalizada_em = new Date().toISOString(); }
+
+    const { data, error } = currentAssessment.id
+      ? await supa.from('physical_assessments').update(payload).eq('id', currentAssessment.id).select().single()
+      : await supa.from('physical_assessments').insert(payload).select().single();
+
+    if (error) {
+      $('formMsg').textContent = 'Erro ao salvar: ' + error.message;
+      $('formMsg').className = 'msg error';
+      btn.disabled = false;
+      return;
+    }
+    currentAssessment = data;
+
+    const fotos = await uploadPendingPhotos(data.id);
+    if (fotos.length) {
+      const { data: updated, error: fotoErr } = await supa.from('physical_assessments').update({ fotos }).eq('id', data.id).select().single();
+      if (!fotoErr) currentAssessment = updated;
+    }
+
+    btn.disabled = false;
+    toast(finalize ? 'Avaliação finalizada.' : 'Rascunho salvo.');
+    $('formArea').style.display = 'none';
+    await loadAssessments();
+  }
+
+  $('saveDraftBtn').addEventListener('click', () => saveAssessment(false));
+  $('finalizeBtn').addEventListener('click', () => saveAssessment(true));
+
+  boot();
+</script>
+</body>
+</html>

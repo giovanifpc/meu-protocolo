@@ -21,7 +21,8 @@
   .card h2 { font-size:15px; margin:0 0 12px; }
   .student-item { border-bottom:1px solid var(--line); padding:10px 0; }
   .student-item:last-child { border-bottom:none; }
-  .student-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .student-row { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+  .student-actions { display:flex; gap:6px; flex-wrap:wrap; }
   .student-name-row { display:flex; align-items:center; gap:8px; }
   .student-name { font-weight:600; font-size:14px; }
   .student-email { font-size:12px; color:var(--muted); }
@@ -142,8 +143,9 @@
               <div class="student-email">${escapeHtml(s.email)}</div>
             </div>
           </div>
-          <div style="display:flex; gap:6px;">
+          <div class="student-actions">
             <a class="btn secondary" style="padding:7px 12px;font-size:12px;" href="treinos.html?student_id=${s.id}">Treino</a>
+            <a class="btn secondary" style="padding:7px 12px;font-size:12px;" href="avaliacoes.html?student_id=${s.id}">Avaliação</a>
             <a class="btn secondary" style="padding:7px 12px;font-size:12px;" href="nutri.html?student_id=${s.id}">Nutri</a>
             <button class="btn secondary" style="padding:7px 12px;font-size:12px;" data-role="toggle-notes" data-student-id="${s.id}">📝</button>
           </div>

@@ -389,6 +389,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   let protocol = null;
   let history = [];
   let nutritionGuidance = null;
+  let assessments = [];
   let state = { workoutIndex:0, currentExercise:0, sessionData:[], startTime:null, restInterval:null, restRemaining:0, restTotal:0, rating:null };
 
   function toast(msg) {
@@ -470,6 +471,14 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       .eq('student_id', student.id)
       .maybeSingle();
     nutritionGuidance = guidance || null;
+
+    const { data: assess } = await supa
+      .from('physical_assessments')
+      .select('*')
+      .eq('student_id', student.id)
+      .eq('status', 'finalizada')
+      .order('avaliado_em', { ascending: true });
+    assessments = assess || [];
 
     goTab('home');
   }
@@ -553,9 +562,80 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       <div id="loadChartArea"></div>
       <div class="section-label">Treinos realizados</div>
       <div id="histList"></div>
+      <div class="section-label">Avaliação física</div>
+      <div id="assessmentsSection"></div>
     `;
     buildLoadChart($('loadChartArea'));
     buildHistList($('histList'));
+    buildAssessmentsSection($('assessmentsSection'));
+  }
+
+  function assessmentPct(a) {
+    const v = a.bioimpedancia?.percentual_gordura ?? a.resultado_dobras?.percentual_gordura;
+    return v == null || v === '' ? null : Number(v);
+  }
+
+  function buildAssessmentsSection(container) {
+    if (!assessments.length) {
+      container.innerHTML = `<div class="empty-state"><div class="es-ico">📏</div><div class="es-txt">Suas avaliações físicas aparecerão aqui<br>depois que seu personal trainer registrar a primeira.</div></div>`;
+      return;
+    }
+    const last = assessments[assessments.length - 1];
+    const prev = assessments.length > 1 ? assessments[assessments.length - 2] : null;
+    const pctLast = assessmentPct(last);
+    const pctPrev = prev ? assessmentPct(prev) : null;
+    const pesoDelta = (prev && last.peso_kg != null && prev.peso_kg != null) ? (last.peso_kg - prev.peso_kg) : null;
+    const pctDelta = (pctLast != null && pctPrev != null) ? (pctLast - pctPrev) : null;
+    const deltaTxt = (d, unit) => d == null ? '' : ` <span style="font-size:11px;font-weight:700;color:${d <= 0 ? 'var(--accent)' : 'var(--danger)'}">${d > 0 ? '+' : ''}${d.toFixed(1)}${unit}</span>`;
+
+    const chartPeso = assessments.filter(a => a.peso_kg != null).map(a => ({ v: a.peso_kg, date: a.avaliado_em }));
+    const chartPct = assessments.filter(a => assessmentPct(a) != null).map(a => ({ v: assessmentPct(a), date: a.avaliado_em }));
+
+    container.innerHTML = `
+      <div class="summary-row">
+        <div class="stat-card"><div class="sc-num">${last.peso_kg ?? '—'}</div><div class="sc-lbl">peso (kg)${deltaTxt(pesoDelta, 'kg')}</div></div>
+        <div class="stat-card"><div class="sc-num">${pctLast != null ? pctLast.toFixed(1) : '—'}</div><div class="sc-lbl">% gordura${deltaTxt(pctDelta, '%')}</div></div>
+      </div>
+      ${chartPct.length >= 2 ? `<div id="assessChart"></div>` : (chartPeso.length >= 2 ? `<div id="assessChart"></div>` : '')}
+      <div id="assessList"></div>
+    `;
+    const chartData = chartPct.length >= 2 ? chartPct : chartPeso;
+    if (chartData.length >= 2) renderAssessmentChart($('assessChart'), chartData);
+
+    $('assessList').innerHTML = assessments.slice().reverse().map(a => {
+      const d = new Date(a.avaliado_em + 'T00:00:00');
+      const pct = assessmentPct(a);
+      const partes = [];
+      if (a.peso_kg != null) partes.push(`${a.peso_kg}kg`);
+      if (pct != null) partes.push(`${pct.toFixed(1)}% gordura`);
+      return `
+        <div class="hist-item">
+          <div class="hist-top">
+            <span class="hist-date">${d.toLocaleDateString('pt-BR')}</span>
+          </div>
+          <div class="hist-meta"><span>${partes.join(' · ') || 'Sem dados de composição'}</span></div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderAssessmentChart(container, data) {
+    const vals = data.map(p => p.v);
+    const maxV = Math.max(...vals) || 1;
+    const W = Math.max(data.length * 48, 200);
+    const H = 110, PB = 28, PT = 10, PL = 4, PR = 4, barW = 32;
+    const gap = (W - PL - PR - data.length * barW) / (data.length + 1);
+    let bars = '', values = '', labels = '';
+    data.forEach((p, i) => {
+      const x = PL + gap * (i + 1) + barW * i;
+      const barH = Math.max(6, Math.round((p.v / maxV) * (H - PB - PT)));
+      const y = H - PB - barH;
+      const isMax = p.v === maxV;
+      bars += `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" rx="5" fill="${isMax ? 'var(--primary)' : 'rgba(45,107,228,.45)'}"/>`;
+      values += `<text x="${x + barW/2}" y="${y-4}" text-anchor="middle" font-size="9" font-weight="700" fill="var(--text)">${p.v.toFixed(1)}</text>`;
+      const d = new Date(p.date + 'T00:00:00');
+      labels += `<text x="${x + barW/2}" y="${H-8}" text-anchor="middle" font-size="9" fill="var(--muted)">${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}</text>`;
+    });
+    container.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:${W}px;display:block">${bars}${values}${labels}</svg>`;
   }
 
   function buildHistList(container) {

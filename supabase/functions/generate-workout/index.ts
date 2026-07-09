@@ -113,7 +113,7 @@ Responda APENAS com um JSON válido, sem texto antes ou depois, exatamente neste
       },
       body: JSON.stringify({
         model: CLAUDE_MODEL,
-        max_tokens: 4096,
+        max_tokens: 8192,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
@@ -124,9 +124,17 @@ Responda APENAS com um JSON válido, sem texto antes ou depois, exatamente neste
     }
 
     const claudeData = await claudeRes.json();
-    const text = claudeData.content?.[0]?.text || '';
+    const text = (claudeData.content || [])
+      .filter((c: { type: string }) => c.type === 'text')
+      .map((c: { text: string }) => c.text)
+      .join('');
     const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('A IA não retornou um JSON válido. Tente de novo.');
+    if (!jsonMatch) {
+      const motivo = claudeData.stop_reason === 'max_tokens'
+        ? 'a resposta da IA foi cortada por ficar longa demais'
+        : `resposta inesperada da IA: "${text.slice(0, 150) || '(vazia)'}"`;
+      throw new Error(`A IA não retornou um JSON válido (${motivo}). Tente de novo.`);
+    }
 
     const suggestion = JSON.parse(jsonMatch[0]);
     return jsonResponse(suggestion);

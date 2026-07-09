@@ -24,10 +24,20 @@
   .stat-card { flex:1; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 10px; text-align:center; }
   .stat-card .num { font-size:24px; font-weight:700; color:var(--primary); line-height:1; }
   .stat-card .lbl { font-size:11px; color:var(--muted); margin-top:6px; }
-  .attention-row { display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--line); font-size:13px; }
-  .attention-row:last-child { border-bottom:none; }
+  .attention-item { border-bottom:1px solid var(--line); padding:9px 0; }
+  .attention-item:last-child { border-bottom:none; }
+  .attention-row { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:13px; cursor:pointer; }
   .attention-name { font-weight:600; }
-  .attention-days { color:#8A5A00; font-size:12px; }
+  .attention-tag { font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; text-transform:uppercase; white-space:nowrap; }
+  .attention-tag.adesao { background:#FFF4E5; color:#8A5A00; }
+  .attention-tag.pagamento { background:#FDEDEC; color:var(--danger); }
+  .attention-detail { display:none; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); }
+  .attention-detail.open { display:block; }
+  .attention-detail textarea { width:100%; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:8px 10px; font-size:13px; color:var(--text); font-family:var(--font); min-height:70px; resize:vertical; margin-bottom:8px; }
+  .attention-detail .hint { font-size:12px; color:var(--muted); margin-bottom:8px; }
+  .btn.whatsapp { background:#25D366; }
+  .msg { font-size:12px; margin-top:6px; }
+  .msg.error { color:var(--danger); }
   .empty { color:var(--muted); font-size:13px; text-align:center; padding:20px 0; }
   .btn { padding:10px 16px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; border:none; background:var(--primary); color:#fff; font-family:var(--font); text-decoration:none; display:inline-block; }
   .btn.secondary { background:var(--bg); color:var(--text); border:1px solid var(--line); }
@@ -53,7 +63,7 @@
     </div>
 
     <div class="card">
-      <h2>Precisam de atenção</h2>
+      <h2>Alertas</h2>
       <div id="attentionList"><div class="empty">Carregando...</div></div>
     </div>
 
@@ -107,8 +117,37 @@
     await loadDashboard();
   }
 
+  function computeDueInfo(s) {
+    if (!s.mensalidade_dia_vencimento) return null;
+    const day = s.mensalidade_dia_vencimento;
+    const base = s.ultimo_pagamento_em ? new Date(s.ultimo_pagamento_em + 'T00:00:00') : new Date(s.created_at);
+    const monthOffset = s.ultimo_pagamento_em ? 1 : 0;
+    const due = new Date(base.getFullYear(), base.getMonth() + monthOffset, day);
+    const daysLate = Math.floor((Date.now() - due.getTime()) / 86400000);
+    return { due, daysLate };
+  }
+
+  function firstName(nome) { return (nome || '').trim().split(' ')[0]; }
+
+  function buildAdherenceMessage(s, days) {
+    const nome = firstName(s.nome);
+    return days === null
+      ? `Oi ${nome}! Vi que você ainda não começou seu treino por aqui. Bora começar? Qualquer dúvida me chama! 💪`
+      : `Oi ${nome}! Notei que você não treina há ${days} dias. Bora retomar? Se tiver alguma dificuldade me chama que a gente ajusta o treino juntos. 💪`;
+  }
+
+  function buildPaymentMessage(s, due) {
+    const nome = firstName(s.nome);
+    const valor = s.mensalidade_valor ? `R$ ${Number(s.mensalidade_valor).toFixed(2)}` : 'sua mensalidade';
+    return `Oi ${nome}! Passando pra lembrar que ${valor} venceu em ${due.toLocaleDateString('pt-BR')} e ainda não recebi por aqui. Pode verificar pra mim? Qualquer coisa me avisa 🙏`;
+  }
+
+  function waLink(telefone, msg) {
+    return `https://wa.me/${telefone}?text=${encodeURIComponent(msg)}`;
+  }
+
   async function loadDashboard() {
-    const { data: students, error: studentsErr } = await supa.from('students').select('id, nome').eq('professional_id', professional.id);
+    const { data: students, error: studentsErr } = await supa.from('students').select('*').eq('professional_id', professional.id);
     if (studentsErr || !students) { $('attentionList').innerHTML = '<div class="empty">Erro ao carregar alunos.</div>'; return; }
 
     $('statStudents').textContent = students.length;
@@ -136,24 +175,85 @@
     const statusByStudent = {};
     (notes || []).forEach(n => { statusByStudent[n.student_id] = n.status; });
 
-    const attention = students
-      .filter(s => (statusByStudent[s.id] || 'ativo') === 'ativo')
-      .map(s => {
-        const last = lastByStudent[s.id];
-        const days = last ? Math.floor((Date.now() - new Date(last).getTime()) / 86400000) : null;
-        return { nome: s.nome, days };
-      }).filter(s => s.days === null || s.days >= 7).sort((a, b) => (b.days ?? 999) - (a.days ?? 999));
+    const activeStudents = students.filter(s => (statusByStudent[s.id] || 'ativo') === 'ativo');
 
-    if (!attention.length) {
-      $('attentionList').innerHTML = '<div class="empty">Todo mundo treinando em dia. 🎉</div>';
+    const adherenceAlerts = activeStudents.map(s => {
+      const last = lastByStudent[s.id];
+      const days = last ? Math.floor((Date.now() - new Date(last).getTime()) / 86400000) : null;
+      return { tipo: 'adesao', student: s, days };
+    }).filter(a => a.days === null || a.days >= 7);
+
+    const paymentAlerts = activeStudents.map(s => {
+      const info = computeDueInfo(s);
+      return info && info.daysLate > 0 ? { tipo: 'pagamento', student: s, daysLate: info.daysLate, due: info.due } : null;
+    }).filter(Boolean);
+
+    const alerts = [...paymentAlerts, ...adherenceAlerts].sort((a, b) => {
+      const aVal = a.tipo === 'pagamento' ? a.daysLate + 1000 : (a.days ?? 999);
+      const bVal = b.tipo === 'pagamento' ? b.daysLate + 1000 : (b.days ?? 999);
+      return bVal - aVal;
+    });
+
+    if (!alerts.length) {
+      $('attentionList').innerHTML = '<div class="empty">Tudo em dia — treino e mensalidade. 🎉</div>';
       return;
     }
-    $('attentionList').innerHTML = attention.map(s => `
-      <div class="attention-row">
-        <span class="attention-name">${escapeHtml(s.nome)}</span>
-        <span class="attention-days">${s.days === null ? 'nunca treinou' : `há ${s.days} dias`}</span>
-      </div>
-    `).join('');
+
+    $('attentionList').innerHTML = alerts.map((a, i) => {
+      const s = a.student;
+      const tag = a.tipo === 'pagamento'
+        ? `${a.daysLate} dia(s) em atraso`
+        : (a.days === null ? 'nunca treinou' : `há ${a.days} dias sem treinar`);
+      const msg = a.tipo === 'pagamento' ? buildPaymentMessage(s, a.due) : buildAdherenceMessage(s, a.days);
+      return `
+      <div class="attention-item">
+        <div class="attention-row" data-role="toggle-alert" data-idx="${i}">
+          <span class="attention-name">${escapeHtml(s.nome)}</span>
+          <span class="attention-tag ${a.tipo}">${escapeHtml(tag)}</span>
+        </div>
+        <div class="attention-detail" id="alertDetail-${i}">
+          <textarea id="alertMsg-${i}">${escapeHtml(msg)}</textarea>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            ${s.telefone
+              ? `<a class="btn whatsapp" id="alertWaBtn-${i}" target="_blank" rel="noopener">Abrir no WhatsApp</a>`
+              : `<div class="hint">Cadastre o WhatsApp desse aluno em "Alunos" pra poder enviar direto por aqui.</div>`}
+            <button class="btn secondary" id="alertPushBtn-${i}" data-student-id="${s.id}" type="button">Notificar no app</button>
+          </div>
+          <div class="msg" id="alertPushMsg-${i}"></div>
+        </div>
+      </div>`;
+    }).join('');
+
+    $('attentionList').querySelectorAll('[data-role="toggle-alert"]').forEach(row => {
+      row.addEventListener('click', () => {
+        $('alertDetail-' + row.dataset.idx).classList.toggle('open');
+      });
+    });
+    alerts.forEach((a, i) => {
+      const waBtn = $('alertWaBtn-' + i);
+      if (waBtn) {
+        const update = () => { waBtn.href = waLink(a.student.telefone, $('alertMsg-' + i).value); };
+        update();
+        $('alertMsg-' + i).addEventListener('input', update);
+      }
+      const pushBtn = $('alertPushBtn-' + i);
+      pushBtn.addEventListener('click', async () => {
+        pushBtn.disabled = true;
+        const title = a.tipo === 'pagamento' ? 'Lembrete de pagamento' : 'Sentimos sua falta!';
+        const { data, error } = await supa.functions.invoke('send-push', {
+          body: { student_id: pushBtn.dataset.studentId, title, body: $('alertMsg-' + i).value },
+        });
+        pushBtn.disabled = false;
+        const out = $('alertPushMsg-' + i);
+        if (error || data?.error) {
+          out.textContent = 'Erro ao notificar: ' + (data?.error || error.message);
+          out.className = 'msg error';
+          return;
+        }
+        out.textContent = data.sent > 0 ? 'Notificação enviada.' : (data.message || 'Aluno sem notificações ativadas.');
+        out.className = 'msg';
+      });
+    });
   }
 
   $('logoutBtn').addEventListener('click', async () => {

@@ -36,6 +36,9 @@
   .workout-block-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
   .workout-block-header input { font-weight:700; font-size:14px; border:none; background:transparent; padding:4px 0; flex:1; }
   .workout-block-header input:focus { outline:none; border-bottom:1px solid var(--primary); }
+  .weekday-picker { display:flex; gap:4px; margin-bottom:12px; flex-wrap:wrap; }
+  .wd-btn { padding:5px 8px; border-radius:6px; border:1px solid var(--line); background:var(--bg); color:var(--muted); font-size:11px; font-weight:700; cursor:pointer; font-family:var(--font); }
+  .wd-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
   .exercise-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px solid var(--line); font-size:13px; }
   .exercise-row:last-child { border-bottom:none; }
   .exercise-row .ex-meta { color:var(--muted); font-size:12px; }
@@ -98,6 +101,16 @@
         </div>
         <button class="btn secondary small" id="duplicateBtn" type="button">Duplicar pra este aluno</button>
       </div>
+      <div id="templateArea" style="display:none; margin-top:12px; padding-top:12px; border-top:1px dashed var(--line);">
+        <div class="field" style="margin-bottom:8px;">
+          <label>Aplicar modelo da biblioteca</label>
+          <select id="templateSelect"><option value="">Nenhum modelo salvo ainda</option></select>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn secondary small" id="applyTemplateBtn" type="button">Aplicar modelo</button>
+          <button class="btn secondary small" id="deleteTemplateBtn" type="button">Excluir modelo selecionado</button>
+        </div>
+      </div>
     </div>
 
     <div id="builderArea" style="display:none;">
@@ -140,9 +153,10 @@
 
       <div id="workoutsContainer"></div>
 
-      <div class="card" style="display:flex; gap:10px;">
+      <div class="card" style="display:flex; gap:10px; flex-wrap:wrap;">
         <button class="btn secondary" id="saveDraftBtn">Salvar rascunho</button>
         <button class="btn" id="publishBtn">Publicar para o aluno</button>
+        <button class="btn secondary" id="saveAsTemplateBtn" type="button">Salvar como modelo</button>
       </div>
     </div>
   </main>
@@ -169,6 +183,11 @@
   const PERIODIZATION_DEFAULT_WEEKS = {
     linear: 4, ondulatoria_semanal: 6, blocos: 9, reversa: 4,
   };
+
+  const WEEKDAYS = [
+    { key: 'dom', label: 'Dom' }, { key: 'seg', label: 'Seg' }, { key: 'ter', label: 'Ter' },
+    { key: 'qua', label: 'Qua' }, { key: 'qui', label: 'Qui' }, { key: 'sex', label: 'Sex' }, { key: 'sab', label: 'Sáb' },
+  ];
 
   function defaultWeek() {
     return { sets: 3, reps: '12', rest: 75, nota: '' };
@@ -265,6 +284,7 @@
     await loadStudents();
     await loadMuscleGroups();
     await loadProtocolsByStudent();
+    await loadTemplates();
 
     const params = new URLSearchParams(window.location.search);
     const preselect = params.get('student_id');
@@ -304,16 +324,79 @@
     });
   }
 
+  let templates = [];
+
+  async function loadTemplates() {
+    const { data, error } = await supa
+      .from('protocol_templates')
+      .select('*')
+      .eq('professional_id', professional.id)
+      .order('created_at', { ascending: false });
+    if (error) return;
+    templates = data || [];
+    const select = $('templateSelect');
+    select.innerHTML = templates.length
+      ? templates.map(t => `<option value="${t.id}">${escapeHtml(t.titulo)}</option>`).join('')
+      : '<option value="">Nenhum modelo salvo ainda</option>';
+  }
+
+  $('applyTemplateBtn').addEventListener('click', () => {
+    const t = templates.find(x => x.id === $('templateSelect').value);
+    if (!t) return;
+    if (currentProtocol.workouts.length && !confirm('Isso substitui os treinos que você já montou aqui (ainda não salvos). Continuar?')) return;
+    currentProtocol.titulo = t.titulo;
+    currentProtocol.periodizacao = t.periodizacao || 'manual';
+    currentProtocol.duracao_semanas = t.duracao_semanas || null;
+    currentProtocol.workouts = (t.workouts || []).map(w => ({
+      ...w,
+      _uid: uid(),
+      exercises: (w.exercises || []).map(ex => ({ ...ex, weeks: (ex.weeks || []).map(wk => ({ ...wk })) })),
+    }));
+    renderProtocol();
+    toast('Modelo aplicado — revise e publique quando estiver pronto.');
+  });
+
+  $('deleteTemplateBtn').addEventListener('click', async () => {
+    const id = $('templateSelect').value;
+    const t = templates.find(x => x.id === id);
+    if (!t) return;
+    if (!confirm(`Excluir o modelo "${t.titulo}" da biblioteca? Isso não afeta protocolos já aplicados a alunos.`)) return;
+    const { error } = await supa.from('protocol_templates').delete().eq('id', id);
+    if (error) { toast('Erro ao excluir: ' + error.message); return; }
+    toast('Modelo excluído.');
+    await loadTemplates();
+  });
+
+  $('saveAsTemplateBtn').addEventListener('click', async () => {
+    if (!currentProtocol || !currentProtocol.workouts.length) { toast('Monte pelo menos um treino antes de salvar como modelo.'); return; }
+    const titulo = prompt('Nome do modelo:', currentProtocol.titulo || 'Modelo de protocolo');
+    if (!titulo) return;
+    const payload = {
+      professional_id: professional.id,
+      titulo,
+      periodizacao: currentProtocol.periodizacao,
+      duracao_semanas: currentProtocol.duracao_semanas,
+      workouts: stripInternalFields(currentProtocol.workouts),
+    };
+    const { error } = await supa.from('protocol_templates').insert(payload);
+    if (error) { toast('Erro ao salvar modelo: ' + error.message); return; }
+    toast('Modelo salvo na biblioteca.');
+    await loadTemplates();
+  });
+
   function updateDuplicateArea(currentStudentId) {
     const candidates = Object.values(latestProtocolByStudent).filter(p => p.student_id !== currentStudentId);
     const area = $('duplicateArea');
-    if (!candidates.length) { area.style.display = 'none'; return; }
-    const select = $('duplicateSourceSelect');
-    select.innerHTML = candidates.map(p => {
-      const nome = studentsById[p.student_id]?.nome || '—';
-      return `<option value="${p.student_id}">${escapeHtml(nome)} — ${escapeHtml(p.titulo)}</option>`;
-    }).join('');
-    area.style.display = 'block';
+    if (!candidates.length) { area.style.display = 'none'; }
+    else {
+      const select = $('duplicateSourceSelect');
+      select.innerHTML = candidates.map(p => {
+        const nome = studentsById[p.student_id]?.nome || '—';
+        return `<option value="${p.student_id}">${escapeHtml(nome)} — ${escapeHtml(p.titulo)}</option>`;
+      }).join('');
+      area.style.display = 'block';
+    }
+    $('templateArea').style.display = 'block';
   }
 
   $('duplicateBtn').addEventListener('click', () => {
@@ -520,6 +603,9 @@
           <input type="text" value="${escapeHtml(w.name)}" data-role="workout-name" data-workout-id="${w._uid}">
           <button class="btn danger small" data-role="remove-workout" data-workout-id="${w._uid}">Remover</button>
         </div>
+        <div class="weekday-picker" data-workout-id="${w._uid}">
+          ${WEEKDAYS.map(d => `<button type="button" class="wd-btn ${(w.dias_semana || []).includes(d.key) ? 'active' : ''}" data-role="weekday-toggle" data-day="${d.key}" data-workout-id="${w._uid}">${d.label}</button>`).join('')}
+        </div>
         <div class="exercises-list">
           ${w.exercises.length ? w.exercises.map((ex, i) => renderExerciseRow(w, ex, i)).join('') : '<div class="empty">Nenhum exercício ainda.</div>'}
         </div>
@@ -540,6 +626,17 @@
       inp.addEventListener('input', (e) => {
         const w = currentProtocol.workouts.find(x => x._uid === e.target.dataset.workoutId);
         if (w) w.name = e.target.value;
+      });
+    });
+    container.querySelectorAll('[data-role="weekday-toggle"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const w = currentProtocol.workouts.find(x => x._uid === e.target.dataset.workoutId);
+        if (!w) return;
+        w.dias_semana = w.dias_semana || [];
+        const day = e.target.dataset.day;
+        const idx = w.dias_semana.indexOf(day);
+        if (idx >= 0) w.dias_semana.splice(idx, 1); else w.dias_semana.push(day);
+        e.target.classList.toggle('active', idx < 0);
       });
     });
     container.querySelectorAll('[data-role="remove-workout"]').forEach(btn => {
@@ -639,7 +736,7 @@
   });
 
   function stripInternalFields(workouts) {
-    return workouts.map(w => ({ id: w.id, name: w.name, exercises: w.exercises }));
+    return workouts.map(w => ({ id: w.id, name: w.name, exercises: w.exercises, dias_semana: w.dias_semana || [] }));
   }
 
   async function saveProtocol(status) {

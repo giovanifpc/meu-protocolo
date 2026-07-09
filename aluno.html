@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#F8F9FA">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon-32.png">
 <title>Meu Protocolo — Meu Treino</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
@@ -51,6 +54,9 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .nw-name{font-size:21px;font-weight:800;margin-top:6px}
 .nw-meta{font-size:12px;color:var(--muted);margin-top:8px}
 .nw-go{position:absolute;right:18px;bottom:18px;width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800}
+.nw-schedule{font-size:11px;font-weight:700;margin-top:8px}
+.nw-schedule.today{color:var(--accent-dim)}
+.nw-schedule.upcoming{color:var(--muted);font-weight:500}
 
 .stat-row{display:flex;gap:12px;margin-bottom:6px}
 .stat-card{flex:1;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 14px;text-align:center}
@@ -211,6 +217,13 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .menu-info .mi-title{font-size:15px;font-weight:700}
 .menu-info .mi-sub{font-size:12px;color:var(--muted);margin-top:2px}
 .profile-foot{text-align:center;font-size:11px;color:var(--faint);line-height:1.7;margin-top:24px;padding:0 20px}
+.anamnese-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.anamnese-field{margin-bottom:14px}
+.anamnese-field:last-child{margin-bottom:0}
+.anamnese-field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.anamnese-field input[type=text],.anamnese-field textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--text);font-family:var(--font)}
+.anamnese-field textarea{min-height:60px;resize:vertical;line-height:1.5}
+.anamnese-checkbox{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:14px}
 
 /* NUTRI */
 .nutri-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:16px}
@@ -260,6 +273,48 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     <div class="ach-summary" id="achSummary"></div>
     <div class="section-label">Conquistas</div>
     <div class="badge-grid" id="badgeGrid"></div>
+
+    <div class="section-label">Anamnese de saúde</div>
+    <div class="anamnese-card">
+      <div class="anamnese-field">
+        <label>Objetivo com o treino</label>
+        <input type="text" id="anObjetivo" placeholder="Ex: emagrecimento, hipertrofia, condicionamento...">
+      </div>
+      <div class="anamnese-field">
+        <label>Histórico médico (condições preexistentes)</label>
+        <textarea id="anHistorico" placeholder="Ex: hipertensão, diabetes, problema cardíaco..."></textarea>
+      </div>
+      <div class="anamnese-field">
+        <label>Lesões</label>
+        <textarea id="anLesoes" placeholder="Ex: lesão no ombro direito em 2023..."></textarea>
+      </div>
+      <div class="anamnese-field">
+        <label>Cirurgias</label>
+        <textarea id="anCirurgias"></textarea>
+      </div>
+      <div class="anamnese-field">
+        <label>Medicamentos em uso</label>
+        <textarea id="anMedicamentos"></textarea>
+      </div>
+      <label class="anamnese-checkbox"><input type="checkbox" id="anFumante"> Fumante</label>
+      <div class="anamnese-field">
+        <label>Restrições (articulares, cardíacas etc.)</label>
+        <textarea id="anRestricoes"></textarea>
+      </div>
+      <div class="anamnese-field">
+        <label>Observações</label>
+        <textarea id="anObservacoes"></textarea>
+      </div>
+      <button class="btn btn-primary" id="saveAnamneseBtn" style="width:100%">Salvar anamnese</button>
+      <div class="mi-sub" id="anamneseMsg" style="text-align:center;margin-top:8px"></div>
+    </div>
+
+    <div class="section-label">Notificações</div>
+    <button class="menu-item" id="enablePushBtn">
+      <div class="menu-ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>
+      <div class="menu-info"><div class="mi-title" id="pushBtnTitle">Ativar notificações</div><div class="mi-sub">Lembretes de treino direto no celular</div></div>
+    </button>
+
     <div class="section-label">Conta</div>
     <button class="menu-item" id="profileLogoutBtn">
       <div class="menu-ico">🚪</div>
@@ -382,6 +437,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   let history = [];
   let nutritionGuidance = null;
   let assessments = [];
+  let anamnese = null;
   let state = { workoutIndex:0, currentExercise:0, sessionData:[], startTime:null, restInterval:null, restRemaining:0, restTotal:0, rating:null };
 
   function toast(msg) {
@@ -469,6 +525,13 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       .eq('status', 'finalizada')
       .order('avaliado_em', { ascending: true });
     assessments = assess || [];
+
+    const { data: anamneseData } = await supa
+      .from('student_anamnese')
+      .select('*')
+      .eq('student_id', student.id)
+      .maybeSingle();
+    anamnese = anamneseData || { student_id: student.id, objetivo: '', historico_medico: '', lesoes: '', cirurgias: '', medicamentos: '', fumante: false, restricoes: '', observacoes: '' };
 
     goTab('home');
   }
@@ -784,7 +847,42 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     $('profileSub').textContent = student.professionals?.display_name ? `Aluno(a) de ${student.professionals.display_name}` : student.email || '';
     $('profileFoot').innerHTML = `Meu Protocolo<br>${completedCount()} treino(s) concluído(s) · ${earnedBadgeIds().length}/${BADGES.length} conquistas`;
     buildAchievements();
+    updatePushButtonState();
+
+    $('anObjetivo').value = anamnese.objetivo || '';
+    $('anHistorico').value = anamnese.historico_medico || '';
+    $('anLesoes').value = anamnese.lesoes || '';
+    $('anCirurgias').value = anamnese.cirurgias || '';
+    $('anMedicamentos').value = anamnese.medicamentos || '';
+    $('anFumante').checked = !!anamnese.fumante;
+    $('anRestricoes').value = anamnese.restricoes || '';
+    $('anObservacoes').value = anamnese.observacoes || '';
+    $('anamneseMsg').textContent = '';
   }
+
+  $('saveAnamneseBtn').addEventListener('click', async () => {
+    $('saveAnamneseBtn').disabled = true;
+    const payload = {
+      student_id: student.id,
+      objetivo: $('anObjetivo').value.trim(),
+      historico_medico: $('anHistorico').value.trim(),
+      lesoes: $('anLesoes').value.trim(),
+      cirurgias: $('anCirurgias').value.trim(),
+      medicamentos: $('anMedicamentos').value.trim(),
+      fumante: $('anFumante').checked,
+      restricoes: $('anRestricoes').value.trim(),
+      observacoes: $('anObservacoes').value.trim(),
+      respondido_em: new Date().toISOString(),
+    };
+    const { data, error } = anamnese.id
+      ? await supa.from('student_anamnese').update(payload).eq('id', anamnese.id).select().single()
+      : await supa.from('student_anamnese').insert(payload).select().single();
+    $('saveAnamneseBtn').disabled = false;
+    if (error) { $('anamneseMsg').textContent = 'Erro ao salvar: ' + error.message; return; }
+    anamnese = data;
+    $('anamneseMsg').textContent = 'Salvo com sucesso.';
+    toast('Anamnese salva.');
+  });
 
   /* ---- NUTRI ---- */
   function buildNutri() {
@@ -809,6 +907,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     }
   }
 
+  const WEEKDAY_KEYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+  const WEEKDAY_LABELS = { dom: 'domingo', seg: 'segunda', ter: 'terça', qua: 'quarta', qui: 'quinta', sex: 'sexta', sab: 'sábado' };
+  function todayWeekdayKey() { return WEEKDAY_KEYS[new Date().getDay()]; }
+
   /* ---- HOME ---- */
   function buildHome() {
     if (!protocol) {
@@ -821,6 +923,12 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     const cycleBadge = protocol.duracao_semanas
       ? `<div class="section-label" style="margin-top:0">${cycleEnded() ? 'Ciclo concluído — fale com seu personal' : `Semana ${currentCycleWeek()+1} de ${protocol.duracao_semanas}`}</div>`
       : '';
+    const dias = w.dias_semana || [];
+    const scheduleHint = dias.length
+      ? (dias.includes(todayWeekdayKey())
+          ? '<div class="nw-schedule today">📅 Hoje é dia deste treino</div>'
+          : `<div class="nw-schedule upcoming">Programado pra ${dias.map(d => WEEKDAY_LABELS[d]).join(', ')}</div>`)
+      : '';
 
     let html = `
       ${cycleBadge}
@@ -829,6 +937,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         <div class="nw-tag">Treino ${escapeHtml(w.id)}</div>
         <div class="nw-name">${escapeHtml(w.name)}</div>
         <div class="nw-meta">${w.exercises.length} exercícios · ${totalSets} séries</div>
+        ${scheduleHint}
         <div class="nw-go">▶</div>
       </div>
       <div class="stat-row">
@@ -1130,6 +1239,55 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   }
   $('logoutBtn').addEventListener('click', doLogout);
   $('profileLogoutBtn').addEventListener('click', doLogout);
+
+  const VAPID_PUBLIC_KEY = 'BK_hloHwhtdFACFl-ajWzaXeFrlNZBUmYeUrjN1Nyn-fbbaqkZH59gKvXq4hu52LPqfhKejRASCCyKBKKAOku8s';
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+  }
+
+  async function updatePushButtonState() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      $('pushBtnTitle').textContent = 'Notificações não suportadas neste navegador';
+      $('enablePushBtn').disabled = true;
+      return;
+    }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    $('pushBtnTitle').textContent = sub ? 'Notificações ativadas ✓' : 'Ativar notificações';
+  }
+
+  $('enablePushBtn').addEventListener('click', async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') { toast('Permissão de notificação negada.'); return; }
+
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+    }
+    const json = sub.toJSON();
+    const { error } = await supa.from('push_subscriptions').upsert({
+      student_id: student.id,
+      endpoint: json.endpoint,
+      p256dh: json.keys.p256dh,
+      auth: json.keys.auth,
+    }, { onConflict: 'student_id,endpoint' });
+    if (error) { toast('Erro ao ativar notificações: ' + error.message); return; }
+    toast('Notificações ativadas!');
+    updatePushButtonState();
+  });
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch((e) => console.error('Falha ao registrar service worker:', e));
+  }
 
   boot();
 </script>

@@ -83,7 +83,20 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
-Última atualização: 2026-07-09 (2ª sessão do dia, notebook — nova área de Avaliação física + reorganização de navegação do aluno selecionado). Ver também `ATUALIZACAO-2026-07-02.md` (sessão anterior, setup de e-mail transacional).
+Última atualização: 2026-07-09 (3ª sessão do dia, notebook — pacote de "comodidades pro profissional": alertas de adesão/pagamento, anamnese, biblioteca de modelos, agenda leve, PWA e push notifications). Ver também `ATUALIZACAO-2026-07-02.md` (sessão anterior, setup de e-mail transacional).
+
+### Pacote de comodidades pro profissional (2026-07-09, 3ª sessão)
+
+Contexto: personal trainers autônomos comparam o app com concorrentes que anunciam "retenção automática" e "cobrança automática" do aluno. Decisão de produto: resolver isso **sem gateway de pagamento nem WhatsApp Business API** — o app só detecta e prepara, o profissional revisa e envia manualmente (mesmo padrão usado no Fox). Pacote fechado: tudo de "rápidas" e "médio prazo" que tínhamos listado, exceto mensageria dentro do app (adiada).
+
+- **Schema**: `supabase_12_engagement.sql` — `students` ganha `telefone`, `mensalidade_valor`, `mensalidade_dia_vencimento`, `ultimo_pagamento_em`; novas tabelas `protocol_templates`, `student_anamnese`, `push_subscriptions`. Aplicada em produção via `supabase db query --linked --file`.
+- **Alertas de adesão + pagamento** (`index.html`): unifica o antigo "precisam de atenção" com um novo alerta de mensalidade em atraso (o app só acompanha data de vencimento — nunca processa pagamento). Cada alerta expande com uma mensagem pronta e editável + botão "Abrir no WhatsApp" (link `wa.me`, sem API paga) e botão "Notificar no app" (push, ver abaixo). Cadastro de telefone/mensalidade e botão "marcar como pago" ficam no painel expansível de cada aluno em `alunos.html`.
+- **Anamnese/PAR-Q digital**: aluno preenche em `aluno.html` → Perfil (objetivo, histórico médico, lesões, cirurgias, medicamentos, fumante, restrições) — é dono do próprio dado (RLS: aluno CRUD, profissional só lê). Profissional vê em `avaliacoes.html`, card no topo, com alerta visual se o aluno marcou "fumante".
+- **Biblioteca de protocolos-modelo** (`treinos.html`): "Salvar como modelo" grava o protocolo atual em `protocol_templates` (sem vínculo de aluno); "Aplicar modelo" clona pra qualquer aluno depois. Evolução do "duplicar protocolo de outro aluno" que já existia.
+- **Agenda leve** (`treinos.html` + `aluno.html`): dia(s) da semana opcional por treino do loop (campo `dias_semana` dentro do próprio `workouts` jsonb, sem migration). Não mexe na lógica do loop/periodização — é só um hint visual ("hoje é dia deste treino" na Home do aluno). Decisão deliberada de não rearquitetar pra calendário fixo completo (contrariaria a escolha consciente já documentada mais abaixo).
+- **PWA completo**: `manifest.json` + ícones gerados em `icons/` (script `scripts/generate_icons.py`, precisa de Pillow) + `sw.js` (cache network-first pra assets estáticos, nunca intercepta `*.supabase.co`). Registrado só em `aluno.html` por ora — é onde faz sentido "adicionar à tela de início" como app; os paineis do profissional continuam como dashboard web comum.
+- **Push notifications**: par de chaves VAPID gerado localmente com a Web Crypto API do Node (sem precisar de Deno instalado nem de expor endpoint nenhum — a chave privada foi direto pra `supabase secrets set VAPID_KEYS_JSON`, nunca tocou o repositório). Edge Function `send-push` usa `jsr:@negrel/webpush` (lib nativa Deno, evita os problemas conhecidos de rodar o pacote npm `web-push` via esm.sh nesse runtime). Aluno ativa em Perfil → "Ativar notificações"; profissional dispara pelo botão "Notificar no app" dentro de cada alerta em `index.html`, reaproveitando a mesma mensagem editada pro WhatsApp.
+- **Não testado interativamente pelo usuário ainda** — validado por sintaxe de todos os scripts, geração de ícones conferida visualmente, registro do service worker confirmado via preview isolado. Precisa de teste ponta a ponta em produção: cadastrar telefone/mensalidade de um aluno, conferir alerta de atraso, preencher anamnese como aluno, salvar/aplicar um modelo de protocolo, marcar dias da semana num treino, instalar o PWA no celular e ativar notificações, e confirmar que uma notificação de teste chega.
 
 ### Avaliação física — nova área (2026-07-09)
 
@@ -179,9 +192,9 @@ Duas vezes nesta sessão o deploy automático (`pages build and deployment`) fal
 
 ### Ainda não implementado (backlog maior, sem trabalho iniciado)
 
-- Webhook Mercado Pago (cobrança automática ao fim do trial — trial deve exigir cartão cadastrado desde o cadastro, ver master doc seção 4)
+- Webhook Mercado Pago (cobrança automática ao fim do trial — trial deve exigir cartão cadastrado desde o cadastro, ver master doc seção 4). Não confundir com o acompanhamento de mensalidade aluno→profissional implementado nesta sessão — são coisas diferentes: esse item aqui é a cobrança do profissional pelo uso do Meu Protocolo em si
 - Chatbot de suporte via IA pro aluno final (item 1 do master doc — diferente da geração de treino por IA pro profissional, que já está feita)
-- PWA completo (manifest, ícones, service worker)
+- Mensageria dentro do próprio app entre profissional e aluno (adiada deliberadamente nesta sessão — hoje usa WhatsApp/push)
 - Política de Privacidade / Termos de Uso
 - Rate limiting, headers de segurança, backup automático (item 13 do master doc)
 - Painel/acesso master: master doc não pede CRUD de tenants, só 2FA + recuperação de emergência (item 14) — escopo exato de uma eventual visão agregada de métricas ainda não decidido com o usuário

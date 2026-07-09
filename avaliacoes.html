@@ -67,6 +67,10 @@
   .evo-stat .es-lbl { font-size:11px; color:var(--muted); }
   .evo-stat .es-delta { font-size:12px; font-weight:700; margin-left:6px; }
   .evo-tabs { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+  .anamnese-row { margin-bottom:10px; }
+  .anamnese-row .ar-lbl { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:3px; }
+  .anamnese-row .ar-val { font-size:13px; line-height:1.5; }
+  .anamnese-alert { background:#FDEDEC; color:var(--danger); border-radius:8px; padding:8px 12px; font-size:12px; font-weight:700; margin-bottom:10px; }
   .evo-tab { padding:6px 10px; border-radius:8px; font-size:12px; font-weight:700; background:var(--bg); border:1px solid var(--line); color:var(--muted); cursor:pointer; }
   .evo-tab.active { background:var(--primary); color:#fff; border-color:var(--primary); }
 </style>
@@ -92,6 +96,7 @@
     </div>
 
     <div id="contentArea" style="display:none;">
+      <div id="anamneseArea"></div>
       <div id="evolutionArea"></div>
 
       <div class="card">
@@ -310,7 +315,32 @@
     if (!studentId) { $('contentArea').style.display = 'none'; return; }
     $('contentArea').style.display = 'block';
     $('formArea').style.display = 'none';
-    await loadAssessments();
+    await Promise.all([loadAssessments(), loadAnamnese()]);
+  }
+
+  async function loadAnamnese() {
+    const { data, error } = await supa.from('student_anamnese').select('*').eq('student_id', currentStudentId).maybeSingle();
+    const el = $('anamneseArea');
+    if (error) { el.innerHTML = ''; return; }
+    if (!data || !data.respondido_em) {
+      el.innerHTML = `<div class="card"><h2>Anamnese</h2><div class="empty">O aluno ainda não preencheu a anamnese de saúde.</div></div>`;
+      return;
+    }
+    const rows = [
+      ['Objetivo', data.objetivo],
+      ['Histórico médico', data.historico_medico],
+      ['Lesões', data.lesoes],
+      ['Cirurgias', data.cirurgias],
+      ['Medicamentos', data.medicamentos],
+      ['Restrições', data.restricoes],
+      ['Observações', data.observacoes],
+    ].filter(([, v]) => v);
+    el.innerHTML = `
+      <div class="card">
+        <h2>Anamnese</h2>
+        ${data.fumante ? '<div class="anamnese-alert">⚠ Fumante</div>' : ''}
+        ${rows.map(([lbl, v]) => `<div class="anamnese-row"><div class="ar-lbl">${escapeHtml(lbl)}</div><div class="ar-val">${escapeHtml(v)}</div></div>`).join('') || '<div class="empty">Sem detalhes preenchidos além do objetivo.</div>'}
+      </div>`;
   }
 
   async function loadAssessments() {

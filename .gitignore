@@ -5,3 +5,5 @@
 Thumbs.db
 node_modules/
 supabase/.temp/
+.vapid-keys.json
+.env.vapid

@@ -83,28 +83,19 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
-Última atualização: 2026-07-07 (sessão longa via celular/web — ver detalhamento completo abaixo). Ver também `ATUALIZACAO-2026-07-02.md` (sessão anterior, setup de e-mail transacional).
+Última atualização: 2026-07-09 (sessão no notebook — CLI do Supabase local funcionando, deploy da Edge Function concluído e depurado). Ver também `ATUALIZACAO-2026-07-02.md` (sessão anterior, setup de e-mail transacional).
 
-### ⚠️ Pendências imediatas — retomar no notebook
+### Resolvido nesta sessão (2026-07-09)
 
-Tudo abaixo já está commitado e com o front-end no ar em produção, mas depende de passos manuais que só dá pra fazer com acesso de terminal (Supabase CLI) ou direto no painel do Supabase. Nenhuma sessão remota (celular/web) consegue completar isso — ver "Limitação de rede" mais abaixo.
+- **As 3 migrations pendentes (`08_nutrition`, `09_periodization`, `10_student_notes`) já estão aplicadas** — confirmado via consulta direta à REST API do Supabase (tabelas `nutrition_guidance`, `student_notes` e colunas `periodizacao`/`duracao_semanas` em `training_protocols` respondem normalmente).
+- **Edge Function `generate-workout` implantada e funcionando ponta a ponta** (`supabase functions deploy generate-workout`, versão 3 ativa). `ANTHROPIC_API_KEY` configurada via `supabase secrets set`.
+- Corrigidos 2 bugs que impediam o card "Gerar sugestão com IA" de funcionar:
+  - `treinos.html` engolia a mensagem de erro real da função (o cliente `supabase-js` só expõe o corpo da resposta de erro em `error.context`, não em `error.message`) — agora lê e mostra o motivo real.
+  - `generate-workout/index.ts` só olhava `content[0].text` da resposta da Claude (perdendo texto se vier em mais de um bloco) e usava `max_tokens: 4096`, que podia cortar o JSON antes de fechar em protocolos maiores — agora concatena todos os blocos de texto e usa `max_tokens: 8192`.
+- Testado em produção pelo usuário: geração de treino por IA funcionando sem erro.
+- Nota de infraestrutura: a CLI Supabase instalada via npm (`supabase.cmd`) nesta versão (2.109.1) **não tem mais o subcomando `functions logs`** — não dá pra rodar `supabase functions logs <nome>` pra depurar. Único jeito de ver logs de execução é pelo painel (`supabase.com/dashboard/project/.../functions`) ou surfaceando o erro real no próprio corpo de resposta da função (como foi feito aqui).
 
-1. **Rodar 3 migrations SQL pendentes no SQL Editor do Supabase**, em ordem:
-   - `supabase_08_nutrition.sql` (tabela `nutrition_guidance` + bucket `nutri-pdfs`)
-   - `supabase_09_periodization.sql` (colunas `periodizacao`/`duracao_semanas` em `training_protocols`)
-   - `supabase_10_student_notes.sql` (tabela `student_notes`)
-   - (Se alguma já tiver sido rodada manualmente entre sessões, `create table if not exists` faz as outras rodarem sem erro mesmo repetindo.)
-2. **Deploy da Edge Function de geração de treino por IA** (só funciona com a CLI local, testado e confirmado que não dá pra fazer de sessão remota):
-   ```
-   cd meu-protocolo
-   supabase link --project-ref yumqmramxbahkfxsthtt
-   supabase functions deploy generate-workout
-   supabase secrets set ANTHROPIC_API_KEY=<chave da Anthropic — pode reaproveitar a mesma já usada no projeto Fox>
-   ```
-3. **Segurança**: um Supabase Personal Access Token (`sbp_...`) foi gerado e colado no chat nesta sessão pra eu tentar fazer o deploy remotamente (não funcionou — ver limitação abaixo). **Confirmar que foi revogado** em `supabase.com/dashboard/account/tokens`, se ainda não foi.
-4. Depois do deploy: testar em `treinos.html` → selecionar aluno → "Gerar sugestão com IA".
-
-### Limitação de rede descoberta nesta sessão (guardar pra não repetir a tentativa)
+### Limitação de rede descoberta em sessão anterior (guardar pra não repetir a tentativa)
 
 Sessões remotas (celular/web) rodam num sandbox com todo tráfego HTTPS saindo por um proxy da Anthropic. Ferramentas que respeitam `HTTPS_PROXY` (curl, npm, node fetch) funcionam normalmente — por isso deu pra rodar `npm install -g supabase` e alcançar `api.supabase.com` via curl (200 OK). Mas o **binário da Supabase CLI é Go compilado que ignora as variáveis de proxy** — `supabase link`/`deploy` falham com erro de rede mesmo com o token de acesso correto. Uma tentativa de forçar a rota via `proxychains` foi **ativamente recusada pelo proxy** ("method CONNECT not permitted") — é bloqueio de política, não bug, então não vale tentar contornar de novo. Conclusão prática: **qualquer comando `supabase` que fale com a API remota (`link`, `functions deploy`, `secrets set`, `db push` contra o projeto remoto) só funciona rodando localmente** (notebook, onde a CLI já funciona bem pro projeto Fox) ou numa sessão de Claude Code que rode nesse ambiente local. SQL direto (colar no SQL Editor do navegador) e o próprio deploy do site (GitHub Pages) não têm esse problema — continuam funcionando normal de qualquer sessão.
 
@@ -127,8 +118,10 @@ Duas vezes nesta sessão o deploy automático (`pages build and deployment`) fal
 - `06_training` — `training_protocols` + `training_history`, RLS completo
 - `07_search_fix` — busca de exercício ignorando acento (`unaccent`)
 
-**Schema SQL escrito mas NÃO rodado ainda** (ver checklist de pendências no topo)
-- `08_nutrition`, `09_periodization`, `10_student_notes`
+**Schema SQL rodado no Supabase** (`supabase_08` a `supabase_10`)
+- `08_nutrition` — tabela `nutrition_guidance` + bucket `nutri-pdfs`
+- `09_periodization` — colunas `periodizacao`/`duracao_semanas` em `training_protocols`
+- `10_student_notes` — tabela `student_notes`
 
 **Painel do profissional** — reestruturado com nav inferior nesta sessão
 - `index.html` — dashboard "Início": nº de alunos, treinos na semana, lista "precisam de atenção" (quem não treina há 7+ dias ou nunca treinou, excluindo alunos pausados/inativos)
@@ -142,7 +135,7 @@ Duas vezes nesta sessão o deploy automático (`pages build and deployment`) fal
 - GIF de exercício: corrigido problema de não animar em navegador real (link cru do Google Drive falha ao decodificar como `<img>` com frequência) — 3 variações de URL (`uc?export=download`, `uc?export=view`, `thumbnail?sz=w900`) com fallback automático via `onerror`, mesma técnica do Fox
 - **Periodização**: dropdown com 6 técnicas (Linear, Ondulatória diária, Ondulatória semanal, Em blocos, Reversa, Manual). Botão "Aplicar periodização" gera automaticamente `weeks[]` (sets/reps/descanso por semana) por exercício a partir do valor atual como base — grade fica editável depois, nunca é uma trava. Ondulatória diária é a exceção: varia por treino do loop (A=pesado, B=moderado, C=leve) em vez de por semana, já que o protocolo não tem calendário fixo
 - **Duplicar protocolo de outro aluno**: aparece quando existe pelo menos um outro aluno com protocolo salvo; clona workouts/exercícios/periodização como rascunho novo, sem alterar o protocolo de origem
-- **Gerar treino com IA**: card que chama a Edge Function `generate-workout` (ver pendência de deploy no topo) — profissional digita objetivo/observação, recebe sugestão baseada no histórico do aluno, carregada como rascunho pra revisão manual antes de publicar
+- **Gerar treino com IA**: card que chama a Edge Function `generate-workout` (implantada e funcionando, ver "Resolvido nesta sessão") — profissional digita objetivo/observação, recebe sugestão baseada no histórico do aluno, carregada como rascunho pra revisão manual antes de publicar
 
 **App do aluno** (`aluno.html`) — reescrito nesta sessão pra ter paridade de recursos com o Training da Fox (repo `giovanifpc/fox-app`), com a identidade visual clara do Meu Protocolo
 - Fase 1 (execução): Home (próximo treino do loop, estatísticas), Overview (pré-treino), Exec (séries, reps/carga com última carga pré-preenchida, timer de descanso), Finish (resumo + avaliação) — tudo em `training_history.detail` (JSONB)
@@ -155,7 +148,7 @@ Duas vezes nesta sessão o deploy automático (`pages build and deployment`) fal
 - Testado em produção pelo usuário: execução de treino, histórico e Nutri rodando ponta a ponta
 
 **Área Nutri**
-- `nutrition_guidance` (schema pendente de rodar — item 8 da lista) + bucket privado `nutri-pdfs`, acesso só via signed URL
+- `nutrition_guidance` + bucket privado `nutri-pdfs`, acesso só via signed URL
 - `nutri.html`: profissional escreve orientação + sobe/substitui PDF
 - Aba "Nutri" no `aluno.html`: ver acima
 

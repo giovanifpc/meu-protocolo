@@ -471,6 +471,34 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   }
   function goHome() { goTab('home'); }
 
+  /* ---- botão voltar do celular: sempre volta pra Início, com duplo toque pra sair ---- */
+  let lastBackPressAt = 0;
+  function currentScreenId() {
+    const el = document.querySelector('.screen.active');
+    return el ? el.id : 'home';
+  }
+  function armBackGuard() {
+    window.history.pushState({ appGuard: true }, '');
+  }
+  window.addEventListener('popstate', () => {
+    const screen = currentScreenId();
+    if (screen === 'exec') {
+      confirmExit();
+      armBackGuard();
+      return;
+    }
+    if (screen !== 'home') {
+      goHome();
+      armBackGuard();
+      return;
+    }
+    const now = Date.now();
+    if (now - lastBackPressAt < 2200) return; // segundo toque: deixa sair de verdade
+    lastBackPressAt = now;
+    toast('Toque em voltar de novo pra sair');
+    armBackGuard();
+  });
+
   async function boot() {
     const { data: { session } } = await supa.auth.getSession();
     if (!session) { window.location.href = 'login.html'; return; }
@@ -534,6 +562,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     anamnese = anamneseData || { student_id: student.id, objetivo: '', historico_medico: '', lesoes: '', cirurgias: '', medicamentos: '', fumante: false, restricoes: '', observacoes: '' };
 
     goTab('home');
+    armBackGuard();
   }
 
   function renderHomeError(msg) {

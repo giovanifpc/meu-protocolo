@@ -247,7 +247,14 @@
         pushBtn.disabled = false;
         const out = $('alertPushMsg-' + i);
         if (error || data?.error) {
-          out.textContent = 'Erro ao notificar: ' + (data?.error || error.message);
+          let motivo = data?.error || error?.message || 'erro desconhecido';
+          if (error?.context?.json) {
+            try {
+              const body = await error.context.json();
+              if (body?.error) motivo = body.error;
+            } catch {}
+          }
+          out.textContent = 'Erro ao notificar: ' + motivo;
           out.className = 'msg error';
           return;
         }

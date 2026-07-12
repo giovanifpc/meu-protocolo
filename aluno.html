@@ -35,6 +35,9 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .topbar h2{font-size:17px;font-weight:700;flex:1}
 .topbar .sub{font-size:12px;color:var(--muted);font-weight:600}
 .topbar .brand{font-size:17px;font-weight:800;flex:1}
+.notif-bell{position:relative;background:none;border:none;color:var(--text);padding:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.notif-bell svg{width:21px;height:21px}
+.notif-dot{position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:var(--danger);border:2px solid var(--bg);display:none}
 .logout-btn{background:none;border:none;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)}
 
 .btn{border:none;border-radius:var(--radius-sm);font-family:var(--font);font-weight:700;cursor:pointer;transition:.15s;width:100%;display:flex;align-items:center;justify-content:center;gap:8px}
@@ -236,6 +239,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 <section class="screen active" id="home">
   <div class="topbar">
     <span class="brand" id="proName">Meu Protocolo</span>
+    <button class="notif-bell" onclick="openNotifications()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span class="notif-dot"></span>
+    </button>
     <button class="logout-btn" id="logoutBtn">Sair</button>
   </div>
   <div class="content" id="homeContent">
@@ -247,6 +254,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 <section class="screen" id="history">
   <div class="topbar">
     <span class="brand">Histórico</span>
+    <button class="notif-bell" onclick="openNotifications()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span class="notif-dot"></span>
+    </button>
   </div>
   <div class="content" id="historyContent"></div>
 </section>
@@ -255,6 +266,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 <section class="screen" id="nutri">
   <div class="topbar">
     <span class="brand">Nutri</span>
+    <button class="notif-bell" onclick="openNotifications()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span class="notif-dot"></span>
+    </button>
   </div>
   <div class="content" id="nutriContent"></div>
 </section>
@@ -263,6 +278,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 <section class="screen" id="profile">
   <div class="topbar">
     <span class="brand">Perfil</span>
+    <button class="notif-bell" onclick="openNotifications()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span class="notif-dot"></span>
+    </button>
   </div>
   <div class="content">
     <div class="profile-head">
@@ -424,6 +443,15 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   </div>
 </section>
 
+<!-- ===== NOTIFICAÇÕES ===== -->
+<section class="screen" id="notifications">
+  <div class="topbar">
+    <button class="back-btn" onclick="goTab('home')">‹</button>
+    <span class="brand">Notificações</span>
+  </div>
+  <div class="content" id="notificationsContent"></div>
+</section>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -438,6 +466,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   let nutritionGuidance = null;
   let assessments = [];
   let anamnese = null;
+  let notifications = [];
   let state = { workoutIndex:0, currentExercise:0, sessionData:[], startTime:null, restInterval:null, restRemaining:0, restTotal:0, rating:null };
 
   function toast(msg) {
@@ -561,8 +590,51 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       .maybeSingle();
     anamnese = anamneseData || { student_id: student.id, objetivo: '', historico_medico: '', lesoes: '', cirurgias: '', medicamentos: '', fumante: false, restricoes: '', observacoes: '' };
 
+    const { data: notifs } = await supa
+      .from('student_notifications')
+      .select('*')
+      .eq('student_id', student.id)
+      .order('created_at', { ascending: false });
+    notifications = notifs || [];
+    updateNotifBadge();
+
     goTab('home');
     armBackGuard();
+  }
+
+  function updateNotifBadge() {
+    const hasUnread = notifications.some(n => !n.read_at);
+    document.querySelectorAll('.notif-dot').forEach(el => { el.style.display = hasUnread ? 'block' : 'none'; });
+  }
+
+  async function openNotifications() {
+    showScreen('notifications');
+    renderNotifications();
+    const unreadIds = notifications.filter(n => !n.read_at).map(n => n.id);
+    if (unreadIds.length) {
+      const now = new Date().toISOString();
+      await supa.from('student_notifications').update({ read_at: now }).in('id', unreadIds);
+      notifications.forEach(n => { if (!n.read_at) n.read_at = now; });
+      updateNotifBadge();
+    }
+  }
+
+  function renderNotifications() {
+    const el = $('notificationsContent');
+    if (!notifications.length) {
+      el.innerHTML = `<div class="empty-state"><div class="es-ico">🔔</div><div class="es-txt">Nenhuma notificação ainda.<br>Mensagens do seu personal aparecerão aqui.</div></div>`;
+      return;
+    }
+    el.innerHTML = notifications.map(n => {
+      const d = new Date(n.created_at);
+      const dataStr = `${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+      return `
+        <div class="hist-item">
+          <div class="hist-top"><span class="hist-date">${escapeHtml(n.title)}</span></div>
+          ${n.body ? `<div class="hist-meta"><span>${escapeHtml(n.body)}</span></div>` : ''}
+          <div class="hist-meta"><span>${dataStr}</span></div>
+        </div>`;
+    }).join('');
   }
 
   function renderHomeError(msg) {

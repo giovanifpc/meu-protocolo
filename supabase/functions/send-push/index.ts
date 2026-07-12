@@ -59,10 +59,15 @@ Deno.serve(async (req) => {
     if (studentErr || !student) throw new Error('Aluno não encontrado ou sem permissão pra notificá-lo.');
 
     const supaAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // grava o registro sempre, independente de o aluno ter push ativado —
+    // é o que aparece na tela de Notificações dentro do próprio app.
+    await supaAdmin.from('student_notifications').insert({ student_id, title, body: body || null });
+
     const { data: subs, error: subsErr } = await supaAdmin
       .from('push_subscriptions').select('*').eq('student_id', student_id);
     if (subsErr) throw new Error('Erro ao buscar inscrições de notificação: ' + subsErr.message);
-    if (!subs || !subs.length) return jsonResponse({ sent: 0, message: 'Esse aluno ainda não ativou notificações no app.' });
+    if (!subs || !subs.length) return jsonResponse({ sent: 0, message: 'Esse aluno ainda não ativou notificações no app — mas a mensagem já ficou registrada pra ele ver dentro do app.' });
 
     const appServer = await getAppServer();
     let sent = 0;

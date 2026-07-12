@@ -83,7 +83,15 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
-Última atualização: 2026-07-09 (3ª sessão do dia, notebook — pacote de "comodidades pro profissional" + logo definitivo da marca). Ver também `ATUALIZACAO-2026-07-02.md` (sessão anterior, setup de e-mail transacional).
+Última atualização: 2026-07-12 (notebook — testes ponta a ponta do pacote de comodidades, correção do botão voltar, chave VAPID corrompida e registro de notificações no app). Ver também `ATUALIZACAO-2026-07-02.md` (sessão anterior, setup de e-mail transacional).
+
+### Testes e correções do pacote de comodidades (2026-07-12)
+
+- **Botão voltar do celular** (`aluno.html`): implementado com History API (`pushState`/`popstate`) — sempre volta pra Início de qualquer tela; na tela de execução de treino, mostra a mesma confirmação de "sair do treino" que já existia; na Início, exige duplo toque ("toque em voltar de novo pra sair") antes de deixar sair de verdade. Cuidado ao mexer nisso: o arquivo já tem uma variável `history` (array de treinos do aluno) que **sombra** o `window.history` do navegador — sempre usar `window.history.pushState(...)` explícito, nunca `history.pushState` sem prefixo.
+- **Chave VAPID corrompida**: o secret `VAPID_KEYS_JSON` tinha sido salvo com `JSON.stringify` aplicado duas vezes por engano (a Edge Function `send-push` falhava com "Expected property name or '}' in JSON" ao tentar fazer `JSON.parse`). Gerada chave nova e corrigido o formato ao salvar — push notifications confirmadas funcionando em produção depois disso.
+- **Registro de notificações** (`aluno.html` + `send-push`): descoberto em teste que a notificação chegava na bandeja do sistema mas não ficava registrada em lugar nenhum dentro do app. Resolvido com tabela `student_notifications` — a Edge Function grava toda mensagem enviada (mesmo sem push ativado), e um sino no topbar de todas as telas (Início/Histórico/Nutri/Perfil) abre uma lista cronológica, com bolinha de não-lida.
+- **Anamnese**: um erro de RLS ("new row violates row-level security policy") apareceu uma vez em teste, mas se resolveu sozinho com logout+login (sessão/token desatualizado no navegador) — confirmado via simulação SQL direta que a policy e os dados estavam corretos o tempo todo, não era bug real.
+- Alertas de adesão/pagamento (WhatsApp) e anamnese testados com sucesso em produção pelo usuário. Restam: biblioteca de protocolos-modelo, agenda leve (dias da semana) e instalação do PWA — ver checklist de teste retomado a partir do item 4.
 
 ### Logo da marca definido (2026-07-09)
 

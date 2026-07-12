@@ -83,7 +83,9 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
-Última atualização: 2026-07-12 (notebook — testes ponta a ponta do pacote de comodidades, correção do botão voltar, chave VAPID corrompida e registro de notificações no app). Ver também `ATUALIZACAO-2026-07-02.md` (sessão anterior, setup de e-mail transacional).
+Última atualização: 2026-07-12 (notebook — testes ponta a ponta do pacote de comodidades + correções encontradas, e fechamento do roadmap priorizado das próximas fases com o usuário). Ver também `ATUALIZACAO-2026-07-02.md` (sessão anterior, setup de e-mail transacional).
+
+**Próxima sessão começa pela Fase A, item 1: Webhook Mercado Pago.** Ver "Roadmap priorizado" mais abaixo pra ordem completa e as decisões de arquitetura já fechadas (painel master, diferenciação de plano).
 
 ### Testes e correções do pacote de comodidades (2026-07-12)
 
@@ -91,7 +93,8 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 - **Chave VAPID corrompida**: o secret `VAPID_KEYS_JSON` tinha sido salvo com `JSON.stringify` aplicado duas vezes por engano (a Edge Function `send-push` falhava com "Expected property name or '}' in JSON" ao tentar fazer `JSON.parse`). Gerada chave nova e corrigido o formato ao salvar — push notifications confirmadas funcionando em produção depois disso.
 - **Registro de notificações** (`aluno.html` + `send-push`): descoberto em teste que a notificação chegava na bandeja do sistema mas não ficava registrada em lugar nenhum dentro do app. Resolvido com tabela `student_notifications` — a Edge Function grava toda mensagem enviada (mesmo sem push ativado), e um sino no topbar de todas as telas (Início/Histórico/Nutri/Perfil) abre uma lista cronológica, com bolinha de não-lida.
 - **Anamnese**: um erro de RLS ("new row violates row-level security policy") apareceu uma vez em teste, mas se resolveu sozinho com logout+login (sessão/token desatualizado no navegador) — confirmado via simulação SQL direta que a policy e os dados estavam corretos o tempo todo, não era bug real.
-- Alertas de adesão/pagamento (WhatsApp) e anamnese testados com sucesso em produção pelo usuário. Restam: biblioteca de protocolos-modelo, agenda leve (dias da semana) e instalação do PWA — ver checklist de teste retomado a partir do item 4.
+- **Pacote de comodidades 100% testado e confirmado em produção**: alertas de adesão/pagamento (WhatsApp), anamnese, biblioteca de protocolos-modelo, agenda leve (dias da semana), instalação do PWA e push notifications — todos funcionando ponta a ponta.
+- **Ícone do PWA estava fora de centro**: `logo.png` não é quadrado e o desenho não fica centralizado nele (sobra assimétrica de espaço transparente) — `scripts/generate_icons.py` agora recorta pro conteúdo visível e centraliza num canvas quadrado antes de gerar os tamanhos. **Lembrete**: ícone de PWA instalado no Android fica em cache — precisa remover o atalho da tela inicial e instalar de novo pra ver a correção, só atualizar a página não basta.
 
 ### Logo da marca definido (2026-07-09)
 
@@ -110,7 +113,7 @@ Contexto: personal trainers autônomos comparam o app com concorrentes que anunc
 - **Agenda leve** (`treinos.html` + `aluno.html`): dia(s) da semana opcional por treino do loop (campo `dias_semana` dentro do próprio `workouts` jsonb, sem migration). Não mexe na lógica do loop/periodização — é só um hint visual ("hoje é dia deste treino" na Home do aluno). Decisão deliberada de não rearquitetar pra calendário fixo completo (contrariaria a escolha consciente já documentada mais abaixo).
 - **PWA completo**: `manifest.json` + ícones gerados em `icons/` (script `scripts/generate_icons.py`, precisa de Pillow) + `sw.js` (cache network-first pra assets estáticos, nunca intercepta `*.supabase.co`). Registrado só em `aluno.html` por ora — é onde faz sentido "adicionar à tela de início" como app; os paineis do profissional continuam como dashboard web comum.
 - **Push notifications**: par de chaves VAPID gerado localmente com a Web Crypto API do Node (sem precisar de Deno instalado nem de expor endpoint nenhum — a chave privada foi direto pra `supabase secrets set VAPID_KEYS_JSON`, nunca tocou o repositório). Edge Function `send-push` usa `jsr:@negrel/webpush` (lib nativa Deno, evita os problemas conhecidos de rodar o pacote npm `web-push` via esm.sh nesse runtime). Aluno ativa em Perfil → "Ativar notificações"; profissional dispara pelo botão "Notificar no app" dentro de cada alerta em `index.html`, reaproveitando a mesma mensagem editada pro WhatsApp.
-- **Não testado interativamente pelo usuário ainda** — validado por sintaxe de todos os scripts, geração de ícones conferida visualmente, registro do service worker confirmado via preview isolado. Precisa de teste ponta a ponta em produção: cadastrar telefone/mensalidade de um aluno, conferir alerta de atraso, preencher anamnese como aluno, salvar/aplicar um modelo de protocolo, marcar dias da semana num treino, instalar o PWA no celular e ativar notificações, e confirmar que uma notificação de teste chega.
+- **Testado ponta a ponta em produção (2026-07-12)** — ver seção "Testes e correções do pacote de comodidades" acima pros bugs encontrados e corrigidos nesse processo (chave VAPID corrompida, falso alarme de RLS na anamnese, registro de notificações que faltava).
 
 ### Avaliação física — nova área (2026-07-09)
 
@@ -204,12 +207,38 @@ Duas vezes nesta sessão o deploy automático (`pages build and deployment`) fal
 - `avaliacoes.html`: dobras cutâneas (4 protocolos) + bioimpedância manual + perimetria + fotos, rascunho/finalizar, comparativo de evolução
 - Seção "Avaliação física" na tela de Histórico do `aluno.html`: somente leitura, resumo + evolução
 
-### Ainda não implementado (backlog maior, sem trabalho iniciado)
+### Roadmap priorizado (definido em 2026-07-12 — ordem é estratégica, não trocar sem recombinar com o usuário)
 
-- Webhook Mercado Pago (cobrança automática ao fim do trial — trial deve exigir cartão cadastrado desde o cadastro, ver master doc seção 4). Não confundir com o acompanhamento de mensalidade aluno→profissional implementado nesta sessão — são coisas diferentes: esse item aqui é a cobrança do profissional pelo uso do Meu Protocolo em si
-- Chatbot de suporte via IA pro aluno final (item 1 do master doc — diferente da geração de treino por IA pro profissional, que já está feita)
-- Mensageria dentro do próprio app entre profissional e aluno (adiada deliberadamente nesta sessão — hoje usa WhatsApp/push)
-- Política de Privacidade / Termos de Uso
-- Rate limiting, headers de segurança, backup automático (item 13 do master doc)
-- Painel/acesso master: master doc não pede CRUD de tenants, só 2FA + recuperação de emergência (item 14) — escopo exato de uma eventual visão agregada de métricas ainda não decidido com o usuário
-- Nota: o master doc completo (`MEU-PROTOCOLO-MASTER.md`) só existe no PC do usuário — não está disponível em sessões remotas (celular/web) a menos que seja colado na conversa ou commitado no repo
+Nota: o master doc completo (`MEU-PROTOCOLO-MASTER.md`) só existe no PC do usuário — não está disponível em sessões remotas (celular/web) a menos que seja colado na conversa ou commitado no repo.
+
+**Decisões de arquitetura já fechadas nesta sessão, aguardando implementação:**
+
+- **Painel master**: e-mail dedicado `meuprotocolo1@gmail.com`. Login pelo mesmo fluxo de OTP, mas esse e-mail específico cai numa página nova (`master.html`, sem link público em lugar nenhum) em vez do painel de profissional/app de aluno normal. Precisa de uma policy de RLS nova, restrita a esse e-mail, que enxergue a tabela `professionals` inteira (todos os tenants) + contagem de alunos por um — não é CRUD completo de tenant, só visão agregada (lista com plano/status/nº de alunos) e controle básico (mudar status manualmente). Não é uma "terceira camada de plano" — é uma camada de operação acima de tudo, visível só pro Giovani.
+- **Diferenciação de plano + preço flexível**: dois campos novos em `professionals` — `plano` (`starter`/`pro`/`elite`, controla o que a conta enxerga/pode usar: white-label, limite de alunos, feature de IA do relatório) e `valor_customizado` (opcional, sobrescreve o preço de tabela na hora de cobrar — permite dar plano Elite completo cobrando preço de Starter pra um amigo/tester, por exemplo). Os dois campos ficam editáveis no painel master. **Hoje nada disso é diferenciado ainda** — qualquer profissional já usa white-label livremente, não existe limite de alunos por plano, e a feature de IA do relatório do Elite nem foi construída.
+- Sessão de expiração: **não precisa mexer** — o padrão atual do Supabase (token renova sozinho em segundo plano, só pede login de novo depois de dias sem abrir o app) já bate com o "comum de mercado" que o usuário quer.
+
+**Fase A — Monetização e operação (bloqueia conversão de clientes pagantes de verdade)**
+1. Webhook Mercado Pago: cobrança automática do profissional ao fim do trial + validação HMAC da assinatura (trial deve exigir cartão cadastrado desde o cadastro, ver master doc seção 4). Não confundir com o acompanhamento de mensalidade aluno→profissional (já implementado) — são coisas diferentes: esse item é a cobrança do profissional pelo uso do Meu Protocolo em si
+2. Painel master (ver decisão de arquitetura acima)
+3. Diferenciação de plano + preço customizado (ver decisão de arquitetura acima) — natural fazer junto com o item 1, já que gating de feature só faz sentido quando existe cobrança de verdade rodando
+4. Fluxo de cancelamento: retenção de dados por 30 dias em estado inativo + aviso explícito na tela de confirmação (data-fim do acesso, prazo de retenção, aviso de exclusão permanente) — master doc seção 4
+
+**Fase B — Legal e segurança (necessário antes de escalar/tráfego pago, master doc diz "desde o MVP/dia 1")**
+5. Política de Privacidade + Termos de Uso + checkbox de consentimento no cadastro do aluno (LGPD — já se coleta dado de saúde real)
+6. Segurança: rate limiting no login, proteção contra brute force, headers HTTP (HSTS/CSP/X-Frame-Options), sanitização de inputs, backup automático do banco Supabase (item 13 do master doc)
+7. Monitoramento automatizado: uptime + erros críticos com alerta via WhatsApp/e-mail (item 12 do master doc — sugestões: UptimeRobot free tier, Sentry)
+
+**Fase C — Diferencial de produto (suporte via IA, a proposta de valor central do master doc)**
+8. MD de contexto da IA de suporte (documento escrito junto com o usuário, descrevendo o produto **como ele funciona de fato** — não criar antes da Fase A/B estarem prontas, senão fica desatualizado rápido)
+9. Chatbot de suporte via IA pro profissional, 24/7 sem fila de ticket (item 1 do master doc — diferente da geração de treino por IA, que já está feita)
+10. Onboarding guiado por IA pro profissional (item 2 — meta: publicar primeiro treino em <30min sem ajuda)
+11. Onboarding visual pro aluno, 3-4 telas na primeira abertura (item 3)
+
+**Fase D — Crescimento (pode esperar mais)**
+12. Upload de vídeo próprio de execução de exercício, além dos GIFs da biblioteca (item 10)
+13. Ranking entre alunos — por profissional, critérios fixos (frequência + medalhas + carga), profissional ativa pra todos os alunos dele (item 11)
+14. Programa de indicação — link rastreável, 1 mês de desconto ou crédito (item 16)
+15. 2FA + plano de contingência de acesso no painel master (item 14)
+16. Mensageria dentro do próprio app entre profissional e aluno (adiada deliberadamente em sessão anterior — hoje usa WhatsApp/push)
+
+**Não-técnico (do usuário, não do Code)**: estrutura de recebimento (MEI), registro da marca no INPI, pesquisa a fundo do concorrente Athlo (athloapp.eu), alinhar termos com o cliente 0.

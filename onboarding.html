@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://sdk.mercadopago.com/js/v2"></script>
 <style>
   :root {
     --bg:#F8F9FA; --primary:#2D6BE4; --accent:#3BB08F; --text:#1E2A3A;
@@ -27,43 +28,108 @@
   .msg { font-size:13px; margin-top:12px; text-align:center; min-height:18px; }
   .msg.error { color:#C0392B; }
   .trial-note { font-size:12px; color:var(--muted); background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:14px; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .card-field { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:11px 13px; height:42px; }
+  .card-field.focused { border-color:var(--primary); }
+  #step2 { display:none; }
+  .lock-hint { font-size:11px; color:var(--muted); text-align:center; margin-top:14px; }
 </style>
 </head>
 <body>
   <div class="card">
-    <h1>Bem-vindo</h1>
-    <p class="hint">Vamos criar sua conta de profissional.</p>
-    <div class="trial-note">Trial gratuito de 14 dias. Ao final, a cobrança do plano escolhido é feita automaticamente.</div>
+    <div id="step1">
+      <h1>Bem-vindo</h1>
+      <p class="hint">Vamos criar sua conta de profissional.</p>
+      <div class="trial-note">Trial gratuito de 14 dias. Ao final, a cobrança do plano escolhido é feita automaticamente no cartão cadastrado a seguir.</div>
 
-    <div class="field">
-      <label>Seu nome ou nome do negócio</label>
-      <input type="text" id="displayNameInput" placeholder="Ex: João Personal Trainer">
+      <div class="field">
+        <label>Seu nome ou nome do negócio</label>
+        <input type="text" id="displayNameInput" placeholder="Ex: João Personal Trainer">
+      </div>
+
+      <button class="btn" id="createBtn">Continuar</button>
+      <div class="msg" id="msgBox"></div>
     </div>
 
-    <button class="btn" id="createBtn">Criar minha conta</button>
-    <div class="msg" id="msgBox"></div>
+    <div id="step2">
+      <h1>Cartão de cobrança</h1>
+      <p class="hint">Não cobramos nada agora — só depois dos 14 dias de trial.</p>
+
+      <div class="field">
+        <label>Nome no cartão</label>
+        <input type="text" id="cardholderName" placeholder="Como está impresso no cartão">
+      </div>
+      <div class="field">
+        <label>Número do cartão</label>
+        <div class="card-field" id="cardNumberField"></div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Validade</label>
+          <div class="card-field" id="expirationDateField"></div>
+        </div>
+        <div class="field">
+          <label>CVV</label>
+          <div class="card-field" id="securityCodeField"></div>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>CPF do titular</label>
+          <input type="text" id="identificationNumber" placeholder="Somente números">
+        </div>
+      </div>
+
+      <button class="btn" id="payBtn">Confirmar cartão e começar o trial</button>
+      <div class="msg" id="msgBox2"></div>
+      <div class="lock-hint">Pagamento processado pelo Mercado Pago — o número do cartão não passa pelos nossos servidores.</div>
+    </div>
   </div>
 
 <script>
   const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';
+  // Public Key é seguro expor no front-end (mesma natureza da anon key acima) —
+  // trocar pelo valor real gerado em developers.mercadopago.com.br → sua
+  // aplicação → Credenciais (teste ou produção, conforme o Access Token
+  // configurado nas Edge Functions).
+  const MERCADOPAGO_PUBLIC_KEY = 'SUBSTITUIR_PELA_PUBLIC_KEY_MERCADO_PAGO';
   const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const $ = (id) => document.getElementById(id);
   const msgBox = $('msgBox');
+  const msgBox2 = $('msgBox2');
 
   function showMsg(text) { msgBox.textContent = text; }
+  function showMsg2(text) { msgBox2.textContent = text; }
 
   (async () => {
     const { data: { session } } = await supa.auth.getSession();
     if (!session) { window.location.href = 'login.html'; return; }
 
     // Se já existe conta pro e-mail (ex: sessão anterior criou o registro mas
-    // não completou o redirecionamento), pula direto pro painel em vez de
-    // mostrar o formulário de novo.
-    const { data: existing, error: existingErr } = await supa.from('professionals').select('id').eq('email', session.user.email).maybeSingle();
+    // não completou o cadastro do cartão), pula direto pro passo certo em vez
+    // de mostrar o formulário de nome de novo.
+    const { data: existing, error: existingErr } = await supa.from('professionals').select('id, mp_preapproval_id').eq('email', session.user.email).maybeSingle();
     if (existingErr) console.error('Falha ao checar conta existente:', existingErr.message);
-    if (existing) { window.location.href = 'index.html'; }
+    if (existing?.mp_preapproval_id) {
+      window.location.href = 'index.html';
+    } else if (existing) {
+      $('step1').style.display = 'none';
+      $('step2').style.display = 'block';
+      initCardFields();
+    }
   })();
+
+  let mpFields = null;
+  function initCardFields() {
+    const mp = new MercadoPago(MERCADOPAGO_PUBLIC_KEY, { locale: 'pt-BR' });
+    mpFields = {
+      cardNumber: mp.fields.create('cardNumber', { placeholder: '0000 0000 0000 0000' }).mount('cardNumberField'),
+      expirationDate: mp.fields.create('expirationDate', { placeholder: 'MM/AA' }).mount('expirationDateField'),
+      securityCode: mp.fields.create('securityCode', { placeholder: 'CVV' }).mount('securityCodeField'),
+      mp,
+    };
+  }
 
   $('createBtn').addEventListener('click', async () => {
     const displayName = $('displayNameInput').value.trim();
@@ -91,6 +157,48 @@
       showMsg('Erro ao criar conta: ' + error.message);
       return;
     }
+
+    $('step1').style.display = 'none';
+    $('step2').style.display = 'block';
+    initCardFields();
+  });
+
+  $('payBtn').addEventListener('click', async () => {
+    const cardholderName = $('cardholderName').value.trim();
+    const identificationNumber = $('identificationNumber').value.trim();
+    if (!cardholderName || !identificationNumber) { showMsg2('Preencha nome no cartão e CPF.'); return; }
+
+    $('payBtn').disabled = true;
+    showMsg2('Validando cartão...');
+
+    let tokenResult;
+    try {
+      tokenResult = await mpFields.mp.fields.createCardToken({
+        cardholderName,
+        identificationType: 'CPF',
+        identificationNumber,
+      });
+    } catch (err) {
+      $('payBtn').disabled = false;
+      showMsg2('Cartão inválido: ' + (err?.message || 'confira os dados e tente de novo.'));
+      return;
+    }
+
+    showMsg2('Ativando assinatura...');
+    const { data: { session } } = await supa.auth.getSession();
+    const { data, error } = await supa.functions.invoke('mercadopago-create-preapproval', {
+      body: { card_token_id: tokenResult.id },
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+
+    $('payBtn').disabled = false;
+    if (error || data?.error) {
+      const motivo = data?.error || error?.context?.error || error?.message || 'erro desconhecido';
+      console.error('Falha ao criar assinatura:', motivo);
+      showMsg2('Erro ao ativar assinatura: ' + motivo);
+      return;
+    }
+
     window.location.href = 'index.html';
   });
 </script>

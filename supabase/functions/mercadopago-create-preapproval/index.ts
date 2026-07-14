@@ -83,8 +83,12 @@ Deno.serve(async (req) => {
       }),
     });
 
-    const mpData = await mpRes.json();
-    if (!mpRes.ok) throw new Error(`Erro ao criar assinatura no Mercado Pago: ${mpData.message || JSON.stringify(mpData)}`);
+    const mpBodyText = await mpRes.text();
+    let mpData: any = null;
+    try { mpData = JSON.parse(mpBodyText); } catch { /* resposta não-JSON, tratado abaixo */ }
+    if (!mpRes.ok || !mpData) {
+      throw new Error(`Erro ao criar assinatura no Mercado Pago (status ${mpRes.status}): ${mpData?.message || mpBodyText || 'corpo vazio'}`);
+    }
 
     const supaAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     await supaAdmin.from('professionals').update({

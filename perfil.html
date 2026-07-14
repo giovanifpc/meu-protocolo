@@ -76,6 +76,24 @@
       <div class="msg" id="saveMsg"></div>
     </div>
 
+    <div class="card" id="cancelCard">
+      <h2>Cancelar assinatura</h2>
+      <div id="cancelStep1">
+        <p style="font-size:13px;color:var(--muted);margin:0 0 12px;">Isso encerra o acesso ao Meu Protocolo. Você pode revisar os detalhes antes de confirmar.</p>
+        <button class="btn danger" id="openCancelBtn">Cancelar minha assinatura</button>
+      </div>
+      <div id="cancelStep2" style="display:none">
+        <p style="font-size:13px;line-height:1.6;margin:0 0 8px;"><strong>Seu acesso será encerrado imediatamente</strong> ao confirmar.</p>
+        <p style="font-size:13px;line-height:1.6;margin:0 0 8px;">Seus dados (protocolos, avaliações, histórico dos seus alunos) ficam <strong>retidos por 30 dias</strong> em estado inativo — nesse período, entre em contato para reativar sem perder nada.</p>
+        <p style="font-size:13px;line-height:1.6;margin:0 0 16px;color:var(--danger);"><strong>Após os 30 dias, os dados são excluídos permanentemente</strong> e não podem ser recuperados.</p>
+        <div style="display:flex;gap:10px;">
+          <button class="btn secondary" id="backCancelBtn" style="flex:1;">Voltar</button>
+          <button class="btn danger" id="confirmCancelBtn" style="flex:1;">Confirmar cancelamento</button>
+        </div>
+        <div class="msg" id="cancelMsg"></div>
+      </div>
+    </div>
+
     <div class="card">
       <button class="btn danger" id="logoutBtn">Sair da conta</button>
     </div>
@@ -151,6 +169,39 @@
   });
 
   $('logoutBtn').addEventListener('click', async () => {
+    await supa.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  $('openCancelBtn').addEventListener('click', () => {
+    $('cancelStep1').style.display = 'none';
+    $('cancelStep2').style.display = 'block';
+  });
+
+  $('backCancelBtn').addEventListener('click', () => {
+    $('cancelStep2').style.display = 'none';
+    $('cancelStep1').style.display = 'block';
+  });
+
+  $('confirmCancelBtn').addEventListener('click', async () => {
+    $('confirmCancelBtn').disabled = true;
+    $('backCancelBtn').disabled = true;
+    $('cancelMsg').textContent = '';
+    $('cancelMsg').className = 'msg';
+
+    const { error } = await supa.from('professionals').update({
+      status: 'inativo',
+      inactive_since: new Date().toISOString(),
+    }).eq('id', professional.id);
+
+    if (error) {
+      $('cancelMsg').textContent = 'Erro ao cancelar: ' + error.message;
+      $('cancelMsg').className = 'msg error';
+      $('confirmCancelBtn').disabled = false;
+      $('backCancelBtn').disabled = false;
+      return;
+    }
+
     await supa.auth.signOut();
     window.location.href = 'login.html';
   });

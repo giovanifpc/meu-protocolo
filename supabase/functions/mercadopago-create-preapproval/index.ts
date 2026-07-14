@@ -55,9 +55,17 @@ Deno.serve(async (req) => {
 
     const valor = PLAN_PRICES[professional.plan] || PLAN_PRICES.starter;
 
+    // Com Access Token de teste (TEST-...), o Mercado Pago exige o header
+    // X-scope: stage — sem ele, a API procura o card_token_id no ambiente de
+    // produção (onde ele não existe, já que foi gerado em modo teste) e
+    // responde "Card token service not found" em vez de criar a assinatura.
     const mpRes = await fetch('https://api.mercadopago.com/preapproval', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${MERCADOPAGO_ACCESS_TOKEN}`, 'content-type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${MERCADOPAGO_ACCESS_TOKEN}`,
+        'content-type': 'application/json',
+        ...(MERCADOPAGO_ACCESS_TOKEN.startsWith('TEST-') ? { 'X-scope': 'stage' } : {}),
+      },
       body: JSON.stringify({
         reason: `Meu Protocolo — plano ${professional.plan}`,
         external_reference: professional.id,

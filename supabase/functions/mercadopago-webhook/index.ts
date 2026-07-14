@@ -53,7 +53,12 @@ async function verificaAssinatura(req: Request, dataId: string): Promise<boolean
 
 async function mpFetch(path: string) {
   const res = await fetch(`https://api.mercadopago.com${path}`, {
-    headers: { Authorization: `Bearer ${MERCADOPAGO_ACCESS_TOKEN}` },
+    headers: {
+      Authorization: `Bearer ${MERCADOPAGO_ACCESS_TOKEN}`,
+      // mesmo caso do X-scope em mercadopago-create-preapproval: com token de
+      // teste, recursos criados em modo teste só são achados no ambiente stage
+      ...(MERCADOPAGO_ACCESS_TOKEN.startsWith('TEST-') ? { 'X-scope': 'stage' } : {}),
+    },
   });
   if (!res.ok) throw new Error(`Mercado Pago API ${path} respondeu ${res.status}: ${await res.text()}`);
   return res.json();

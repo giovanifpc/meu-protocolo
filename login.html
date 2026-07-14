@@ -128,7 +128,12 @@
     const { data: isPro, error: proErr } = await supa.rpc('is_professional_email', { check_email: email });
     if (proErr) console.error('is_professional_email falhou:', proErr.message);
     if (isPro) {
-      window.location.href = 'index.html';
+      // Trial exige cartão cadastrado desde o cadastro — se o profissional
+      // ainda não completou a etapa do cartão (fechou o navegador no meio do
+      // onboarding, por exemplo), manda de volta pro onboarding em vez do
+      // painel, que continua nesse mesmo estado indefinidamente.
+      const { data: prof } = await supa.from('professionals').select('mp_preapproval_id').eq('email', email).maybeSingle();
+      window.location.href = prof?.mp_preapproval_id ? 'index.html' : 'onboarding.html';
       return;
     }
     const { data: isStudent, error: stuErr } = await supa.rpc('is_student_email', { check_email: email });

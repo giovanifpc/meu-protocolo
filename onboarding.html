@@ -193,7 +193,12 @@
 
     $('payBtn').disabled = false;
     if (error || data?.error) {
-      const motivo = data?.error || error?.context?.error || error?.message || 'erro desconhecido';
+      let motivo = data?.error;
+      if (!motivo && error?.context?.text) {
+        const corpo = await error.context.text().catch(() => null);
+        try { motivo = corpo && JSON.parse(corpo)?.error; } catch { motivo = corpo; }
+      }
+      motivo = motivo || error?.message || 'erro desconhecido';
       console.error('Falha ao criar assinatura:', motivo);
       showMsg2('Erro ao ativar assinatura: ' + motivo);
       return;

@@ -61,6 +61,7 @@
         <label>Nome exibido</label>
         <input type="text" id="displayNameInput" placeholder="Ex: João Personal Trainer">
       </div>
+      <div id="whiteLabelLock" class="msg" style="display:none;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;">Cor e logo personalizados são exclusivos dos planos Pro e Elite. Faça upgrade pra personalizar sua marca.</div>
       <div class="field">
         <label>Cor principal</label>
         <div class="color-row">
@@ -139,6 +140,13 @@
     $('primaryColorPicker').value = color;
     $('primaryColorText').value = color;
     $('logoUrlInput').value = pro.logo_url || '';
+
+    if (pro.plan === 'starter') {
+      $('whiteLabelLock').style.display = 'block';
+      $('primaryColorPicker').disabled = true;
+      $('primaryColorText').disabled = true;
+      $('logoUrlInput').disabled = true;
+    }
   }
 
   $('primaryColorPicker').addEventListener('input', (e) => { $('primaryColorText').value = e.target.value; });
@@ -151,11 +159,11 @@
     $('saveMsg').textContent = '';
     $('saveMsg').className = 'msg';
 
-    const payload = {
-      display_name: $('displayNameInput').value.trim() || professional.display_name,
-      primary_color: $('primaryColorText').value.trim() || null,
-      logo_url: $('logoUrlInput').value.trim() || null,
-    };
+    const payload = { display_name: $('displayNameInput').value.trim() || professional.display_name };
+    if (professional.plan !== 'starter') {
+      payload.primary_color = $('primaryColorText').value.trim() || null;
+      payload.logo_url = $('logoUrlInput').value.trim() || null;
+    }
 
     const { error } = await supa.from('professionals').update(payload).eq('id', professional.id);
     $('saveBtn').disabled = false;

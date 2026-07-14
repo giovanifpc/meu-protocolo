@@ -126,12 +126,15 @@
   }
 
   const STATUS_LABELS = { ativo: 'Ativo', pausado: 'Pausado', inativo: 'Inativo' };
+  const PLAN_STUDENT_LIMITS = { starter: 15, pro: 40, elite: Infinity };
   let notesByStudent = {};
+  let currentStudentCount = 0;
 
   async function loadStudents() {
     const { data, error } = await supa.from('students').select('*').eq('professional_id', professional.id).order('created_at', { ascending: false });
     const list = $('studentsList');
     if (error) { list.innerHTML = `<div class="empty">Erro ao carregar alunos.</div>`; return; }
+    currentStudentCount = data ? data.length : 0;
     if (!data || data.length === 0) { list.innerHTML = `<div class="empty">Nenhum aluno cadastrado ainda.</div>`; return; }
 
     const { data: notes } = await supa.from('student_notes').select('*').eq('professional_id', professional.id);
@@ -240,6 +243,11 @@
     $('addStudentMsg').textContent = '';
     if (!nome || !email || !email.includes('@')) {
       $('addStudentMsg').textContent = 'Preencha nome e e-mail válidos.';
+      return;
+    }
+    const limite = PLAN_STUDENT_LIMITS[professional.plan] ?? PLAN_STUDENT_LIMITS.starter;
+    if (currentStudentCount >= limite) {
+      $('addStudentMsg').textContent = `Seu plano (${professional.plan}) permite até ${limite} alunos. Faça upgrade pra cadastrar mais.`;
       return;
     }
     $('addStudentBtn').disabled = true;

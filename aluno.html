@@ -231,9 +231,33 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 /* NUTRI */
 .nutri-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:16px}
 .nutri-text{font-size:14px;line-height:1.6;color:var(--text);white-space:pre-wrap}
+
+/* CONSENTIMENTO LGPD (primeiro acesso) */
+.consent-gate{position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
+.consent-card{width:100%;max-width:400px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:28px 24px}
+.consent-card h1{font-size:20px;font-weight:700;margin-bottom:8px}
+.consent-card p{font-size:14px;line-height:1.6;color:var(--muted);margin-bottom:16px}
+.consent-check{display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.5;margin-bottom:18px}
+.consent-check input{margin-top:2px}
+.consent-check a{color:var(--primary);font-weight:600}
+.consent-card button{width:100%;padding:12px 18px;border-radius:10px;font-weight:700;font-size:15px;border:none;background:var(--primary);color:#fff;font-family:var(--font);cursor:pointer}
+.consent-card button:disabled{opacity:.5;cursor:not-allowed}
 </style>
 </head>
 <body>
+
+<!-- ===== CONSENTIMENTO LGPD (primeiro acesso) ===== -->
+<div class="consent-gate" id="consentGate" style="display:none">
+  <div class="consent-card">
+    <h1>Antes de começar</h1>
+    <p>Pra usar o Meu Protocolo, você precisa ler e aceitar os termos abaixo. Seu profissional só vê os dados de saúde que você registrar aqui (anamnese, avaliações) — nunca compartilhamos com terceiros.</p>
+    <label class="consent-check">
+      <input type="checkbox" id="consentCheckbox">
+      <span>Li e aceito os <a href="termos.html" target="_blank">Termos de Uso</a> e a <a href="privacidade.html" target="_blank">Política de Privacidade</a>, incluindo o tratamento dos meus dados de saúde.</span>
+    </label>
+    <button id="consentBtn" disabled>Continuar</button>
+  </div>
+</div>
 
 <!-- ===== HOME ===== -->
 <section class="screen active" id="home">
@@ -547,6 +571,35 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       document.documentElement.style.setProperty('--primary', student.professionals.primary_color);
     }
 
+    const { data: consent } = await supa
+      .from('student_consent')
+      .select('id')
+      .eq('student_id', student.id)
+      .maybeSingle();
+
+    if (!consent) {
+      $('consentGate').style.display = 'flex';
+      $('consentCheckbox').addEventListener('change', (e) => {
+        $('consentBtn').disabled = !e.target.checked;
+      });
+      $('consentBtn').addEventListener('click', async () => {
+        $('consentBtn').disabled = true;
+        const { error: consentErr } = await supa.from('student_consent').insert({ student_id: student.id });
+        if (consentErr) {
+          console.error('Falha ao registrar consentimento:', consentErr.message);
+          $('consentBtn').disabled = false;
+          return;
+        }
+        $('consentGate').style.display = 'none';
+        await continuarBootAposConsentimento();
+      });
+      return;
+    }
+
+    await continuarBootAposConsentimento();
+  }
+
+  async function continuarBootAposConsentimento() {
     const { data: proto, error: protoErr } = await supa
       .from('training_protocols')
       .select('*')

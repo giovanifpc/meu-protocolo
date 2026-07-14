@@ -83,7 +83,37 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
-Última atualização: 2026-07-13 (web — implementação do item 1 da Fase A, webhook + assinatura Mercado Pago. **Código escrito e commitado, mas não implantado nem testado** — depende de passos manuais do usuário, ver abaixo). Ver também `ATUALIZACAO-2026-07-02.md` (sessão de 2026-07-02, setup de e-mail transacional).
+Última atualização: 2026-07-14 (web/notebook — setup completo do Mercado Pago em sandbox feito nesta sessão: aplicação criada, schema aplicado em produção, secrets configurados, as duas Edge Functions implantadas, 3 bugs encontrados e corrigidos. **Bloqueado num erro do lado do Mercado Pago** — chamado de suporte aberto, aguardando resposta. Ver "Bloqueio atual" logo abaixo antes de continuar). Ver também `ATUALIZACAO-2026-07-02.md` (sessão de 2026-07-02, setup de e-mail transacional).
+
+### Bloqueio atual — POST /preapproval retorna 500 (2026-07-14)
+
+**Antes de mexer em qualquer coisa aqui, confira se o chamado de suporte já foi respondido** (e-mail com assunto contendo `WCS-XXXXX`, ou `mercadopago.com.br/developers/pt/support/center/tickets`).
+
+Ao tentar criar a assinatura (`POST /preapproval`) com o Access Token de **teste**, a API do Mercado Pago responde de forma determinística:
+- **Sem header `X-scope: stage`**: `500 {"message":"Internal server error","status":500}`
+- **Com o header** (recomendado pela doc oficial pra esse cenário): `503`, corpo vazio
+
+Isolado como problema do lado do Mercado Pago, não do nosso código: reproduzido via `curl` direto (fora da Edge Function e do navegador), com uma assinatura mínima **sem cartão nenhum** (`status: "pending"`, sem `card_token_id`), e também descartado como intermitência (3 tentativas com `X-Idempotency-Key` diferente + backoff de 3s, mesmo resultado nas 3). Configuração da aplicação conferida e correta (produto "Assinaturas" selecionado, todas as permissões de Subscriptions marcadas). Chamado aberto no suporte de desenvolvedores do Mercado Pago com esse diagnóstico completo — falta resposta deles pra saber se é pendência de habilitação na conta ou bug da plataforma.
+
+**O que já está pronto e não precisa refazer, só validar depois que o Mercado Pago liberar:**
+- Aplicação "Meu Protocolo" criada em `developers.mercadopago.com.br` (User ID `137247688`), produto "Assinaturas", credenciais de teste geradas
+- Conta de teste compradora criada (`TESTUSER8279756466002256207`, Brasil)
+- `supabase_14_billing.sql` **já aplicado em produção**
+- Secrets `MERCADOPAGO_ACCESS_TOKEN` e `MERCADOPAGO_WEBHOOK_SECRET` **já configurados** no projeto Supabase
+- Webhook configurado no painel do Mercado Pago (modo teste), apontando pra `https://yumqmramxbahkfxsthtt.supabase.co/functions/v1/mercadopago-webhook`, eventos "Planos e assinaturas" + "Pagamentos (legacy)"
+- As duas Edge Functions (`mercadopago-webhook`, `mercadopago-create-preapproval`) **já implantadas** em produção, com o header `X-scope: stage` (aplicado condicionalmente quando o Access Token começa com `TEST-`, então não afeta produção depois)
+- `onboarding.html` com a Public Key de teste já configurada (branch `claude/mercado-pago-webhook-fz17za`, ainda não mesclada na `main` — só deve mesclar depois de validar o fluxo completo, pra não quebrar o onboarding real com credenciais de teste)
+
+**3 bugs reais encontrados e corrigidos durante o teste (branch `claude/mercado-pago-webhook-fz17za`):**
+1. `login.html`: um profissional que criava a conta mas nunca completava a etapa do cartão (ex: fechava o navegador no meio) caía direto no painel em qualquer login futuro, pulando o cartão pra sempre — porque o roteamento só checava "existe profissional com esse e-mail?", não `mp_preapproval_id`. Corrigido: agora também busca `mp_preapproval_id` e manda de volta pro `onboarding.html` se estiver nulo.
+2. `onboarding.html`: erro real da Edge Function ficava escondido atrás de "Edge Function returned a non-2xx status code" — `error.context` do `supabase-js` é o `Response` cru, precisa ler o corpo (`.text()` → tenta `JSON.parse`) antes de extrair o campo `error`.
+3. `mercadopago-create-preapproval` / `mercadopago-webhook`: faltava o header `X-scope: stage` nas chamadas à API do Mercado Pago com Access Token de teste — sem ele, a doc oficial confirma que é assim que se testa esse endpoint em sandbox.
+
+**Retomando depois que o Mercado Pago responder:**
+1. Ler a resposta do chamado de suporte primeiro
+2. Testar de novo o envio do cartão em `onboarding.html` (servidor local: `npx serve -l 5500 .`, ou preview do Claude Code) com e-mail novo (não usar `doug.sickmind@gmail.com` de novo — já ficou com `status: trial` sem assinatura completa; ou simplesmente apagar essa linha de teste de `professionals` antes de reusar)
+3. Confirmar que o webhook chega, a assinatura HMAC valida, e `professionals` é atualizado (`mp_preapproval_id`, `mp_subscription_status`, `status`)
+4. Só depois de validar em sandbox: mesclar a branch na `main`, gerar credenciais de **produção**, trocar secrets/Public Key, reconfigurar o webhook em modo produção no painel
 
 ### Webhook + assinatura Mercado Pago (2026-07-13) — Fase A, item 1
 
@@ -98,14 +128,14 @@ Decisão de arquitetura: **Preapproval (assinatura nativa)**, não cobrança avu
 - *"Só tenho uma conta pessoal Mercado Pago (uso pra salário/compras/Mercado Livre) — o que preciso fazer a partir dela?"* → O painel de desenvolvedores (`developers.mercadopago.com.br`) **não é um cadastro separado**, é a mesma conta com uma aba extra. Dá pra criar a Aplicação direto por ela; ela gera credenciais isoladas (Public Key + Access Token, teste e produção) da atividade pessoal. Ressalva de negócio (não bloqueia o técnico agora): misturar receita de assinatura com salário pessoal é ruim pra contabilidade — quando o MEI for formalizado (já é item não-técnico pendente no fim deste arquivo), vale migrar o recebimento pro CNPJ.
 - *"Quero o free_trial nativo — como testar sem usar meu cartão real?"* → Não precisa. O Mercado Pago tem "Contas de teste" (usuários fake com carteira de dinheiro fictício, criados no próprio painel de desenvolvedores) e uma lista pública de **números de cartão de teste** (ex: `5031 4332 1540 6351`, validade futura qualquer, CVV `123`; nome do titular `APRO` força aprovação, `OTHE` força recusa). Com isso dá pra rodar o fluxo completo (autorização, free_trial, cobrança recorrente, webhook) em sandbox sem mover dinheiro real. Só troca pra credenciais de produção quando for cobrar de verdade.
 
-**Pendências pra próxima sessão (nada disso o Code consegue fazer sozinho remotamente):**
-1. Criar a Aplicação no Mercado Pago (`developers.mercadopago.com.br`, login com a conta pessoal — ver pergunta respondida acima). Nome sugerido: "Meu Protocolo". Gerar credenciais de **teste** primeiro (Public Key + Access Token) pra validar tudo em sandbox antes de ir pra produção.
-2. Criar 1-2 "Contas de teste" (usuários de teste) no painel de desenvolvedores, pra simular o profissional assinando sem usar e-mail/cartão reais.
-3. Configurar o webhook na aplicação do Mercado Pago apontando pra URL da função `mercadopago-webhook` (só existe depois do deploy) e copiar a "chave secreta" gerada lá.
-4. Rodar `supabase secrets set MERCADOPAGO_ACCESS_TOKEN=... MERCADOPAGO_WEBHOOK_SECRET=...` e aplicar `supabase_14_billing.sql` — **só funciona localmente** (notebook), pela limitação de proxy já documentada abaixo ("Limitação de rede descoberta em sessão anterior").
-5. Deploy das duas functions: `supabase functions deploy mercadopago-webhook --no-verify-jwt` e `supabase functions deploy mercadopago-create-preapproval` — idem, só local.
-6. Trocar `MERCADOPAGO_PUBLIC_KEY` em `onboarding.html` (hoje um placeholder `SUBSTITUIR_PELA_PUBLIC_KEY_MERCADO_PAGO`) pela Public Key de teste.
-7. Testar o fluxo completo em sandbox: logar com a conta de teste (item 2), usar um número de cartão de teste (ver pergunta respondida acima) no onboarding, e confirmar que a assinatura é criada, o webhook chega, a assinatura de HMAC valida, e `professionals` é atualizado (`mp_preapproval_id`, `mp_subscription_status`, `status`).
+**Pendências (status atualizado em 2026-07-14 — itens 1 a 6 abaixo já foram feitos nesta sessão, ver "Bloqueio atual" no topo desta seção pra detalhes e o que falta de verdade):**
+1. ~~Criar a Aplicação no Mercado Pago~~ — feito.
+2. ~~Criar conta de teste~~ — feito.
+3. ~~Configurar o webhook na aplicação~~ — feito.
+4. ~~Secrets + aplicar `supabase_14_billing.sql`~~ — feito. (Nota: ao contrário do que essa entrada dizia antes, essa sessão específica conseguiu rodar `supabase` com acesso real à API — a limitação de proxy abaixo pode não valer pra toda sessão remota, vale testar de novo em vez de assumir bloqueio.)
+5. ~~Deploy das duas functions~~ — feito.
+6. ~~Trocar `MERCADOPAGO_PUBLIC_KEY` em `onboarding.html`~~ — feito.
+7. Testar o fluxo completo em sandbox — **bloqueado**, ver "Bloqueio atual" no topo desta seção.
 8. Só depois de validar em sandbox: gerar credenciais de produção, trocar os secrets/Public Key, reconfigurar o webhook de produção.
 9. Fluxo de cancelamento/dunning (o que fazer quando um pagamento recorrente é recusado repetidas vezes) é o item 4 da Fase A, ainda não construído — o webhook hoje só registra `ultima_cobranca_status` quando um pagamento é rejeitado, não toma nenhuma ação automática sobre isso.
 

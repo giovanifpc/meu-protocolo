@@ -83,43 +83,36 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
-Última atualização: 2026-07-14 (web/notebook — setup completo do Mercado Pago em sandbox feito nesta sessão: aplicação criada, schema aplicado em produção, secrets configurados, as duas Edge Functions implantadas, 3 bugs encontrados e corrigidos. **Bloqueado num erro do lado do Mercado Pago** — chamado de suporte aberto, aguardando resposta. Ver "Bloqueio atual" logo abaixo antes de continuar). Ver também `ATUALIZACAO-2026-07-02.md` (sessão de 2026-07-02, setup de e-mail transacional).
+Última atualização: 2026-07-15 (web — fluxo de assinatura testado ponta a ponta em sandbox com sucesso: criação de preapproval com cartão funcionando, webhook confirmado recebendo e validando assinatura HMAC. **Falta só confirmar que eventos reais de mudança de status disparam webhook** (simulação manual já confirmada) antes de mesclar na `main`).
 
-### Bloqueio resolvido (diagnóstico) — POST /preapproval não aceita credencial TEST- (2026-07-14)
+### Fluxo de assinatura validado em sandbox (2026-07-14/15)
 
-**Resposta do suporte do Mercado Pago (chamado WCS)**: não é bloqueio de conta nem falta de permissão. Pra **Assinaturas** especificamente, o produto não segue a mesma lógica sandbox/produção dos outros endpoints — credencial `TEST-` **não é válida** pra criar `preapproval` (por isso os 500/503 determinísticos, testados exaustivamente antes de abrir o chamado). O fluxo certo pra testar Assinaturas:
-- Usar credencial **`APP_USR-...`** (não `TEST-`) — vem de uma **conta de teste** (comprador/vendedor), logando de verdade como aquela conta fake, não da conta pessoal real
-- Comprador e vendedor de teste precisam estar no mesmo "contexto" de teste (não misturar conta real de vendedor com conta de teste de comprador, como fizemos até agora)
-- Pra assinatura `status: pending` sem `card_token_id`, mesmo fluxo de credencial de teste vale
-- O header `X-scope: stage` era um paliativo baseado num exemplo de doc que não se aplicava a esse cenário — não é mais necessário nesse modelo
+**Descoberta principal (resposta do suporte Mercado Pago, chamado WCS)**: pra **Assinaturas**, credencial `TEST-` (da própria conta pessoal) **não é válida** pra criar `preapproval` — sempre resulta em 500/503 determinístico, não é bug nosso. O fluxo certo:
+- Usar credencial **`APP_USR-...`** de uma **aplicação criada dentro de uma conta de teste** (login de verdade como aquela conta fake em `mercadopago.com.br`, não a conta pessoal)
+- `payer_email` da assinatura precisa ser o e-mail real da conta de teste **compradora** — formato `test_user_<ID>@testuser.com` (não o nickname `TESTUSER...`; só descobrimos o formato certo logando na conta de teste e olhando o perfil dela)
+- Comprador e vendedor de teste precisam estar no mesmo "contexto" de teste (nunca misturar com a conta pessoal real)
+- O header `X-scope: stage` (usado durante a tentativa com `TEST-`) não é mais necessário com `APP_USR-` — já é condicional no código (`.startsWith('TEST-')`), então não precisou mexer
 
-**O que muda no setup:**
-1. Criar uma **segunda conta de teste**, perfil **Vendedor** (só tínhamos uma Comprador) — painel do Mercado Pago → Contas de teste
-2. Logar em `mercadopago.com.br` **como essa conta de teste vendedora** (usuário/senha gerados pro teste, não a conta pessoal)
-3. Dentro dessa sessão, acessar `developers.mercadopago.com.br` (escopo já é o da conta de teste) e pegar as credenciais **normais** dela (`APP_USR-...` — não tem "credenciais de teste" separadas, pra uma conta de teste as credenciais normais já são o que precisamos)
-4. Trocar `MERCADOPAGO_ACCESS_TOKEN` (secret do Supabase) e a Public Key em `onboarding.html` por esses valores `APP_USR-...`
-5. `payer_email` da assinatura deve ser o e-mail da conta de teste **compradora** (já temos: `TESTUSER8279756466002256207`)
-6. Redeploy das functions (o header `X-scope: stage` já é condicional a `TEST-`, então com `APP_USR-` ele simplesmente não é mais enviado — não precisa mexer nesse trecho de código, só nos secrets/Public Key)
+**Setup de teste que funcionou, passo a passo (repetir se precisar recriar):**
+1. Criar uma **conta de teste Vendedor** (painel Mercado Pago → Contas de teste) — além da conta Comprador que já existia
+2. Logar em `mercadopago.com.br` como essa conta vendedora (janela anônima, usuário/senha gerados)
+3. Dentro dessa sessão, criar uma aplicação em `developers.mercadopago.com.br` (produto Assinaturas) — as credenciais "de produção" dela (`APP_USR-...`) são o que se usa pra testar
+4. `MERCADOPAGO_ACCESS_TOKEN` (secret Supabase) e a Public Key em `onboarding.html` = as credenciais `APP_USR-` dessa aplicação de teste
+5. **Cartão de teste que funcionou pra `status: authorized` com `card_token_id`**: American Express `3753 651535 56885`, CVV `1234`, validade `11/30`, nome `APRO`. Os cartões Mastercard/Visa "nacionais" recomendados na doc de Assinaturas **não funcionaram** aqui (`Unsupported_credit_card_for_recurring_payment` e `CC_VAL_433` respectivamente) — motivo não confirmado, não vale reabrir investigação a menos que o Amex pare de funcionar também.
+6. **Webhook precisa ser configurado na aplicação de teste correta** (a de dentro da conta de teste vendedora) — configurar na aplicação errada (ex: a "Meu Protocolo" da conta pessoal) não gera erro nenhum visível, só o webhook nunca chega. Usar o botão **"Simular notificação"** (Webhooks → aba Modo de teste) pra confirmar entrega rápido, sem precisar esperar evento real.
 
-**O que já está pronto e não precisa refazer, só validar depois que o Mercado Pago liberar:**
-- Aplicação "Meu Protocolo" criada em `developers.mercadopago.com.br` (User ID `137247688`), produto "Assinaturas", credenciais de teste geradas
-- Conta de teste compradora criada (`TESTUSER8279756466002256207`, Brasil)
-- `supabase_14_billing.sql` **já aplicado em produção**
-- Secrets `MERCADOPAGO_ACCESS_TOKEN` e `MERCADOPAGO_WEBHOOK_SECRET` **já configurados** no projeto Supabase
-- Webhook configurado no painel do Mercado Pago (modo teste), apontando pra `https://yumqmramxbahkfxsthtt.supabase.co/functions/v1/mercadopago-webhook`, eventos "Planos e assinaturas" + "Pagamentos (legacy)"
-- As duas Edge Functions (`mercadopago-webhook`, `mercadopago-create-preapproval`) **já implantadas** em produção, com o header `X-scope: stage` (aplicado condicionalmente quando o Access Token começa com `TEST-`, então não afeta produção depois)
-- `onboarding.html` com a Public Key de teste já configurada (branch `claude/mercado-pago-webhook-fz17za`, ainda não mesclada na `main` — só deve mesclar depois de validar o fluxo completo, pra não quebrar o onboarding real com credenciais de teste)
+**Confirmado funcionando (2026-07-15):**
+- `POST /preapproval` com `card_token_id` real (Secure Fields) → `status: authorized`, `professionals.mp_preapproval_id`/`mp_subscription_status` atualizados pela própria Edge Function
+- Webhook recebe, valida assinatura HMAC (`x-signature`) corretamente, grava em `billing_events` — confirmado via "Simular notificação" (200 OK, evento gravado com `mp_id` da simulação)
 
-**3 bugs reais encontrados e corrigidos durante o teste (branch `claude/mercado-pago-webhook-fz17za`):**
-1. `login.html`: um profissional que criava a conta mas nunca completava a etapa do cartão (ex: fechava o navegador no meio) caía direto no painel em qualquer login futuro, pulando o cartão pra sempre — porque o roteamento só checava "existe profissional com esse e-mail?", não `mp_preapproval_id`. Corrigido: agora também busca `mp_preapproval_id` e manda de volta pro `onboarding.html` se estiver nulo.
-2. `onboarding.html`: erro real da Edge Function ficava escondido atrás de "Edge Function returned a non-2xx status code" — `error.context` do `supabase-js` é o `Response` cru, precisa ler o corpo (`.text()` → tenta `JSON.parse`) antes de extrair o campo `error`.
-3. `mercadopago-create-preapproval` / `mercadopago-webhook`: faltava o header `X-scope: stage` nas chamadas à API do Mercado Pago com Access Token de teste — sem ele, a doc oficial confirma que é assim que se testa esse endpoint em sandbox.
+**Ainda não confirmado — investigar antes de mesclar na `main`:**
+- Um evento **real** (criar + cancelar preapproval via API, fora da simulação) não gerou registro em `billing_events` depois de ~20s de espera. Pode ser só delay maior de entrega em conta de teste, ou algo específico de evento real vs. simulado — não deu tempo de esgotar essa investigação. Testar de novo com mais paciência (1-2 min de espera) antes de considerar isso um bug.
 
-**Retomando depois que o Mercado Pago responder:**
-1. Ler a resposta do chamado de suporte primeiro
-2. Testar de novo o envio do cartão em `onboarding.html` (servidor local: `npx serve -l 5500 .`, ou preview do Claude Code) com e-mail novo (não usar `doug.sickmind@gmail.com` de novo — já ficou com `status: trial` sem assinatura completa; ou simplesmente apagar essa linha de teste de `professionals` antes de reusar)
-3. Confirmar que o webhook chega, a assinatura HMAC valida, e `professionals` é atualizado (`mp_preapproval_id`, `mp_subscription_status`, `status`)
-4. Só depois de validar em sandbox: mesclar a branch na `main`, gerar credenciais de **produção**, trocar secrets/Public Key, reconfigurar o webhook em modo produção no painel
+**Pendências antes de mesclar a branch `claude/mercado-pago-webhook-fz17za` na `main`:**
+1. Confirmar o ponto do webhook com evento real acima
+2. **Reverter o `payer_email` hardcoded** em `mercadopago-create-preapproval/index.ts` (hoje fixo em `test_user_8279756466002256207@testuser.com` pra permitir teste via sandbox) **de volta pra `professional.email`** — isso é obrigatório antes de qualquer deploy de produção, senão todo profissional real seria cobrado usando o e-mail de um usuário de teste do Mercado Pago
+3. Gerar credenciais de **produção** de verdade (conta pessoal, não mais de teste), trocar secrets/Public Key, reconfigurar webhook em modo produção
+4. Fluxo de cancelamento/dunning (pagamento recusado repetidas vezes) continua sendo o item 4 da Fase A, ainda não construído — o webhook hoje só registra `ultima_cobranca_status`, não toma ação automática
 
 ### Webhook + assinatura Mercado Pago (2026-07-13) — Fase A, item 1
 

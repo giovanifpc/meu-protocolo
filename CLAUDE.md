@@ -85,15 +85,21 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 Última atualização: 2026-07-14 (web/notebook — setup completo do Mercado Pago em sandbox feito nesta sessão: aplicação criada, schema aplicado em produção, secrets configurados, as duas Edge Functions implantadas, 3 bugs encontrados e corrigidos. **Bloqueado num erro do lado do Mercado Pago** — chamado de suporte aberto, aguardando resposta. Ver "Bloqueio atual" logo abaixo antes de continuar). Ver também `ATUALIZACAO-2026-07-02.md` (sessão de 2026-07-02, setup de e-mail transacional).
 
-### Bloqueio atual — POST /preapproval retorna 500 (2026-07-14)
+### Bloqueio resolvido (diagnóstico) — POST /preapproval não aceita credencial TEST- (2026-07-14)
 
-**Antes de mexer em qualquer coisa aqui, confira se o chamado de suporte já foi respondido** (e-mail com assunto contendo `WCS-XXXXX`, ou `mercadopago.com.br/developers/pt/support/center/tickets`).
+**Resposta do suporte do Mercado Pago (chamado WCS)**: não é bloqueio de conta nem falta de permissão. Pra **Assinaturas** especificamente, o produto não segue a mesma lógica sandbox/produção dos outros endpoints — credencial `TEST-` **não é válida** pra criar `preapproval` (por isso os 500/503 determinísticos, testados exaustivamente antes de abrir o chamado). O fluxo certo pra testar Assinaturas:
+- Usar credencial **`APP_USR-...`** (não `TEST-`) — vem de uma **conta de teste** (comprador/vendedor), logando de verdade como aquela conta fake, não da conta pessoal real
+- Comprador e vendedor de teste precisam estar no mesmo "contexto" de teste (não misturar conta real de vendedor com conta de teste de comprador, como fizemos até agora)
+- Pra assinatura `status: pending` sem `card_token_id`, mesmo fluxo de credencial de teste vale
+- O header `X-scope: stage` era um paliativo baseado num exemplo de doc que não se aplicava a esse cenário — não é mais necessário nesse modelo
 
-Ao tentar criar a assinatura (`POST /preapproval`) com o Access Token de **teste**, a API do Mercado Pago responde de forma determinística:
-- **Sem header `X-scope: stage`**: `500 {"message":"Internal server error","status":500}`
-- **Com o header** (recomendado pela doc oficial pra esse cenário): `503`, corpo vazio
-
-Isolado como problema do lado do Mercado Pago, não do nosso código: reproduzido via `curl` direto (fora da Edge Function e do navegador), com uma assinatura mínima **sem cartão nenhum** (`status: "pending"`, sem `card_token_id`), e também descartado como intermitência (3 tentativas com `X-Idempotency-Key` diferente + backoff de 3s, mesmo resultado nas 3). Configuração da aplicação conferida e correta (produto "Assinaturas" selecionado, todas as permissões de Subscriptions marcadas). Chamado aberto no suporte de desenvolvedores do Mercado Pago com esse diagnóstico completo — falta resposta deles pra saber se é pendência de habilitação na conta ou bug da plataforma.
+**O que muda no setup:**
+1. Criar uma **segunda conta de teste**, perfil **Vendedor** (só tínhamos uma Comprador) — painel do Mercado Pago → Contas de teste
+2. Logar em `mercadopago.com.br` **como essa conta de teste vendedora** (usuário/senha gerados pro teste, não a conta pessoal)
+3. Dentro dessa sessão, acessar `developers.mercadopago.com.br` (escopo já é o da conta de teste) e pegar as credenciais **normais** dela (`APP_USR-...` — não tem "credenciais de teste" separadas, pra uma conta de teste as credenciais normais já são o que precisamos)
+4. Trocar `MERCADOPAGO_ACCESS_TOKEN` (secret do Supabase) e a Public Key em `onboarding.html` por esses valores `APP_USR-...`
+5. `payer_email` da assinatura deve ser o e-mail da conta de teste **compradora** (já temos: `TESTUSER8279756466002256207`)
+6. Redeploy das functions (o header `X-scope: stage` já é condicional a `TEST-`, então com `APP_USR-` ele simplesmente não é mais enviado — não precisa mexer nesse trecho de código, só nos secrets/Public Key)
 
 **O que já está pronto e não precisa refazer, só validar depois que o Mercado Pago liberar:**
 - Aplicação "Meu Protocolo" criada em `developers.mercadopago.com.br` (User ID `137247688`), produto "Assinaturas", credenciais de teste geradas

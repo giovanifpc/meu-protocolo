@@ -83,7 +83,7 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
-Última atualização: 2026-07-15 (web — fluxo de assinatura testado ponta a ponta em sandbox com sucesso: criação de preapproval com cartão funcionando, webhook confirmado recebendo e validando assinatura HMAC. **Falta só confirmar que eventos reais de mudança de status disparam webhook** (simulação manual já confirmada) antes de mesclar na `main`).
+Última atualização: 2026-07-16 (web — branch do Mercado Pago mesclada na `main` **com credenciais de produção já configuradas** (Access Token, Public Key e webhook, tudo trocado de teste pra real antes da mescla). Também nesta janela de trabalho: desenvolvimento em paralelo enquanto o Mercado Pago esteve bloqueado — painel master, LGPD, CSP, fluxo de cancelamento, gating de plano, expurgo de retenção. Ver as duas seções abaixo).
 
 ### Fluxo de assinatura validado em sandbox (2026-07-14/15)
 
@@ -108,11 +108,14 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 **Ainda não confirmado — investigar antes de mesclar na `main`:**
 - Um evento **real** (criar + cancelar preapproval via API, fora da simulação) não gerou registro em `billing_events` depois de ~20s de espera. Pode ser só delay maior de entrega em conta de teste, ou algo específico de evento real vs. simulado — não deu tempo de esgotar essa investigação. Testar de novo com mais paciência (1-2 min de espera) antes de considerar isso um bug.
 
-**Pendências antes de mesclar a branch `claude/mercado-pago-webhook-fz17za` na `main`:**
-1. Confirmar o ponto do webhook com evento real acima
-2. **Reverter o `payer_email` hardcoded** em `mercadopago-create-preapproval/index.ts` (hoje fixo em `test_user_8279756466002256207@testuser.com` pra permitir teste via sandbox) **de volta pra `professional.email`** — isso é obrigatório antes de qualquer deploy de produção, senão todo profissional real seria cobrado usando o e-mail de um usuário de teste do Mercado Pago
-3. Gerar credenciais de **produção** de verdade (conta pessoal, não mais de teste), trocar secrets/Public Key, reconfigurar webhook em modo produção
-4. Fluxo de cancelamento/dunning (pagamento recusado repetidas vezes) continua sendo o item 4 da Fase A, ainda não construído — o webhook hoje só registra `ultima_cobranca_status`, não toma ação automática
+**Feito antes da mescla (2026-07-16):**
+1. ~~Reverter o `payer_email` hardcoded~~ — feito, `mercadopago-create-preapproval/index.ts` volta a usar `professional.email`.
+2. ~~Gerar credenciais de produção~~ — feito. `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET` e a Public Key em `onboarding.html` são todos de **produção** agora (aplicação "Meu Protocolo" da conta pessoal real), não mais de teste. Webhook de produção configurado na mesma aplicação (aba "Modo de produção").
+
+**Ainda em aberto, decidido mesclar mesmo assim (2026-07-16):**
+1. O ponto do webhook com evento real (não simulado) não chegou a ser confirmado em sandbox mesmo após ~1min de espera em duas tentativas — só a simulação manual foi confirmada recebendo/validando HMAC corretamente. Vale monitorar os primeiros cadastros reais de perto (`billing_events`) até ter certeza que chega.
+2. Fluxo de cancelamento/dunning (pagamento recusado repetidas vezes) continua sendo o item 4 da Fase A, ainda não construído — o webhook hoje só registra `ultima_cobranca_status`, não toma ação automática.
+3. Quando o item 3 (diferenciação de plano) for revisitado, `mercadopago-create-preapproval` precisa passar a ler `valor_customizado` em vez do mapa fixo `PLAN_PRICES`.
 
 ### Webhook + assinatura Mercado Pago (2026-07-13) — Fase A, item 1
 
@@ -137,6 +140,30 @@ Decisão de arquitetura: **Preapproval (assinatura nativa)**, não cobrança avu
 7. Testar o fluxo completo em sandbox — **bloqueado**, ver "Bloqueio atual" no topo desta seção.
 8. Só depois de validar em sandbox: gerar credenciais de produção, trocar os secrets/Public Key, reconfigurar o webhook de produção.
 9. Fluxo de cancelamento/dunning (o que fazer quando um pagamento recorrente é recusado repetidas vezes) é o item 4 da Fase A, ainda não construído — o webhook hoje só registra `ultima_cobranca_status` quando um pagamento é rejeitado, não toma nenhuma ação automática sobre isso.
+
+### Desenvolvimento em paralelo — painel master, LGPD, segurança (2026-07-14)
+
+Feito direto na `main` enquanto a branch do Mercado Pago esteve bloqueada — já mesclado tudo junto agora (ver seção acima pro estado final da branch).
+
+- **Painel master** (item 2 da Fase A): `master.html`, novo. O e-mail `meuprotocolo1@gmail.com` cai aqui em vez do painel normal (checagem em `login.html`, antes de tudo). Visão agregada de todos os profissionais (plano, status, preço customizado, nº de alunos), com edição inline. Segurança real fica nas RPCs `master_list_professionals`/`master_update_professional` (`supabase_16_master_panel.sql`) — SECURITY DEFINER, checam `auth.jwt() ->> 'email'` internamente; não é RLS aberta na tabela `professionals`. A checagem client-side em `master.html` é só UX (redireciona quem não é o e-mail master pra `index.html`), não é a fronteira de segurança.
+- **Diferenciação de plano** (item 3 da Fase A): coluna `professionals.valor_customizado` criada e editável pelo painel master. Gating de feature por plano implementado: `alunos.html` bloqueia cadastro de novo aluno acima do limite (`starter`=15, `pro`=40, `elite`=ilimitado); `perfil.html` desabilita cor/logo customizados pra `starter` (exclusivo Pro/Elite). **Falta**: IA de interpretação de relatório do Elite (feature nova, não é gating — ainda não construída) e `mercadopago-create-preapproval` ainda não lê `valor_customizado` (continua no mapa fixo `PLAN_PRICES`).
+- **Fluxo de cancelamento** (item 4 da Fase A): `perfil.html` ganhou card "Cancelar assinatura" com tela de confirmação (fim de acesso, retenção de 30 dias, aviso de exclusão permanente) — muda `professionals.status` pra `'inativo'` + grava `inactive_since`, desloga. `login.html` bloqueia um novo login enquanto `status = 'inativo'` (mensagem explicando o motivo, em vez de deixar entrar). Testado ponta a ponta em produção com conta de teste. **Falta**: chamar a API do Mercado Pago pra cancelar a assinatura de verdade (agora que as credenciais de produção existem, dá pra implementar).
+- **Expurgo automático dos 30 dias** (`supabase_17_retention_purge.sql`): função `purge_inactive_professionals()` criada e aplicada em produção — deleta `professionals` com `status='inativo'` há mais de 30 dias (cascade já limpa todas as tabelas de aluno; `billing_events` é exceção deliberada, vira `professional_id = null` em vez de apagar o log). **O agendamento automático (`cron.schedule`) está deliberadamente comentado/desligado** — extensão `pg_cron` habilitada e a function existe, mas nada roda sozinho ainda. Ligar isso é uma decisão que exige confirmação explícita do usuário antes (é expurgo permanente e irreversível de dado real rodando sem supervisão) — não ativar sem pedir.
+- **Ferramenta de dev `dev-generate-login`**: Edge Function que gera OTP válido pra e-mails de teste (allowlist fixa no código) sem precisar checar caixa de entrada real, protegida por secret (`DEV_TOOLS_SECRET`, criado manualmente no painel do Supabase — não pelo Code, o classificador de segurança do Claude Code bloqueia criação/uso desse tipo de secret sem confirmação bem específica a cada vez). Implantada em produção, mas **o código-fonte não foi commitado no repo** (decisão pendente do usuário: manter só implantada e fora do git, ou publicar o código — o mecanismo em si não é secreto, só a allowlist de e-mails limita o dano se o secret vazar). Nunca deve ser usada com e-mail de conta real.
+- **LGPD** (item 5 da Fase B): `termos.html` e `privacidade.html` novos (conteúdo redigido nesta sessão — **rascunho de boa fé, não revisado por advogado**; vale alinhar com o cliente 0 antes de tratar como definitivo, mesmo item não-técnico já listado no fim deste arquivo). Aluno aceita explicitamente no primeiro acesso ao `aluno.html` (tela full-screen, bloqueia o resto do app até aceitar) — grava em `student_consent` (`supabase_15_lgpd_consent.sql`, tabela separada de `students` porque aluno não tem policy de update lá, mesmo padrão de `student_anamnese`). Profissional só lê (auditoria de quem aceitou), nunca escreve em nome do aluno.
+- **CSP** (item 6 da Fase B, parcial): meta tag `Content-Security-Policy` adicionada em todas as páginas, restringindo script/style/connect/img-src aos domínios realmente usados (Supabase, jsdelivr, Google Fonts, Drive). Auditoria confirmou que a sanitização contra XSS (`escapeHtml()`) já cobria os pontos de risco de antes — não foi preciso reescrever nada aí.
+- **O que falta do item 6 e por quê**: `frame-ancestors`, HSTS e `X-Frame-Options` **não são configuráveis via meta tag** (exigem header HTTP de verdade, que o GitHub Pages não deixa customizar). Único jeito de resolver sem trocar de hospedagem: colocar o domínio `meuprotocolo.app` atrás do proxy da Cloudflare (nuvem laranja no DNS, hoje provavelmente só NS) e usar uma **Transform Rule** (Rules → Transform Rules → Modify Response Header, free tier) adicionando esses 3 headers em toda resposta. Isso precisa ser feito no painel da Cloudflare pelo usuário — ver "Pendências externas" abaixo.
+- **Rate limiting no login** (item 6): o Supabase Auth já tem rate limit nativo em `signInWithOtp` (limite padrão por e-mail/IP, configurável em Dashboard → Authentication → Rate Limits) — **conferir se está ativo/adequado no painel**, não precisa de código novo.
+- **Backup automático do banco** (item 6): depende do plano do Supabase (Point-in-Time Recovery é add-on pago; plano Free não tem backup automático). Não deu pra confirmar o plano atual via CLI — **checar em Dashboard → Settings → Add-ons/Billing**.
+- **Monitoramento** (item 7 da Fase B): nada implementado ainda — depende de contas externas do usuário (UptimeRobot free tier pra uptime de `meuprotocolo.app`; Sentry pra erros críticos, precisa criar projeto e colar o DSN nas páginas). Ver "Pendências externas" abaixo pro passo a passo.
+
+**Pendências externas (preciso que o usuário faça, mesmo padrão do setup do Mercado Pago):**
+1. **Cloudflare**: confirmar se `meuprotocolo.app` está com proxy ativado (nuvem laranja) no DNS; se sim, criar uma Transform Rule (Rules → Transform Rules → Modify Response Header) adicionando `Strict-Transport-Security: max-age=31536000; includeSubDomains`, `X-Frame-Options: DENY` e `X-Content-Type-Options: nosniff` em toda resposta.
+2. **Supabase → Rate Limits**: conferir em Authentication → Rate Limits se o limite de OTP por e-mail/hora está num valor razoável (padrão costuma ser suficiente, é só checar).
+3. **Supabase → Backups**: conferir em Settings → Add-ons se Point-in-Time Recovery/backup diário está ativo; se não, decidir se vale o custo do upgrade de plano (decisão de negócio, não técnica).
+4. **UptimeRobot** (free): criar conta, adicionar monitor HTTP(s) pra `https://meuprotocolo.app` (ou o domínio de fallback do GitHub Pages), configurar alerta por e-mail/WhatsApp.
+5. **Sentry** (free tier): criar conta + projeto JavaScript, colar o DSN gerado — aviso pro Code fazer a integração nas páginas depois que a conta existir.
+6. **Revisão jurídica**: `termos.html`/`privacidade.html` são rascunho — alinhar com o cliente 0 (item não-técnico já listado no fim deste arquivo) antes de tratar como definitivo.
 
 ### Testes e correções do pacote de comodidades (2026-07-12)
 
@@ -269,15 +296,15 @@ Nota: o master doc completo (`MEU-PROTOCOLO-MASTER.md`) só existe no PC do usu�
 - Sessão de expiração: **não precisa mexer** — o padrão atual do Supabase (token renova sozinho em segundo plano, só pede login de novo depois de dias sem abrir o app) já bate com o "comum de mercado" que o usuário quer.
 
 **Fase A — Monetização e operação (bloqueia conversão de clientes pagantes de verdade)**
-1. Webhook Mercado Pago: cobrança automática do profissional ao fim do trial + validação HMAC da assinatura (trial deve exigir cartão cadastrado desde o cadastro, ver master doc seção 4). Não confundir com o acompanhamento de mensalidade aluno→profissional (já implementado) — são coisas diferentes: esse item é a cobrança do profissional pelo uso do Meu Protocolo em si. **Código pronto (2026-07-13), falta deploy/config manual do usuário** — ver seção "Webhook + assinatura Mercado Pago" acima pra lista de pendências
-2. Painel master (ver decisão de arquitetura acima)
-3. Diferenciação de plano + preço customizado (ver decisão de arquitetura acima) — natural fazer junto com o item 1, já que gating de feature só faz sentido quando existe cobrança de verdade rodando
-4. Fluxo de cancelamento: retenção de dados por 30 dias em estado inativo + aviso explícito na tela de confirmação (data-fim do acesso, prazo de retenção, aviso de exclusão permanente) — master doc seção 4
+1. ~~Webhook Mercado Pago~~ — **feito e mesclado na `main` (2026-07-16), com credenciais de produção configuradas.** Cobrança automática do profissional ao fim do trial + validação HMAC da assinatura. Não confundir com o acompanhamento de mensalidade aluno→profissional (já implementado) — são coisas diferentes: esse item é a cobrança do profissional pelo uso do Meu Protocolo em si. Ver seção "Fluxo de assinatura Mercado Pago" acima pro que ainda ficou em aberto (confirmação de webhook com evento real).
+2. ~~Painel master~~ — feito (`master.html`, 2026-07-14, ver seção "Desenvolvimento em paralelo" acima)
+3. Diferenciação de plano + preço customizado — **parcial**: campo `valor_customizado` criado e editável no painel master (2026-07-14), gating de limite de alunos/white-label já implementado; falta ligar `valor_customizado` no cálculo de cobrança (`mercadopago-create-preapproval` ainda usa o mapa fixo `PLAN_PRICES`) e a feature de IA do relatório do Elite ainda não existe
+4. Fluxo de cancelamento — **parcial**: retenção de dados por 30 dias em estado inativo + aviso explícito na tela de confirmação já implementados (2026-07-14, ver "Desenvolvimento em paralelo" acima). Falta chamar a API do Mercado Pago pra cancelar a assinatura de verdade — agora que as credenciais de produção existem, dá pra implementar.
 
 **Fase B — Legal e segurança (necessário antes de escalar/tráfego pago, master doc diz "desde o MVP/dia 1")**
-5. Política de Privacidade + Termos de Uso + checkbox de consentimento no cadastro do aluno (LGPD — já se coleta dado de saúde real)
-6. Segurança: rate limiting no login, proteção contra brute force, headers HTTP (HSTS/CSP/X-Frame-Options), sanitização de inputs, backup automático do banco Supabase (item 13 do master doc)
-7. Monitoramento automatizado: uptime + erros críticos com alerta via WhatsApp/e-mail (item 12 do master doc — sugestões: UptimeRobot free tier, Sentry)
+5. ~~Política de Privacidade + Termos de Uso + checkbox de consentimento no cadastro do aluno~~ — feito (2026-07-14, ver seção "Desenvolvimento em paralelo" acima). **Pendente**: revisão jurídica do conteúdo (rascunho de boa fé, não é advogado)
+6. Segurança — **parcial**: CSP via meta tag e sanitização contra XSS já confirmadas (2026-07-14). Faltam: HSTS/X-Frame-Options/`frame-ancestors` (precisa Cloudflare, ver "Pendências externas" acima), conferir rate limiting nativo do Supabase Auth e backup automático do banco (ambos são configuração no painel do Supabase, não código)
+7. Monitoramento automatizado: uptime + erros críticos com alerta via WhatsApp/e-mail (item 12 do master doc — sugestões: UptimeRobot free tier, Sentry) — não implementado, depende de contas externas do usuário (ver "Pendências externas" acima)
 
 **Fase C — Diferencial de produto (suporte via IA, a proposta de valor central do master doc)**
 8. MD de contexto da IA de suporte (documento escrito junto com o usuário, descrevendo o produto **como ele funciona de fato** — não criar antes da Fase A/B estarem prontas, senão fica desatualizado rápido)

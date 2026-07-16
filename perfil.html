@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://drive.google.com https://*.supabase.co; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co; object-src 'none'; base-uri 'self';">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" href="icons/favicon-32.png">
 <title>Meu Protocolo — Config</title>
@@ -60,6 +61,7 @@
         <label>Nome exibido</label>
         <input type="text" id="displayNameInput" placeholder="Ex: João Personal Trainer">
       </div>
+      <div id="whiteLabelLock" class="msg" style="display:none;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;">Cor e logo personalizados são exclusivos dos planos Pro e Elite. Faça upgrade pra personalizar sua marca.</div>
       <div class="field">
         <label>Cor principal</label>
         <div class="color-row">
@@ -73,6 +75,24 @@
       </div>
       <button class="btn" id="saveBtn">Salvar</button>
       <div class="msg" id="saveMsg"></div>
+    </div>
+
+    <div class="card" id="cancelCard">
+      <h2>Cancelar assinatura</h2>
+      <div id="cancelStep1">
+        <p style="font-size:13px;color:var(--muted);margin:0 0 12px;">Isso encerra o acesso ao Meu Protocolo. Você pode revisar os detalhes antes de confirmar.</p>
+        <button class="btn danger" id="openCancelBtn">Cancelar minha assinatura</button>
+      </div>
+      <div id="cancelStep2" style="display:none">
+        <p style="font-size:13px;line-height:1.6;margin:0 0 8px;"><strong>Seu acesso será encerrado imediatamente</strong> ao confirmar.</p>
+        <p style="font-size:13px;line-height:1.6;margin:0 0 8px;">Seus dados (protocolos, avaliações, histórico dos seus alunos) ficam <strong>retidos por 30 dias</strong> em estado inativo — nesse período, entre em contato para reativar sem perder nada.</p>
+        <p style="font-size:13px;line-height:1.6;margin:0 0 16px;color:var(--danger);"><strong>Após os 30 dias, os dados são excluídos permanentemente</strong> e não podem ser recuperados.</p>
+        <div style="display:flex;gap:10px;">
+          <button class="btn secondary" id="backCancelBtn" style="flex:1;">Voltar</button>
+          <button class="btn danger" id="confirmCancelBtn" style="flex:1;">Confirmar cancelamento</button>
+        </div>
+        <div class="msg" id="cancelMsg"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -120,6 +140,13 @@
     $('primaryColorPicker').value = color;
     $('primaryColorText').value = color;
     $('logoUrlInput').value = pro.logo_url || '';
+
+    if (pro.plan === 'starter') {
+      $('whiteLabelLock').style.display = 'block';
+      $('primaryColorPicker').disabled = true;
+      $('primaryColorText').disabled = true;
+      $('logoUrlInput').disabled = true;
+    }
   }
 
   $('primaryColorPicker').addEventListener('input', (e) => { $('primaryColorText').value = e.target.value; });
@@ -132,11 +159,11 @@
     $('saveMsg').textContent = '';
     $('saveMsg').className = 'msg';
 
-    const payload = {
-      display_name: $('displayNameInput').value.trim() || professional.display_name,
-      primary_color: $('primaryColorText').value.trim() || null,
-      logo_url: $('logoUrlInput').value.trim() || null,
-    };
+    const payload = { display_name: $('displayNameInput').value.trim() || professional.display_name };
+    if (professional.plan !== 'starter') {
+      payload.primary_color = $('primaryColorText').value.trim() || null;
+      payload.logo_url = $('logoUrlInput').value.trim() || null;
+    }
 
     const { error } = await supa.from('professionals').update(payload).eq('id', professional.id);
     $('saveBtn').disabled = false;
@@ -150,6 +177,39 @@
   });
 
   $('logoutBtn').addEventListener('click', async () => {
+    await supa.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  $('openCancelBtn').addEventListener('click', () => {
+    $('cancelStep1').style.display = 'none';
+    $('cancelStep2').style.display = 'block';
+  });
+
+  $('backCancelBtn').addEventListener('click', () => {
+    $('cancelStep2').style.display = 'none';
+    $('cancelStep1').style.display = 'block';
+  });
+
+  $('confirmCancelBtn').addEventListener('click', async () => {
+    $('confirmCancelBtn').disabled = true;
+    $('backCancelBtn').disabled = true;
+    $('cancelMsg').textContent = '';
+    $('cancelMsg').className = 'msg';
+
+    const { error } = await supa.from('professionals').update({
+      status: 'inativo',
+      inactive_since: new Date().toISOString(),
+    }).eq('id', professional.id);
+
+    if (error) {
+      $('cancelMsg').textContent = 'Erro ao cancelar: ' + error.message;
+      $('cancelMsg').className = 'msg error';
+      $('confirmCancelBtn').disabled = false;
+      $('backCancelBtn').disabled = false;
+      return;
+    }
+
     await supa.auth.signOut();
     window.location.href = 'login.html';
   });

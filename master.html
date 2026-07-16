@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://drive.google.com https://*.supabase.co; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co; object-src 'none'; base-uri 'self';">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="icons/favicon-32.png">
+<title>Meu Protocolo — Painel Master</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg:#F8F9FA; --primary:#2D6BE4; --accent:#3BB08F; --text:#1E2A3A;
+    --line:#E2E5EA; --card:#FFFFFF; --muted:#6B7684; --danger:#C0392B; --font:'Inter', sans-serif;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font-family:var(--font); }
+  header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--card); border-bottom:1px solid var(--line); }
+  header h1 { font-size:18px; font-weight:700; margin:0; }
+  .btn { padding:8px 14px; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; border:none; background:var(--primary); color:#fff; font-family:var(--font); }
+  .btn.secondary { background:var(--bg); color:var(--text); border:1px solid var(--line); }
+  .btn.small { padding:6px 10px; font-size:12px; }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+  main { max-width:1100px; margin:0 auto; padding:20px; }
+  .summary-row { display:flex; gap:12px; margin-bottom:18px; flex-wrap:wrap; }
+  .summary-card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 18px; min-width:120px; }
+  .summary-card .num { font-size:22px; font-weight:700; }
+  .summary-card .lbl { font-size:12px; color:var(--muted); }
+  .table-wrap { background:var(--card); border:1px solid var(--line); border-radius:14px; overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; min-width:820px; }
+  th, td { text-align:left; padding:10px 14px; font-size:13px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { color:var(--muted); font-weight:700; text-transform:uppercase; font-size:11px; letter-spacing:.4px; }
+  tr:last-child td { border-bottom:none; }
+  select, input[type=number] { background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:6px 8px; font-size:13px; font-family:var(--font); color:var(--text); }
+  input[type=number] { width:90px; }
+  .status-tag { font-size:11px; font-weight:700; padding:2px 8px; border-radius:8px; text-transform:uppercase; }
+  .status-trial { background:#FFF4E0; color:#8A5B00; }
+  .status-ativo { background:#E7F7F1; color:#1B7A55; }
+  .status-inativo { background:#FDEDEC; color:var(--danger); }
+  .status-deletado { background:#EDEFF2; color:var(--muted); }
+  .msg { font-size:12px; margin-top:4px; }
+  .msg.error { color:var(--danger); }
+  .msg.ok { color:var(--accent); }
+  .row-save { display:flex; align-items:center; gap:6px; }
+  #loadingMsg, #emptyMsg { padding:40px; text-align:center; color:var(--muted); font-size:14px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Painel Master</h1>
+    <button class="btn secondary" id="logoutBtn">Sair</button>
+  </header>
+
+  <main>
+    <div class="summary-row" id="summaryRow"></div>
+    <div id="loadingMsg">Carregando...</div>
+    <div id="emptyMsg" style="display:none">Nenhum profissional cadastrado ainda.</div>
+    <div class="table-wrap" id="tableWrap" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th>Profissional</th>
+            <th>E-mail</th>
+            <th>Plano</th>
+            <th>Status</th>
+            <th>Preço customizado</th>
+            <th>Alunos</th>
+            <th>Criado em</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </main>
+
+<script>
+  const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';
+  const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const $ = (id) => document.getElementById(id);
+
+  const PLANS = ['starter', 'pro', 'elite'];
+  const STATUSES = ['trial', 'ativo', 'inativo', 'deletado'];
+
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  function renderSummary(rows) {
+    const total = rows.length;
+    const ativos = rows.filter(r => r.status === 'ativo').length;
+    const trial = rows.filter(r => r.status === 'trial').length;
+    const alunos = rows.reduce((sum, r) => sum + Number(r.alunos_count || 0), 0);
+    $('summaryRow').innerHTML = [
+      { num: total, lbl: 'Profissionais' },
+      { num: ativos, lbl: 'Ativos' },
+      { num: trial, lbl: 'Em trial' },
+      { num: alunos, lbl: 'Alunos (total)' },
+    ].map(c => `<div class="summary-card"><div class="num">${c.num}</div><div class="lbl">${c.lbl}</div></div>`).join('');
+  }
+
+  function renderRow(row) {
+    const tr = document.createElement('tr');
+    tr.dataset.id = row.id;
+    const dataCriado = row.created_at ? new Date(row.created_at).toLocaleDateString('pt-BR') : '—';
+
+    const planOptions = PLANS.map(p => `<option value="${p}" ${p === row.plan ? 'selected' : ''}>${p}</option>`).join('');
+    const statusOptions = STATUSES.map(s => `<option value="${s}" ${s === row.status ? 'selected' : ''}>${s}</option>`).join('');
+
+    tr.innerHTML = `
+      <td>${escapeHtml(row.display_name)}</td>
+      <td>${escapeHtml(row.email)}</td>
+      <td><select class="planSelect">${planOptions}</select></td>
+      <td><select class="statusSelect">${statusOptions}</select></td>
+      <td><input type="number" class="valorInput" step="0.01" placeholder="tabela" value="${row.valor_customizado ?? ''}"></td>
+      <td>${row.alunos_count ?? 0}</td>
+      <td>${dataCriado}</td>
+      <td>
+        <div class="row-save">
+          <button class="btn small saveBtn">Salvar</button>
+        </div>
+      </td>
+    `;
+
+    tr.querySelector('.saveBtn').addEventListener('click', async () => {
+      const btn = tr.querySelector('.saveBtn');
+      btn.disabled = true;
+      const newPlan = tr.querySelector('.planSelect').value;
+      const newStatus = tr.querySelector('.statusSelect').value;
+      const valorRaw = tr.querySelector('.valorInput').value.trim();
+      const args = {
+        prof_id: row.id,
+        new_plan: newPlan,
+        new_status: newStatus,
+        new_valor_customizado: valorRaw === '' ? null : Number(valorRaw),
+        clear_valor_customizado: valorRaw === '',
+      };
+      const { error } = await supa.rpc('master_update_professional', args);
+      btn.disabled = false;
+      if (error) {
+        console.error('Falha ao salvar:', error.message);
+        alert('Erro ao salvar: ' + error.message);
+        return;
+      }
+      btn.textContent = 'Salvo!';
+      setTimeout(() => { btn.textContent = 'Salvar'; }, 1500);
+    });
+
+    return tr;
+  }
+
+  async function boot() {
+    const { data: { session } } = await supa.auth.getSession();
+    if (!session) { window.location.href = 'login.html'; return; }
+
+    // Checagem client-side só pra UX (redirecionar quem não é o e-mail master
+    // pra longe desta tela) — a segurança de verdade é a checagem por dentro
+    // das RPCs (master_list_professionals/master_update_professional), que
+    // nunca retornam dado de outro tenant nem aceitam updates de outro e-mail.
+    if (session.user.email !== 'meuprotocolo1@gmail.com') {
+      window.location.href = 'index.html';
+      return;
+    }
+
+    const { data: rows, error } = await supa.rpc('master_list_professionals');
+    $('loadingMsg').style.display = 'none';
+
+    if (error) {
+      console.error('Falha ao carregar profissionais:', error.message);
+      $('emptyMsg').textContent = 'Erro ao carregar: ' + error.message;
+      $('emptyMsg').style.display = 'block';
+      return;
+    }
+    if (!rows || rows.length === 0) {
+      $('emptyMsg').style.display = 'block';
+      renderSummary([]);
+      return;
+    }
+
+    renderSummary(rows);
+    const tbody = $('tbody');
+    tbody.innerHTML = '';
+    rows.forEach(row => tbody.appendChild(renderRow(row)));
+    $('tableWrap').style.display = 'block';
+  }
+
+  $('logoutBtn').addEventListener('click', async () => {
+    await supa.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  boot();
+</script>
+</body>
+</html>

@@ -12,19 +12,21 @@
 <script src="https://sdk.mercadopago.com/js/v2"></script>
 <style>
   :root {
-    --bg:#F8F9FA; --primary:#2D6BE4; --accent:#3BB08F; --text:#1E2A3A;
-    --line:#E2E5EA; --card:#FFFFFF; --muted:#6B7684; --font:'Inter', sans-serif;
+    --bg:#F8F9FA; --primary:#2D6BE4; --accent:#1E8C64; --text:#1E2A3A;
+    --line:#E9EBEF; --card:#FFFFFF; --muted:#63707F; --font:'Inter', sans-serif;
+    --card-grad:linear-gradient(165deg,#FFFFFF 0%,#F7FBF9 55%,#F6F8FE 100%);
   }
   * { box-sizing:border-box; }
   body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--bg); color:var(--text); font-family:var(--font); padding:24px; }
-  .card { width:100%; max-width:400px; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:28px 24px; }
+  .card { width:100%; max-width:400px; background:var(--card-grad); border:1px solid rgba(20,30,45,.05); box-shadow:0 14px 34px -12px rgba(20,30,45,.16); border-radius:20px; padding:28px 24px; }
   h1 { font-size:22px; font-weight:700; margin:0 0 6px; }
   p.hint { color:var(--muted); font-size:14px; margin:0 0 20px; }
   .field { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
   .field label { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
   .field input { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:11px 13px; font-size:15px; color:var(--text); font-family:var(--font); }
   .field input:focus { outline:none; border-color:var(--primary); }
-  .btn { width:100%; padding:12px 18px; border-radius:10px; font-weight:700; font-size:15px; cursor:pointer; border:none; background:var(--primary); color:#fff; font-family:var(--font); }
+  .btn { width:100%; padding:12px 18px; border-radius:10px; font-weight:700; font-size:15px; cursor:pointer; border:none; background:var(--primary); color:#fff; font-family:var(--font); transition:transform .15s ease; }
+  .btn:active { transform:scale(.98); }
   .btn:disabled { opacity:.5; cursor:not-allowed; }
   .msg { font-size:13px; margin-top:12px; text-align:center; min-height:18px; }
   .msg.error { color:#C0392B; }

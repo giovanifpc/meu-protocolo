@@ -11,18 +11,21 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
-    --bg:#F8F9FA; --primary:#2D6BE4; --accent:#3BB08F; --text:#1E2A3A;
-    --line:#E2E5EA; --card:#FFFFFF; --muted:#6B7684; --danger:#C0392B; --font:'Inter', sans-serif;
+    --bg:#F8F9FA; --primary:#2D6BE4; --accent:#1E8C64; --accent-dim:#146B4D; --text:#1E2A3A;
+    --line:#E9EBEF; --card:#FFFFFF; --muted:#63707F; --faint:#94A0AF; --danger:#C0392B; --font:'Inter', sans-serif;
+    --radius:14px; --radius-lg:18px;
+    --card-grad:linear-gradient(165deg,#FFFFFF 0%,#F7FBF9 55%,#F6F8FE 100%);
+    --shadow-card:0 1px 2px rgba(20,30,45,.04), 0 10px 24px -14px rgba(20,30,45,.14);
   }
   * { box-sizing:border-box; }
   body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font-family:var(--font); }
   header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--card); border-bottom:1px solid var(--line); gap:12px; }
   header h1 { font-size:17px; font-weight:700; margin:0; }
   .tabbar { display:none; gap:4px; padding:8px 20px; background:var(--card); border-bottom:1px solid var(--line); max-width:720px; margin:0 auto; }
-  .tab-link { flex:1; text-align:center; padding:8px 4px; border-radius:8px; font-size:12px; font-weight:700; color:var(--muted); text-decoration:none; }
+  .tab-link { flex:1; text-align:center; padding:8px 4px; border-radius:8px; font-size:12px; font-weight:700; color:var(--muted); text-decoration:none; transition:.15s; }
   .tab-link.active { background:var(--primary); color:#fff; }
   main { max-width:720px; margin:0 auto; padding:20px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:16px; }
+  .card { background:var(--card-grad); border:1px solid rgba(20,30,45,.04); box-shadow:var(--shadow-card); border-radius:var(--radius-lg); padding:16px 18px; margin-bottom:16px; }
   .card h2 { font-size:15px; margin:0 0 12px; }
   .field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
   .field label { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
@@ -37,7 +40,8 @@
   @media (max-width: 480px) {
     .row.three, .row.four { grid-template-columns:1fr 1fr; }
   }
-  .btn { padding:10px 16px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; border:none; background:var(--primary); color:#fff; font-family:var(--font); }
+  .btn { padding:10px 16px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; border:none; background:var(--primary); color:#fff; font-family:var(--font); transition:transform .15s ease; }
+  .btn:active { transform:scale(.97); }
   .btn.secondary { background:var(--bg); color:var(--text); border:1px solid var(--line); }
   .btn.small { padding:7px 12px; font-size:12px; }
   .btn:disabled { opacity:.5; cursor:not-allowed; }
@@ -340,7 +344,7 @@
     el.innerHTML = `
       <div class="card">
         <h2>Anamnese</h2>
-        ${data.fumante ? '<div class="anamnese-alert">⚠ Fumante</div>' : ''}
+        ${data.fumante ? '<div class="anamnese-alert"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Fumante</div>' : ''}
         ${rows.map(([lbl, v]) => `<div class="anamnese-row"><div class="ar-lbl">${escapeHtml(lbl)}</div><div class="ar-val">${escapeHtml(v)}</div></div>`).join('') || '<div class="empty">Sem detalhes preenchidos além do objetivo.</div>'}
       </div>`;
   }
@@ -582,7 +586,7 @@
       const existing = fotos.find(f => f.tipo === slot.key);
       return `
         <div class="photo-slot" data-tipo="${slot.key}">
-          <div class="ph-preview">${existing ? '<div class="ph-placeholder">📷 enviada</div>' : '<div class="ph-placeholder">Sem foto</div>'}</div>
+          <div class="ph-preview">${existing ? '<div class="ph-placeholder"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:4px"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>enviada</div>' : '<div class="ph-placeholder">Sem foto</div>'}</div>
           <label>${slot.label}</label>
           <input type="file" accept="image/*" class="photo-input" data-tipo="${slot.key}">
           ${existing ? `<button type="button" class="btn secondary small view-photo-btn" data-path="${existing.path}" style="margin-top:4px;width:100%;">Ver</button>` : ''}

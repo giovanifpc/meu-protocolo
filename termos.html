@@ -10,8 +10,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:#F8F9FA; --primary:#2D6BE4; --accent:#3BB08F; --text:#1E2A3A;
-    --line:#E2E5EA; --card:#FFFFFF; --muted:#6B7684; --font:'Inter', sans-serif;
+    --bg:#F8F9FA; --primary:#2D6BE4; --accent:#1E8C64; --text:#1E2A3A;
+    --line:#E9EBEF; --card:#FFFFFF; --muted:#63707F; --font:'Inter', sans-serif;
+    --card-grad:linear-gradient(165deg,#FFFFFF 0%,#F7FBF9 55%,#F6F8FE 100%);
   }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--text); font-family:var(--font); }
@@ -22,7 +23,7 @@
   h2 { font-size:17px; margin:32px 0 8px; }
   p, li { font-size:15px; line-height:1.6; color:var(--text); }
   ul { padding-left:20px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:24px; }
+  .card { background:var(--card-grad); border:1px solid rgba(20,30,45,.05); box-shadow:0 1px 2px rgba(20,30,45,.04), 0 10px 24px -14px rgba(20,30,45,.14); border-radius:18px; padding:24px; }
 </style>
 </head>
 <body>

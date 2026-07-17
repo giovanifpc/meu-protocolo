@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://drive.google.com https://*.supabase.co; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co; object-src 'none'; base-uri 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://drive.google.com https://*.supabase.co; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co; object-src 'none'; base-uri 'self';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#F8F9FA">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -230,7 +230,12 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 
 /* PERFIL */
 .profile-head{display:flex;flex-direction:column;align-items:center;padding:12px 0 20px}
-.profile-avatar{width:64px;height:64px;border-radius:50%;background:var(--primary);color:#fff;font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.profile-avatar-wrap{position:relative;width:76px;height:76px}
+.profile-avatar{width:76px;height:76px;border-radius:50%;background:var(--primary);color:#fff;font-size:28px;font-weight:800;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.profile-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.avatar-edit-btn{position:absolute;right:-2px;bottom:-2px;width:28px;height:28px;border-radius:50%;background:var(--card);border:2px solid var(--bg);box-shadow:var(--shadow-sm);color:var(--primary);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.avatar-edit-btn svg{width:14px;height:14px}
+.avatar-edit-btn:active{transform:scale(.92)}
 .profile-name{font-size:20px;font-weight:800;margin-top:14px}
 .profile-sub{font-size:12px;color:var(--muted);margin-top:4px}
 .menu-item{display:flex;align-items:center;gap:14px;background:var(--card-grad);border:1px solid rgba(20,30,45,.04);box-shadow:var(--shadow-card);border-radius:var(--radius);padding:16px;margin-bottom:11px;color:var(--text);width:100%;text-align:left;font-family:var(--font);font-size:14px;cursor:pointer;transition:transform .15s ease}
@@ -263,6 +268,22 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .consent-check a{color:var(--primary);font-weight:600}
 .consent-card button{width:100%;padding:12px 18px;border-radius:10px;font-weight:700;font-size:15px;border:none;background:var(--primary);color:#fff;font-family:var(--font);cursor:pointer}
 .consent-card button:disabled{opacity:.5;cursor:not-allowed}
+
+/* CROP DE FOTO DE PERFIL */
+.crop-overlay{position:fixed;inset:0;z-index:550;background:rgba(15,20,28,.6);display:none;align-items:center;justify-content:center;padding:24px}
+.crop-overlay.show{display:flex}
+.crop-card{width:100%;max-width:340px;background:var(--card);border-radius:var(--radius-lg);padding:22px;box-shadow:var(--shadow-pop)}
+.crop-card h3{font-size:16px;font-weight:800;margin-bottom:4px;text-align:center}
+.crop-card .crop-hint{font-size:12px;color:var(--muted);text-align:center;margin-bottom:16px}
+.crop-stage{width:240px;height:240px;margin:0 auto;position:relative;overflow:hidden;border-radius:16px;background:#0f141c;touch-action:none;cursor:grab}
+.crop-stage:active{cursor:grabbing}
+.crop-stage img{position:absolute;top:0;left:0;transform-origin:0 0;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.crop-mask{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 999px rgba(15,20,28,.62);pointer-events:none}
+.crop-zoom-row{display:flex;align-items:center;gap:10px;margin-top:18px}
+.crop-zoom-row svg{width:15px;height:15px;color:var(--faint);flex-shrink:0}
+.crop-zoom-row input[type=range]{flex:1;accent-color:var(--primary)}
+.crop-actions{display:flex;gap:10px;margin-top:18px}
+.crop-actions .btn{flex:1}
 </style>
 </head>
 <body>
@@ -330,7 +351,11 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   </div>
   <div class="content">
     <div class="profile-head">
-      <div class="profile-avatar" id="profileAvatar">A</div>
+      <div class="profile-avatar-wrap">
+        <div class="profile-avatar" id="profileAvatar">A</div>
+        <button class="avatar-edit-btn" id="avatarEditBtn" title="Trocar foto" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
+        <input type="file" id="avatarFileInput" accept="image/*" style="display:none">
+      </div>
       <div class="profile-name" id="profileName">Aluno</div>
       <div class="profile-sub" id="profileSub">—</div>
     </div>
@@ -496,6 +521,27 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   </div>
   <div class="content" id="notificationsContent"></div>
 </section>
+
+<!-- ===== CROP DE FOTO DE PERFIL ===== -->
+<div class="crop-overlay" id="cropOverlay">
+  <div class="crop-card">
+    <h3>Ajustar foto</h3>
+    <div class="crop-hint">Arraste pra posicionar e use o zoom pra enquadrar</div>
+    <div class="crop-stage" id="cropStage">
+      <img id="cropImg" alt="">
+      <div class="crop-mask"></div>
+    </div>
+    <div class="crop-zoom-row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="6"/><line x1="21" y1="21" x2="15" y2="15"/><line x1="7" y1="10" x2="13" y2="10"/></svg>
+      <input type="range" id="cropZoomInput" min="100" max="300" value="100">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="6"/><line x1="21" y1="21" x2="15" y2="15"/><line x1="10" y1="7" x2="10" y2="13"/><line x1="7" y1="10" x2="13" y2="10"/></svg>
+    </div>
+    <div class="crop-actions">
+      <button class="btn btn-ghost" id="cropCancelBtn" type="button">Cancelar</button>
+      <button class="btn btn-primary" id="cropConfirmBtn" type="button">Usar foto</button>
+    </div>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -1048,6 +1094,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     $('profileFoot').innerHTML = `Meu Protocolo<br>${completedCount()} treino(s) concluído(s) · ${earnedBadgeIds().length}/${BADGES.length} conquistas`;
     buildAchievements();
     updatePushButtonState();
+    loadAvatar();
 
     $('anObjetivo').value = anamnese.objetivo || '';
     $('anHistorico').value = anamnese.historico_medico || '';
@@ -1059,6 +1106,119 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     $('anObservacoes').value = anamnese.observacoes || '';
     $('anamneseMsg').textContent = '';
   }
+
+  /* ---- FOTO DE PERFIL (crop circular) ---- */
+  const AVATAR_BUCKET = 'student-avatars';
+  function avatarPath() { return `${student.id}/avatar.jpg`; }
+
+  function setAvatarImg(url) {
+    const el = $('profileAvatar');
+    el.innerHTML = url
+      ? `<img src="${escapeHtml(url)}" alt="">`
+      : escapeHtml((student.nome || '?').trim().charAt(0).toUpperCase());
+  }
+
+  async function loadAvatar() {
+    const { data, error } = await supa.storage.from(AVATAR_BUCKET).createSignedUrl(avatarPath(), 3600);
+    if (error || !data) { setAvatarImg(null); return; }
+    setAvatarImg(data.signedUrl);
+  }
+
+  $('avatarEditBtn').addEventListener('click', () => $('avatarFileInput').click());
+
+  const cropState = { natW: 0, natH: 0, baseScale: 1, scale: 1, offsetX: 0, offsetY: 0, dragging: false, pointerId: null, lastX: 0, lastY: 0, objectUrl: null };
+  const CROP_STAGE = 240;
+
+  $('avatarFileInput').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    if (cropState.objectUrl) URL.revokeObjectURL(cropState.objectUrl);
+    cropState.objectUrl = URL.createObjectURL(file);
+    const img = $('cropImg');
+    img.onload = () => {
+      cropState.natW = img.naturalWidth;
+      cropState.natH = img.naturalHeight;
+      cropState.baseScale = CROP_STAGE / Math.min(cropState.natW, cropState.natH);
+      cropState.scale = cropState.baseScale;
+      cropState.offsetX = (CROP_STAGE - cropState.natW * cropState.scale) / 2;
+      cropState.offsetY = (CROP_STAGE - cropState.natH * cropState.scale) / 2;
+      $('cropZoomInput').value = 100;
+      renderCropTransform();
+      $('cropOverlay').classList.add('show');
+    };
+    img.src = cropState.objectUrl;
+  });
+
+  function clampCropOffsets() {
+    const w = cropState.natW * cropState.scale, h = cropState.natH * cropState.scale;
+    cropState.offsetX = Math.min(0, Math.max(CROP_STAGE - w, cropState.offsetX));
+    cropState.offsetY = Math.min(0, Math.max(CROP_STAGE - h, cropState.offsetY));
+  }
+  function renderCropTransform() {
+    clampCropOffsets();
+    const img = $('cropImg');
+    img.style.width = (cropState.natW * cropState.scale) + 'px';
+    img.style.height = (cropState.natH * cropState.scale) + 'px';
+    img.style.transform = `translate(${cropState.offsetX}px,${cropState.offsetY}px)`;
+  }
+
+  const cropStageEl = $('cropStage');
+  cropStageEl.addEventListener('pointerdown', (e) => {
+    cropState.dragging = true;
+    cropState.pointerId = e.pointerId;
+    cropState.lastX = e.clientX;
+    cropState.lastY = e.clientY;
+    cropStageEl.setPointerCapture(e.pointerId);
+  });
+  cropStageEl.addEventListener('pointermove', (e) => {
+    if (!cropState.dragging || e.pointerId !== cropState.pointerId) return;
+    cropState.offsetX += e.clientX - cropState.lastX;
+    cropState.offsetY += e.clientY - cropState.lastY;
+    cropState.lastX = e.clientX;
+    cropState.lastY = e.clientY;
+    renderCropTransform();
+  });
+  ['pointerup', 'pointercancel'].forEach(ev => cropStageEl.addEventListener(ev, () => { cropState.dragging = false; }));
+
+  $('cropZoomInput').addEventListener('input', (e) => {
+    const oldScale = cropState.scale;
+    const newScale = cropState.baseScale * (Number(e.target.value) / 100);
+    const cx = (CROP_STAGE / 2 - cropState.offsetX) / oldScale;
+    const cy = (CROP_STAGE / 2 - cropState.offsetY) / oldScale;
+    cropState.scale = newScale;
+    cropState.offsetX = CROP_STAGE / 2 - cx * newScale;
+    cropState.offsetY = CROP_STAGE / 2 - cy * newScale;
+    renderCropTransform();
+  });
+
+  function closeCropModal() {
+    $('cropOverlay').classList.remove('show');
+    if (cropState.objectUrl) { URL.revokeObjectURL(cropState.objectUrl); cropState.objectUrl = null; }
+  }
+  $('cropCancelBtn').addEventListener('click', closeCropModal);
+
+  $('cropConfirmBtn').addEventListener('click', async () => {
+    const btn = $('cropConfirmBtn');
+    btn.disabled = true;
+    const OUT = 480;
+    const canvas = document.createElement('canvas');
+    canvas.width = OUT; canvas.height = OUT;
+    const ctx = canvas.getContext('2d');
+    const sx = -cropState.offsetX / cropState.scale;
+    const sy = -cropState.offsetY / cropState.scale;
+    const sSize = CROP_STAGE / cropState.scale;
+    ctx.drawImage($('cropImg'), sx, sy, sSize, sSize, 0, 0, OUT, OUT);
+
+    canvas.toBlob(async (blob) => {
+      const { error } = await supa.storage.from(AVATAR_BUCKET).upload(avatarPath(), blob, { contentType: 'image/jpeg', upsert: true });
+      btn.disabled = false;
+      if (error) { toast('Erro ao salvar foto: ' + error.message); return; }
+      closeCropModal();
+      await loadAvatar();
+      toast('Foto de perfil atualizada.');
+    }, 'image/jpeg', 0.85);
+  });
 
   $('saveAnamneseBtn').addEventListener('click', async () => {
     $('saveAnamneseBtn').disabled = true;

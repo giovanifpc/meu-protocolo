@@ -41,6 +41,8 @@
   .notes-panel textarea { min-height:70px; resize:vertical; }
   .notes-sub-label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin:10px 0 6px; }
   .notes-sub-label:first-child { margin-top:0; }
+  .avatar-preview { width:56px; height:56px; border-radius:50%; background:var(--primary); color:#fff; font-size:20px; font-weight:800; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:12px; }
+  .avatar-preview img { width:100%; height:100%; object-fit:cover; display:block; }
   .billing-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .billing-row > * { min-width:0; }
   .billing-status { font-size:12px; color:var(--muted); margin-bottom:8px; }
@@ -132,6 +134,14 @@
     await loadStudents();
   }
 
+  async function loadStudentAvatarPreview(studentId) {
+    const el = $('avatarPreview-' + studentId);
+    if (!el) return;
+    const { data, error } = await supa.storage.from('student-avatars').createSignedUrl(`${studentId}/avatar.jpg`, 3600);
+    if (error || !data) return;
+    el.innerHTML = `<img src="${data.signedUrl}" alt="">`;
+  }
+
   const STATUS_LABELS = { ativo: 'Ativo', pausado: 'Pausado', inativo: 'Inativo' };
   const PLAN_STUDENT_LIMITS = { starter: 15, pro: 40, elite: Infinity };
   let notesByStudent = {};
@@ -168,6 +178,7 @@
           </div>
         </div>
         <div class="notes-panel" id="notesPanel-${s.id}">
+          <div class="avatar-preview" id="avatarPreview-${s.id}">${escapeHtml((s.nome || '?').trim().charAt(0).toUpperCase())}</div>
           <div class="notes-sub-label">Status e nota privada</div>
           <select data-role="note-status" data-student-id="${s.id}">
             ${Object.entries(STATUS_LABELS).map(([v, l]) => `<option value="${v}" ${note.status === v ? 'selected' : ''}>${l}</option>`).join('')}
@@ -188,9 +199,17 @@
       </div>
     `; }).join('');
 
+    const avatarLoaded = {};
     list.querySelectorAll('[data-role="toggle-notes"]').forEach(btn => {
       btn.addEventListener('click', () => {
-        $('notesPanel-' + btn.dataset.studentId).classList.toggle('open');
+        const studentId = btn.dataset.studentId;
+        const panel = $('notesPanel-' + studentId);
+        const opening = !panel.classList.contains('open');
+        panel.classList.toggle('open');
+        if (opening && !avatarLoaded[studentId]) {
+          avatarLoaded[studentId] = true;
+          loadStudentAvatarPreview(studentId);
+        }
       });
     });
     list.querySelectorAll('[data-role="save-note"]').forEach(btn => {

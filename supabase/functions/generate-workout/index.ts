@@ -1,14 +1,23 @@
 // Gera uma sugestão de protocolo de treino via Claude, usando o histórico
-// de treinos do aluno como contexto. O profissional revisa/edita antes de
-// publicar — isso nunca salva nada sozinho, só devolve uma sugestão.
+// de treinos, a anamnese e as respostas do wizard (objetivo, nível,
+// frequência, duração de sessão) como contexto. O profissional revisa/edita
+// antes de publicar — isso nunca salva nada sozinho, só devolve uma sugestão.
 //
 // Deploy:   supabase functions deploy generate-workout
 // Secret:   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
 //
 // Usa o JWT de quem chamou (repassado automaticamente pelo supa.functions.invoke
 // do client) pra criar um client Supabase autenticado como esse usuário — a
-// leitura de aluno/histórico/protocolo passa pela RLS normal, sem precisar de
-// service role key.
+// leitura de aluno/histórico/protocolo/anamnese passa pela RLS normal, sem
+// precisar de service role key.
+//
+// Divisão de responsabilidade deliberada: a IA decide EXERCÍCIOS, DIVISÃO
+// (quantos treinos, o que cada um trabalha) e TÉCNICA de intensificação por
+// exercício. A progressão numérica semana a semana (sets/reps/descanso por
+// semana do mesociclo) continua sendo calculada pelo generateWeeks() do
+// front-end (mesma função determinística que o modo manual usa) — pedir
+// pro modelo fazer essa aritmética seria mais caro e menos confiável do
+// que reaproveitar código já testado.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -29,6 +38,24 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+// Técnicas de intensificação mais arriscadas/exigentes — vetadas por código
+// pra aluno iniciante, não só por instrução no prompt. É uma garantia, não
+// uma esperança de que o modelo respeitou a regra.
+const TECNICAS_RESTRITAS_INICIANTE = ['Drop-Set', 'Cluster', 'Negativo', 'Rest-Pause'];
+
+function aplicarVetoPorNivel(workouts: any[], nivel: string) {
+  if (nivel !== 'iniciante') return workouts;
+  return workouts.map((w) => ({
+    ...w,
+    exercises: (w.exercises || []).map((ex: any) => {
+      if (ex.tecnica && TECNICAS_RESTRITAS_INICIANTE.includes(ex.tecnica)) {
+        return { ...ex, tecnica: null };
+      }
+      return ex;
+    }),
+  }));
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -40,7 +67,14 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { student_id, objetivo } = await req.json();
+    const {
+      student_id,
+      objetivo,
+      categoria_objetivo,
+      nivel,
+      frequencia,
+      duracao_sessao_min,
+    } = await req.json();
     if (!student_id) throw new Error('student_id é obrigatório.');
 
     const { data: { user } } = await supa.auth.getUser();
@@ -53,6 +87,12 @@ Deno.serve(async (req) => {
     const { data: student, error: studentErr } = await supa
       .from('students').select('id, nome').eq('id', student_id).maybeSingle();
     if (studentErr || !student) throw new Error('Aluno não encontrado ou sem permissão pra acessá-lo.');
+
+    const { data: anamnese } = await supa
+      .from('student_anamnese')
+      .select('historico_medico, lesoes, restricoes, fumante')
+      .eq('student_id', student_id)
+      .maybeSingle();
 
     const { data: history } = await supa
       .from('training_history')
@@ -84,23 +124,60 @@ Deno.serve(async (req) => {
       ? `Título: ${lastProtocol.titulo}\nExercícios usados: ${(lastProtocol.workouts || []).flatMap((w: { exercises: { nome: string }[] }) => w.exercises.map((e) => e.nome)).join(', ')}`
       : 'Nenhum protocolo anterior.';
 
-    const prompt = `Você é assistente de um personal trainer montando um protocolo de treino pro aluno ${student.nome}.
+    const anamneseLinhas: string[] = [];
+    if (anamnese?.lesoes) anamneseLinhas.push(`Lesões: ${anamnese.lesoes}`);
+    if (anamnese?.restricoes) anamneseLinhas.push(`Restrições: ${anamnese.restricoes}`);
+    if (anamnese?.historico_medico) anamneseLinhas.push(`Histórico médico: ${anamnese.historico_medico}`);
+    if (anamnese?.fumante) anamneseLinhas.push('Fumante: sim');
+    const anamneseTexto = anamneseLinhas.length
+      ? anamneseLinhas.join('\n')
+      : 'Nada reportado — sem restrições conhecidas.';
 
-Objetivo passado pelo profissional: ${objetivo || 'não especificado — use bom senso com base no histórico'}
+    const freq = Math.min(6, Math.max(2, Number(frequencia) || 4));
+    const duracaoSessao = Number(duracao_sessao_min) || 60;
+    const nivelFinal = ['iniciante', 'intermediario', 'avancado'].includes(nivel) ? nivel : 'intermediario';
+    const objetivoFinal = ['hipertrofia', 'emagrecimento', 'saude'].includes(categoria_objetivo) ? categoria_objetivo : 'hipertrofia';
 
-Protocolo anterior:
+    // Regra de exercícios por sessão, calibrada pra caber na duração escolhida
+    // (~7-9min por exercício considerando séries+descanso+transição).
+    const exerciciosPorSessao = Math.max(3, Math.min(9, Math.round(duracaoSessao / 8)));
+
+    const prompt = `Você é um preparador físico de elite montando um protocolo de treino de musculação pro aluno ${student.nome}.
+
+DADOS DO ALUNO
+Objetivo: ${objetivoFinal}
+Nível: ${nivelFinal}
+Anamnese/saúde:
+${anamneseTexto}
+
+CONFIGURAÇÃO PEDIDA PELO PROFISSIONAL
+Frequência semanal: ${freq}x
+Duração de cada sessão: ~${duracaoSessao} minutos (por isso cada treino deve ter aproximadamente ${exerciciosPorSessao} exercícios)
+Observação adicional do profissional: ${objetivo || 'nenhuma'}
+
+PROTOCOLO ANTERIOR (pra não repetir sem motivo, e progredir carga/volume onde o histórico mostrar evolução)
 ${protocoloAtual}
 
-Histórico recente de treinos (mais recente primeiro):
+HISTÓRICO RECENTE DE TREINOS (mais recente primeiro)
 ${historyResumo || 'Sem histórico ainda — é aluno novo ou sem sessões registradas.'}
 
-Monte um protocolo de treino novo, coerente com a evolução observada no histórico (progrida carga/volume onde fizer sentido pela evolução de carga registrada, evite repetir exatamente o mesmo protocolo sem motivo). Use nomes de exercícios comuns e específicos em português do Brasil (ex: "Supino reto com barra", "Agachamento livre", "Puxada frente na polia").
+REGRAS DE MONTAGEM (siga rigorosamente)
+1. Gere exatamente ${freq} treinos (id "A", "B", "C"... até a letra necessária), com divisão de grupos musculares coerente com a frequência escolhida (ex: 2x = full body ou upper/lower; 3x = ABC; 4x = ABCD; 5-6x = divisão mais isolada por grupo).
+2. Cada exercício pode receber uma "tecnica" de intensificação (um destes valores exatos, ou null se não se aplica): "Drop-Set", "Rest-Pause", "Cluster", "Myo-Reps", "Pirâmide Crescente", "Pirâmide Decrescente", "Super Slow", "Bi-Set", "Tri-Set", "Negativo".
+3. Aplique técnica com moderação e critério — nunca em todos os exercícios. Prefira aplicar no ÚLTIMO exercício isolador de cada treino (papel de "finalizador"), nunca no primeiro exercício composto pesado do treino.
+4. Para nível "iniciante": NÃO use "Drop-Set", "Cluster", "Rest-Pause" nem "Negativo" (mais arriscadas/exigentes tecnicamente) — prefira "Pirâmide Crescente", "Bi-Set" ou nenhuma técnica.
+5. Nunca prescreva exercício que agrida uma lesão ou restrição reportada na anamnese acima.
+6. Cada exercício tem um campo "nota_execucao": uma dica curta e específica de execução (ex: "1-3 na reserva, carga sobe a cada série", "pausa de 15s dentro da série", "reduz 20% de carga a cada drop, sem descanso entre eles") — coerente com a técnica aplicada, quando houver.
+7. Use nomes de exercícios comuns e específicos em português do Brasil (ex: "Supino reto com barra", "Agachamento livre", "Puxada frente na polia").
+8. sets/reps/rest de cada exercício são o ponto de partida da semana 1 — não invente uma progressão semana a semana, isso é calculado depois por outro sistema.
 
 Responda APENAS com um JSON válido, sem texto antes ou depois, exatamente neste formato:
 {
   "titulo": "string",
   "workouts": [
-    { "id": "A", "name": "Treino A — nome descritivo", "exercises": [ { "nome": "string", "sets": number, "reps": "string", "rest": number } ] }
+    { "id": "A", "name": "Treino A — nome descritivo do foco do dia", "exercises": [
+      { "nome": "string", "sets": number, "reps": "string", "rest": number, "tecnica": "string ou null", "nota_execucao": "string" }
+    ] }
   ]
 }`;
 
@@ -137,6 +214,7 @@ Responda APENAS com um JSON válido, sem texto antes ou depois, exatamente neste
     }
 
     const suggestion = JSON.parse(jsonMatch[0]);
+    suggestion.workouts = aplicarVetoPorNivel(suggestion.workouts || [], nivelFinal);
     return jsonResponse(suggestion);
   } catch (err) {
     return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 400);

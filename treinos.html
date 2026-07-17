@@ -50,6 +50,8 @@
   .exercise-row .ex-meta { color:var(--muted); font-size:12px; }
   .exercise-row-edit { flex-wrap:wrap; }
   .ex-name-col { font-weight:600; flex:1 1 100%; margin-bottom:4px; }
+  .tecnica-chip { display:inline-block; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.3px; color:var(--primary); background:rgba(45,107,228,.1); padding:2px 8px; border-radius:6px; margin-bottom:4px; }
+  .ex-note { font-size:11.5px; color:var(--muted); flex:1 1 100%; margin:-2px 0 4px; }
   .ex-fields { display:flex; align-items:center; gap:4px; }
   .ex-field-input { width:44px; padding:5px 4px; text-align:center; border:1px solid var(--line); border-radius:6px; font-size:12px; font-family:var(--font); }
   .ex-field-input:focus { outline:none; border-color:var(--primary); }
@@ -77,6 +79,32 @@
   .week-grid th { color:var(--muted); font-weight:700; font-size:10px; text-transform:uppercase; }
   .week-grid td:first-child, .week-grid th:first-child { text-align:left; color:var(--muted); padding-right:8px; }
   .week-grid .ex-field-input { width:40px; }
+
+  /* CRIAÇÃO: botões grandes + modal de confirmação + wizard IA */
+  .creation-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+  .creation-btn { display:flex; flex-direction:column; align-items:center; gap:8px; padding:18px 10px; border-radius:var(--radius-lg); font-family:var(--font); cursor:pointer; text-align:center; }
+  .creation-btn svg { width:24px; height:24px; }
+  .creation-btn .cb-title { font-size:14px; font-weight:800; }
+  .creation-btn .cb-sub { font-size:11px; font-weight:500; opacity:.8; }
+  .creation-btn.ia { background:linear-gradient(135deg,var(--primary),#1e4fb0); color:#fff; border:none; box-shadow:0 10px 24px -10px rgba(45,107,228,.5); }
+  .creation-btn.manual { background:var(--card-grad); color:var(--text); border:1px solid rgba(20,30,45,.06); box-shadow:var(--shadow-card); }
+  .creation-btn.manual svg { color:var(--muted); }
+
+  .modal-overlay { position:fixed; inset:0; z-index:400; background:rgba(15,20,28,.55); display:none; align-items:center; justify-content:center; padding:24px; }
+  .modal-overlay.show { display:flex; }
+  .modal-card { width:100%; max-width:380px; background:var(--card-grad); border-radius:var(--radius-lg); padding:22px; box-shadow:0 20px 44px -14px rgba(20,30,45,.3); }
+  .modal-card h3 { font-size:16px; font-weight:800; margin-bottom:6px; }
+  .modal-card p { font-size:13px; color:var(--muted); line-height:1.5; margin-bottom:18px; }
+  .modal-actions { display:flex; flex-direction:column; gap:8px; }
+
+  .chip-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .chip { padding:8px 14px; border-radius:20px; border:1px solid var(--line); background:var(--bg); color:var(--muted); font-size:13px; font-weight:700; cursor:pointer; font-family:var(--font); }
+  .chip.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+
+  .anamnese-context { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:14px; font-size:12.5px; line-height:1.6; color:var(--text); }
+  .anamnese-context .ac-lbl { font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+  .anamnese-context .ac-alert { color:var(--danger); font-weight:700; }
+  .wizard-back { display:inline-block; margin-bottom:12px; color:var(--muted); font-size:13px; font-weight:700; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -119,17 +147,96 @@
       </div>
     </div>
 
-    <div id="builderArea" style="display:none;">
+    <div id="creationButtons" style="display:none;">
+      <div class="creation-actions">
+        <button class="creation-btn ia" id="newAiBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span class="cb-title">Criar novo com IA</span>
+          <span class="cb-sub">Responde algumas perguntas, a IA monta tudo</span>
+        </button>
+        <button class="creation-btn manual" id="newManualBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          <span class="cb-title">Criar novo manual</span>
+          <span class="cb-sub">Você monta tudo do zero</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="aiWizardArea" style="display:none;">
       <div class="card">
-        <h2>Gerar treino com IA</h2>
+        <span class="wizard-back" id="wizardBackBtn">‹ Voltar</span>
+        <h2 style="margin-top:4px;">Criar treino com IA</h2>
+
+        <div id="wizardAnamneseArea"></div>
+
         <div class="field">
-          <label>Objetivo / observações (opcional)</label>
-          <textarea id="aiObjetivoInput" rows="2" style="width:100%; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; color:var(--text); font-family:var(--font); resize:vertical;" placeholder="Ex: foco em hipertrofia de posterior, aluno relatou dor no ombro direito, evitar supino..."></textarea>
+          <label>Objetivo</label>
+          <div class="chip-row" id="wizardObjetivo">
+            <button type="button" class="chip active" data-value="hipertrofia">Hipertrofia</button>
+            <button type="button" class="chip" data-value="emagrecimento">Emagrecimento</button>
+            <button type="button" class="chip" data-value="saude">Saúde</button>
+          </div>
         </div>
-        <button class="btn secondary" id="generateAiBtn" type="button">Gerar sugestão com IA</button>
+
+        <div class="field">
+          <label>Nível do aluno</label>
+          <div class="chip-row" id="wizardNivel">
+            <button type="button" class="chip" data-value="iniciante">Iniciante</button>
+            <button type="button" class="chip active" data-value="intermediario">Intermediário</button>
+            <button type="button" class="chip" data-value="avancado">Avançado</button>
+          </div>
+        </div>
+
+        <div class="periodization-row">
+          <div class="field" style="margin-bottom:0;">
+            <label>Periodização</label>
+            <select id="wizardPeriodizacaoSelect">
+              <option value="manual">Nenhuma (manual)</option>
+              <option value="linear" selected>Linear</option>
+              <option value="ondulatoria_diaria">Ondulatória diária</option>
+              <option value="ondulatoria_semanal">Ondulatória semanal</option>
+              <option value="blocos">Em blocos</option>
+              <option value="reversa">Reversa</option>
+            </select>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Semanas</label>
+            <input type="number" id="wizardDuracaoInput" min="2" max="16" value="4">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Frequência semanal</label>
+          <div class="chip-row" id="wizardFrequencia">
+            <button type="button" class="chip" data-value="2">2x</button>
+            <button type="button" class="chip" data-value="3">3x</button>
+            <button type="button" class="chip active" data-value="4">4x</button>
+            <button type="button" class="chip" data-value="5">5x</button>
+            <button type="button" class="chip" data-value="6">6x</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Duração da sessão</label>
+          <div class="chip-row" id="wizardDuracaoSessao">
+            <button type="button" class="chip" data-value="30">30 min</button>
+            <button type="button" class="chip" data-value="45">45 min</button>
+            <button type="button" class="chip active" data-value="60">60 min</button>
+            <button type="button" class="chip" data-value="75">75 min</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Algo mais que a IA deveria saber? (opcional)</label>
+          <textarea id="aiObjetivoInput" rows="2" style="width:100%; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; color:var(--text); font-family:var(--font); resize:vertical;" placeholder="Ex: evitar supino, aluno prefere treino em casa com halteres..."></textarea>
+        </div>
+
+        <button class="btn" id="generateAiBtn" type="button"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" style="vertical-align:-2px;margin-right:5px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Criar treino perfeito</button>
         <div class="msg" id="aiMsg"></div>
       </div>
+    </div>
 
+    <div id="builderArea" style="display:none;">
       <div class="card">
         <div class="field">
           <label>Título do protocolo</label>
@@ -167,6 +274,18 @@
     </div>
   </main>
 
+  <div class="modal-overlay" id="confirmOverlay">
+    <div class="modal-card">
+      <h3>Criar um treino novo?</h3>
+      <p>Já existe um treino pra esse aluno. O que você quer fazer com ele antes de começar do zero?</p>
+      <div class="modal-actions">
+        <button class="btn secondary" id="confirmSaveTemplateBtn" type="button">Salvar o atual como modelo e continuar</button>
+        <button class="btn" id="confirmContinueBtn" type="button">Continuar (o atual vira rascunho)</button>
+        <button class="btn secondary" id="confirmCancelModalBtn" type="button">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
 <script>
   const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';
@@ -177,6 +296,9 @@
   let currentProtocol = null; // { id, student_id, titulo, status, periodizacao, duracao_semanas, workouts: [...] }
   let searchDebounce = null;
   let muscleGroups = [];
+  let viewMode = 'edit'; // 'edit' | 'wizard'
+  let pendingCreationAction = null; // 'manual' | 'ia'
+  let currentAnamnese = null;
 
   const PERIODIZATION_HINTS = {
     manual: 'Sets/reps/descanso fixos, sem progressão automática — você ajusta na mão quando quiser.',
@@ -373,7 +495,7 @@
     await loadTemplates();
   });
 
-  $('saveAsTemplateBtn').addEventListener('click', async () => {
+  async function saveCurrentAsTemplate() {
     if (!currentProtocol || !currentProtocol.workouts.length) { toast('Monte pelo menos um treino antes de salvar como modelo.'); return; }
     const titulo = prompt('Nome do modelo:', currentProtocol.titulo || 'Modelo de protocolo');
     if (!titulo) return;
@@ -388,7 +510,8 @@
     if (error) { toast('Erro ao salvar modelo: ' + error.message); return; }
     toast('Modelo salvo na biblioteca.');
     await loadTemplates();
-  });
+  }
+  $('saveAsTemplateBtn').addEventListener('click', saveCurrentAsTemplate);
 
   function updateDuplicateArea(currentStudentId) {
     const candidates = Object.values(latestProtocolByStudent).filter(p => p.student_id !== currentStudentId);
@@ -425,20 +548,34 @@
 
   $('generateAiBtn').addEventListener('click', async () => {
     if (!currentProtocol.student_id) return;
-    if (currentProtocol.workouts.length && !confirm('Isso substitui os treinos que você já montou aqui (ainda não salvos). Continuar?')) return;
 
     const objetivo = $('aiObjetivoInput').value.trim();
+    const categoriaObjetivo = wizardChipValue('wizardObjetivo');
+    const nivel = wizardChipValue('wizardNivel');
+    const periodizacao = $('wizardPeriodizacaoSelect').value;
+    const usesDuration = !['manual', 'ondulatoria_diaria'].includes(periodizacao);
+    const duracaoSemanas = usesDuration ? Math.max(2, Number($('wizardDuracaoInput').value) || 4) : null;
+    const frequencia = Number(wizardChipValue('wizardFrequencia')) || 4;
+    const duracaoSessaoMin = Number(wizardChipValue('wizardDuracaoSessao')) || 60;
+
     $('generateAiBtn').disabled = true;
-    $('generateAiBtn').textContent = 'Gerando... (pode levar até 30s)';
+    $('generateAiBtn').textContent = 'Criando... (pode levar até 30s)';
     $('aiMsg').textContent = '';
     $('aiMsg').className = 'msg';
 
     const { data, error } = await supa.functions.invoke('generate-workout', {
-      body: { student_id: currentProtocol.student_id, objetivo },
+      body: {
+        student_id: currentProtocol.student_id,
+        objetivo,
+        categoria_objetivo: categoriaObjetivo,
+        nivel,
+        frequencia,
+        duracao_sessao_min: duracaoSessaoMin,
+      },
     });
 
     $('generateAiBtn').disabled = false;
-    $('generateAiBtn').textContent = 'Gerar sugestão com IA';
+    $('generateAiBtn').innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" style="vertical-align:-2px;margin-right:5px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Criar treino perfeito';
 
     if (error || !data || data.error) {
       let motivo = data?.error || error?.message || 'erro desconhecido';
@@ -458,27 +595,88 @@
       const exercises = [];
       for (const ex of (w.exercises || [])) {
         const match = await matchExerciseByName(ex.nome);
+        const base = { sets: Number(ex.sets) || 3, reps: String(ex.reps || '12'), rest: Number(ex.rest) || 60, nota: '' };
         exercises.push({
           nome: match ? match.nome : ex.nome,
           exercise_id: match?.exercise_id,
           exercise_ref: match?.exercise_ref,
           media: match?.gif_url,
           mediaType: 'img',
-          weeks: [{ sets: Number(ex.sets) || 3, reps: String(ex.reps || '12'), rest: Number(ex.rest) || 60, nota: '' }],
+          tecnica: ex.tecnica || null,
+          note: ex.nota_execucao || '',
+          weeks: [base],
         });
       }
       workouts.push({ _uid: uid(), id: w.id || String.fromCharCode(65 + workouts.length), name: w.name, exercises });
     }
 
     currentProtocol.titulo = data.titulo || currentProtocol.titulo;
+    currentProtocol.periodizacao = periodizacao;
+    currentProtocol.duracao_semanas = duracaoSemanas;
     currentProtocol.workouts = workouts;
+
+    // Aplica a periodização escolhida em cima da base que a IA sugeriu —
+    // a IA decide exercícios/técnica, o cálculo de progressão semana a
+    // semana continua sendo o mesmo generateWeeks() determinístico do
+    // modo manual (mais barato e confiável do que pedir aritmética pro modelo).
+    const durationForWeeks = usesDuration ? duracaoSemanas : 1;
+    currentProtocol.workouts.forEach((w, wIdx) => {
+      w.exercises.forEach(ex => {
+        const base = ex.weeks[0];
+        ex.weeks = generateWeeks(periodizacao, base, durationForWeeks, wIdx);
+      });
+    });
+
+    viewMode = 'edit';
     renderProtocol();
-    toast('Sugestão gerada pela IA — revise os exercícios e as cargas antes de publicar.');
+    showViewMode();
+    toast('Treino criado pela IA — revise antes de publicar.');
   });
 
   async function matchExerciseByName(nome) {
     const { data } = await supa.rpc('search_exercise_library', { q: nome });
     return (data && data[0]) || null;
+  }
+
+  async function regenerateWorkoutExercises(workoutUid, btn) {
+    const w = currentProtocol.workouts.find(x => x._uid === workoutUid);
+    if (!w || !w.exercises.length) return;
+    if (!confirm(`Trocar os exercícios de "${w.name}"? Sets, reps, descanso e periodização de cada um continuam como estão — só o exercício em si muda.`)) return;
+
+    const originalLabel = btn.innerHTML;
+    btn.disabled = true;
+    btn.textContent = 'Trocando...';
+
+    const { data, error } = await supa.functions.invoke('regenerate-exercises', {
+      body: {
+        student_id: currentProtocol.student_id,
+        exercises: w.exercises.map(ex => ({ exercise_id: ex.exercise_id || null, nome: ex.nome, tecnica: ex.tecnica || null })),
+      },
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = originalLabel;
+
+    if (error || !data || data.error || !Array.isArray(data.exercises)) {
+      let motivo = data?.error || error?.message || 'erro desconhecido';
+      if (error?.context?.json) {
+        try { const body = await error.context.json(); if (body?.error) motivo = body.error; } catch {}
+      }
+      toast('Erro ao trocar exercícios: ' + motivo);
+      return;
+    }
+
+    for (let i = 0; i < w.exercises.length; i++) {
+      const novoNome = data.exercises[i]?.nome;
+      if (!novoNome) continue;
+      const match = await matchExerciseByName(novoNome);
+      w.exercises[i].nome = match ? match.nome : novoNome;
+      w.exercises[i].exercise_id = match?.exercise_id;
+      w.exercises[i].exercise_ref = match?.exercise_ref;
+      w.exercises[i].media = match?.gif_url;
+    }
+    renderWorkouts();
+    toast(`Exercícios de "${w.name}" trocados.`);
   }
 
   async function loadMuscleGroups() {
@@ -490,10 +688,21 @@
   $('studentSelect').addEventListener('change', async (e) => {
     const studentId = e.target.value;
     updateTabbar(studentId);
-    if (!studentId) { $('builderArea').style.display = 'none'; $('duplicateArea').style.display = 'none'; return; }
+    if (!studentId) {
+      $('builderArea').style.display = 'none';
+      $('duplicateArea').style.display = 'none';
+      $('creationButtons').style.display = 'none';
+      $('aiWizardArea').style.display = 'none';
+      return;
+    }
     updateDuplicateArea(studentId);
+    viewMode = 'edit';
     await loadOrCreateProtocol(studentId);
   });
+
+  function blankProtocol(studentId) {
+    return { id: null, student_id: studentId, titulo: 'Protocolo de treino', status: 'rascunho', periodizacao: 'manual', duracao_semanas: null, workouts: [] };
+  }
 
   async function loadOrCreateProtocol(studentId) {
     updateDuplicateArea(studentId);
@@ -511,10 +720,100 @@
       currentProtocol = data;
       currentProtocol.workouts = (data.workouts || []).map(w => ({ ...w, _uid: uid() }));
     } else {
-      currentProtocol = { id: null, student_id: studentId, titulo: 'Protocolo de treino', status: 'rascunho', periodizacao: 'manual', duracao_semanas: null, workouts: [] };
+      currentProtocol = blankProtocol(studentId);
     }
     renderProtocol();
-    $('builderArea').style.display = 'block';
+    $('creationButtons').style.display = 'block';
+    showViewMode();
+  }
+
+  function hasMeaningfulContent() {
+    return !!(currentProtocol && (currentProtocol.id || (currentProtocol.workouts && currentProtocol.workouts.length)));
+  }
+
+  function showViewMode() {
+    $('aiWizardArea').style.display = viewMode === 'wizard' ? 'block' : 'none';
+    $('builderArea').style.display = viewMode === 'edit' ? 'block' : 'none';
+  }
+
+  async function requestCreation(kind) {
+    if (!currentProtocol) return;
+    if (!hasMeaningfulContent()) { await startFreshCreation(kind); return; }
+    pendingCreationAction = kind;
+    $('confirmOverlay').classList.add('show');
+  }
+
+  async function demoteCurrentIfPublished() {
+    if (currentProtocol.id && currentProtocol.status === 'publicado') {
+      const { error } = await supa.from('training_protocols').update({ status: 'rascunho' }).eq('id', currentProtocol.id);
+      if (error) console.error('Falha ao rebaixar protocolo publicado:', error.message);
+    }
+  }
+
+  async function startFreshCreation(kind) {
+    await demoteCurrentIfPublished();
+    currentProtocol = blankProtocol(currentProtocol.student_id);
+    if (kind === 'ia') {
+      viewMode = 'wizard';
+      await loadWizardAnamnese(currentProtocol.student_id);
+    } else {
+      viewMode = 'edit';
+      renderProtocol();
+    }
+    showViewMode();
+  }
+
+  $('newManualBtn').addEventListener('click', () => requestCreation('manual'));
+  $('newAiBtn').addEventListener('click', () => requestCreation('ia'));
+  $('wizardBackBtn').addEventListener('click', () => { viewMode = 'edit'; showViewMode(); });
+
+  $('confirmCancelModalBtn').addEventListener('click', () => {
+    pendingCreationAction = null;
+    $('confirmOverlay').classList.remove('show');
+  });
+  $('confirmContinueBtn').addEventListener('click', async () => {
+    $('confirmOverlay').classList.remove('show');
+    const kind = pendingCreationAction;
+    pendingCreationAction = null;
+    if (kind) await startFreshCreation(kind);
+  });
+  $('confirmSaveTemplateBtn').addEventListener('click', async () => {
+    await saveCurrentAsTemplate();
+    $('confirmOverlay').classList.remove('show');
+    const kind = pendingCreationAction;
+    pendingCreationAction = null;
+    if (kind) await startFreshCreation(kind);
+  });
+
+  const WIZARD_CHIP_GROUPS = ['wizardObjetivo', 'wizardNivel', 'wizardFrequencia', 'wizardDuracaoSessao'];
+  WIZARD_CHIP_GROUPS.forEach(groupId => {
+    $(groupId).querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        $(groupId).querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+      });
+    });
+  });
+
+  function wizardChipValue(groupId) {
+    const active = $(groupId).querySelector('.chip.active');
+    return active ? active.dataset.value : null;
+  }
+
+  async function loadWizardAnamnese(studentId) {
+    const { data } = await supa.from('student_anamnese').select('*').eq('student_id', studentId).maybeSingle();
+    currentAnamnese = data || null;
+    const area = $('wizardAnamneseArea');
+    if (!currentAnamnese || (!currentAnamnese.lesoes && !currentAnamnese.restricoes && !currentAnamnese.historico_medico && !currentAnamnese.fumante)) {
+      area.innerHTML = '';
+      return;
+    }
+    const linhas = [];
+    if (currentAnamnese.lesoes) linhas.push(`<span class="ac-alert">Lesões:</span> ${escapeHtml(currentAnamnese.lesoes)}`);
+    if (currentAnamnese.restricoes) linhas.push(`<span class="ac-alert">Restrições:</span> ${escapeHtml(currentAnamnese.restricoes)}`);
+    if (currentAnamnese.historico_medico) linhas.push(`Histórico médico: ${escapeHtml(currentAnamnese.historico_medico)}`);
+    if (currentAnamnese.fumante) linhas.push(`<span class="ac-alert">Fumante</span>`);
+    area.innerHTML = `<div class="anamnese-context"><div class="ac-lbl">A IA vai considerar isso automaticamente</div>${linhas.join('<br>')}</div>`;
   }
 
   function renderProtocol() {
@@ -561,13 +860,19 @@
     toast('Periodização aplicada — confira e ajuste as semanas se quiser.');
   });
 
+  function renderTecnicaAndNote(ex) {
+    const chip = ex.tecnica ? `<span class="tecnica-chip">${escapeHtml(ex.tecnica)}</span><br>` : '';
+    const note = ex.note ? `<div class="ex-note">${escapeHtml(ex.note)}</div>` : '';
+    return chip + note;
+  }
+
   function renderExerciseRow(w, ex, i) {
     const weeks = ex.weeks && ex.weeks.length ? ex.weeks : [{ sets: ex.sets || 3, reps: ex.reps || '12', rest: ex.rest || 60, nota: '' }];
     if (weeks.length <= 1) {
       const wk = weeks[0];
       return `
         <div class="exercise-row exercise-row-edit">
-          <div class="ex-name-col">${escapeHtml(ex.nome)}</div>
+          <div class="ex-name-col">${renderTecnicaAndNote(ex)}${escapeHtml(ex.nome)}</div>
           <div class="ex-fields">
             <input type="number" min="1" class="ex-field-input" value="${escapeHtml(wk.sets)}" data-role="wk-sets" data-workout-id="${w._uid}" data-idx="${i}" data-week="0" title="Séries">
             <span class="ex-field-x">×</span>
@@ -581,7 +886,7 @@
     return `
       <div class="exercise-row-multi">
         <div class="ex-name-row">
-          <div class="ex-name-col">${escapeHtml(ex.nome)}</div>
+          <div class="ex-name-col">${renderTecnicaAndNote(ex)}${escapeHtml(ex.nome)}</div>
           <button class="btn danger small" data-role="remove-exercise" data-workout-id="${w._uid}" data-idx="${i}">×</button>
         </div>
         <div class="week-grid">
@@ -607,7 +912,10 @@
       <div class="workout-block" data-workout-id="${w._uid}">
         <div class="workout-block-header">
           <input type="text" value="${escapeHtml(w.name)}" data-role="workout-name" data-workout-id="${w._uid}">
-          <button class="btn danger small" data-role="remove-workout" data-workout-id="${w._uid}">Remover</button>
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            <button class="btn secondary small" data-role="regenerate-exercises" data-workout-id="${w._uid}" type="button" title="Trocar exercícios, mantendo técnicas e periodização"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>Trocar exercícios</button>
+            <button class="btn danger small" data-role="remove-workout" data-workout-id="${w._uid}">Remover</button>
+          </div>
         </div>
         <div class="weekday-picker" data-workout-id="${w._uid}">
           ${WEEKDAYS.map(d => `<button type="button" class="wd-btn ${(w.dias_semana || []).includes(d.key) ? 'active' : ''}" data-role="weekday-toggle" data-day="${d.key}" data-workout-id="${w._uid}">${d.label}</button>`).join('')}
@@ -650,6 +958,9 @@
         currentProtocol.workouts = currentProtocol.workouts.filter(x => x._uid !== e.target.dataset.workoutId);
         renderWorkouts();
       });
+    });
+    container.querySelectorAll('[data-role="regenerate-exercises"]').forEach(btn => {
+      btn.addEventListener('click', () => regenerateWorkoutExercises(btn.dataset.workoutId, btn));
     });
     container.querySelectorAll('[data-role="remove-exercise"]').forEach(btn => {
       btn.addEventListener('click', (e) => {

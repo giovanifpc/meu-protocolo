@@ -88,7 +88,15 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
-Última atualização: 2026-07-18 (PC, sessão local — resolveu a pendência crítica deixada pela sessão web/celular anterior e corrigiu bugs de UX encontrados no teste real da criação de treino por IA. Ver seção "Deploy das Edge Functions + ajustes de UX na criação de treino" logo abaixo pro detalhamento; as duas seções seguintes, "UI Polish..." e "Criação de treino guiada por IA...", são o contexto da sessão anterior que originou esse trabalho).
+Última atualização: 2026-07-18 (PC, sessão local — resolveu a pendência crítica deixada pela sessão web/celular anterior, corrigiu bugs de UX encontrados no teste real da criação de treino por IA, e fechou os dois itens que faltavam da Fase A/Monetização (preço customizado na cobrança + cancelamento real via Mercado Pago). Ver as duas seções logo abaixo pro detalhamento; as seções seguintes, "UI Polish..." e "Criação de treino guiada por IA...", são o contexto da sessão anterior que originou o trabalho de UX).
+
+### Fase A fechada: preço customizado na cobrança + cancelamento real (2026-07-18)
+
+Últimos dois itens em aberto da Fase A (ver checklist "Roadmap priorizado" no fim deste arquivo).
+
+- **`mercadopago-create-preapproval`**: passou a ler `professionals.valor_customizado` (editável no painel master) na hora de criar a assinatura, com fallback pro preço fixo por plano (`PLAN_PRICES`) quando não há customização. Antes sempre cobrava o preço de tabela, ignorando qualquer preço combinado manualmente com um profissional.
+- **Cancelamento real**: nova Edge Function `mercadopago-cancel-preapproval` chama `PUT /preapproval/{id}` com `status: cancelled` na API do Mercado Pago. `perfil.html` chama essa function **antes** de marcar `professionals.status = 'inativo'` — se a chamada ao Mercado Pago falhar, o cancelamento inteiro é abortado (nada muda no banco), pra nunca deixar o app achando que cancelou enquanto o cartão do profissional continua sendo cobrado. Ambas implantadas em produção nesta sessão.
+- **Não testado ainda com assinatura real**: o fluxo de cancelamento precisa ser validado ponta a ponta com uma assinatura de verdade ativa no Mercado Pago (não só revisão de código) antes de confiar 100% nele em produção.
 
 ### Deploy das Edge Functions + ajustes de UX na criação de treino (2026-07-18, sessão local no PC)
 
@@ -345,8 +353,8 @@ Nota: o master doc completo (`MEU-PROTOCOLO-MASTER.md`) só existe no PC do usu�
 **Fase A — Monetização e operação (bloqueia conversão de clientes pagantes de verdade)**
 1. ~~Webhook Mercado Pago~~ — **feito e mesclado na `main` (2026-07-16), com credenciais de produção configuradas.** Cobrança automática do profissional ao fim do trial + validação HMAC da assinatura. Não confundir com o acompanhamento de mensalidade aluno→profissional (já implementado) — são coisas diferentes: esse item é a cobrança do profissional pelo uso do Meu Protocolo em si. Ver seção "Fluxo de assinatura Mercado Pago" acima pro que ainda ficou em aberto (confirmação de webhook com evento real).
 2. ~~Painel master~~ — feito (`master.html`, 2026-07-14, ver seção "Desenvolvimento em paralelo" acima)
-3. Diferenciação de plano + preço customizado — **parcial**: campo `valor_customizado` criado e editável no painel master (2026-07-14), gating de limite de alunos/white-label já implementado; falta ligar `valor_customizado` no cálculo de cobrança (`mercadopago-create-preapproval` ainda usa o mapa fixo `PLAN_PRICES`) e a feature de IA do relatório do Elite ainda não existe
-4. Fluxo de cancelamento — **parcial**: retenção de dados por 30 dias em estado inativo + aviso explícito na tela de confirmação já implementados (2026-07-14, ver "Desenvolvimento em paralelo" acima). Falta chamar a API do Mercado Pago pra cancelar a assinatura de verdade — agora que as credenciais de produção existem, dá pra implementar.
+3. ~~Diferenciação de plano + preço customizado~~ — **feito (2026-07-18)**: `mercadopago-create-preapproval` agora usa `professionals.valor_customizado` quando setado, com fallback pro preço fixo por plano. Gating de limite de alunos/white-label já estava implementado desde 2026-07-14. **Ainda falta**: a feature de IA de interpretação de relatório do Elite (funcionalidade nova, não é gating — não confundir com o que ficou pronto aqui).
+4. ~~Fluxo de cancelamento~~ — **feito (2026-07-18)**: nova Edge Function `mercadopago-cancel-preapproval` cancela a assinatura de verdade na API do Mercado Pago antes de marcar a conta como inativa localmente (se a chamada falhar, o cancelamento é abortado e nada muda no banco — nunca fica um estado em que o app acha que cancelou mas o Mercado Pago continua cobrando). Retenção de 30 dias + aviso na tela de confirmação já estavam prontos desde 2026-07-14.
 
 **Fase B — Legal e segurança (necessário antes de escalar/tráfego pago, master doc diz "desde o MVP/dia 1")**
 5. ~~Política de Privacidade + Termos de Uso + checkbox de consentimento no cadastro do aluno~~ — feito (2026-07-14, ver seção "Desenvolvimento em paralelo" acima). **Pendente**: revisão jurídica do conteúdo (rascunho de boa fé, não é advogado)

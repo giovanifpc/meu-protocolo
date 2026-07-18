@@ -88,7 +88,17 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
-Última atualização: 2026-07-18 (PC, sessão local — resolveu a pendência crítica deixada pela sessão web/celular anterior, corrigiu bugs de UX encontrados no teste real da criação de treino por IA, fechou os dois itens que faltavam da Fase A/Monetização (preço customizado na cobrança + cancelamento real via Mercado Pago), adicionou suporte a exercício de cardio seguindo a lógica já validada no app irmão Fox Performance, e fechou a Fase B/Segurança inteira (Cloudflare, rate limit, UptimeRobot, Sentry). Ver as quatro seções logo abaixo pro detalhamento; as seções seguintes, "UI Polish..." e "Criação de treino guiada por IA...", são o contexto da sessão anterior que originou o trabalho de UX).
+Última atualização: 2026-07-18 (PC, sessão local — resolveu a pendência crítica deixada pela sessão web/celular anterior, corrigiu bugs de UX encontrados no teste real da criação de treino por IA, fechou os dois itens que faltavam da Fase A/Monetização (preço customizado na cobrança + cancelamento real via Mercado Pago), adicionou suporte a exercício de cardio seguindo a lógica já validada no app irmão Fox Performance, fechou a Fase B/Segurança inteira (Cloudflare, rate limit, UptimeRobot, Sentry), e começou a Fase C com um primeiro rascunho do documento de contexto da IA de suporte. Ver as cinco seções logo abaixo pro detalhamento; as seções seguintes, "UI Polish..." e "Criação de treino guiada por IA...", são o contexto da sessão anterior que originou o trabalho de UX).
+
+### Fase C iniciada: rascunho do contexto da IA de suporte (2026-07-18)
+
+Primeiro passo da Fase C (item 8 do roadmap) — documento escrito em `contexto-ia-suporte.md`, na raiz do repo (separado do CLAUDE.md porque é conteúdo pra alimentar o chatbot em produção, não instrução de desenvolvimento). **Ainda é rascunho, aguardando revisão do usuário** — não usar pra implementar o chatbot (itens 9-11 do roadmap) sem essa revisão acontecer primeiro.
+
+- **Regras de comportamento definidas pelo usuário, direto**: a IA nunca deve tentar parecer humana nem enrolar — cordial e direta sempre; deve fazer perguntas pra entender o problema antes de dar solução quando o caso for complicado.
+- **Decisão de segurança central**: o usuário já tinha visto vídeos de gente induzindo IA de atendimento a vazar código/dado se passando por "administrador do sistema" — a defesa desenhada não depende da IA "resistir" a esse tipo de manipulação (frágil por natureza), depende dela **não ter a capacidade técnica** de fazer o que está sendo pedido. Três camadas: (1) zero acesso a código-fonte, nunca; (2) acesso a dado é só-leitura e escopado ao profissional logado por uma trava no backend (RLS + funções fixas), nunca por uma alegação dentro da conversa; (3) acesso só via funções nomeadas e fixas (ex: "contar meus alunos"), nunca uma consulta livre — a lista final dessas funções ainda **não foi fechada com o usuário**, é bloqueio pra implementação de verdade.
+- **Outras decisões fechadas nesta sessão**: disponível em todos os planos incluindo trial (não é feature premium); escala por e-mail/ticket quando não resolve (não WhatsApp pessoal do Giovani — endereço/mecanismo ainda não definido); vive como botão/widget flutuante em todas as telas do painel do profissional; nunca dá conselho jurídico/contratual nem executa mudança de cobrança/plano pela conversa (só orienta ou escala).
+- **Seção 5 do documento** (como o produto funciona) foi escrita a partir do que já existe no código e no próprio CLAUDE.md — cobre planos, cadastro/login, gestão de alunos, treinos (manual/IA/periodização/cardio), app do aluno, avaliação física, nutrição, relatórios e cancelamento. **Precisa da revisão do usuário** pra pegar nuance de negócio que só ele sabe.
+- **Pendências explícitas listadas no fim do documento** (seção 7): lista final das funções de acesso só-leitura, destino/mecanismo do escalonamento por e-mail, revisão geral da seção de conhecimento de produto, e se deve haver limite de mensagens/custo por conversa (a API da Claude não é de graça).
 
 ### Fase B fechada: Cloudflare, rate limit, UptimeRobot e Sentry (2026-07-18)
 
@@ -385,7 +395,7 @@ Nota: o master doc completo (`MEU-PROTOCOLO-MASTER.md`) só existe no PC do usu�
 7. ~~Monitoramento automatizado~~ — **feito (2026-07-18)**: UptimeRobot (monitor HTTP pra `meuprotocolo.app`) e Sentry (captura de erro JS em todas as páginas) configurados. Ver seção "Fase B fechada" abaixo pro detalhamento.
 
 **Fase C — Diferencial de produto (suporte via IA, a proposta de valor central do master doc)**
-8. MD de contexto da IA de suporte (documento escrito junto com o usuário, descrevendo o produto **como ele funciona de fato** — não criar antes da Fase A/B estarem prontas, senão fica desatualizado rápido)
+8. MD de contexto da IA de suporte — **em andamento (2026-07-18)**: primeiro rascunho em `contexto-ia-suporte.md`, aguardando revisão do usuário. Ver seção própria em "Status atual" abaixo.
 9. Chatbot de suporte via IA pro profissional, 24/7 sem fila de ticket (item 1 do master doc — diferente da geração de treino por IA, que já está feita)
 10. Onboarding guiado por IA pro profissional (item 2 — meta: publicar primeiro treino em <30min sem ajuda)
 11. Onboarding visual pro aluno, 3-4 telas na primeira abertura (item 3)

@@ -386,3 +386,7 @@ Nota: o master doc completo (`MEU-PROTOCOLO-MASTER.md`) só existe no PC do usu�
 16. Mensageria dentro do próprio app entre profissional e aluno (adiada deliberadamente em sessão anterior — hoje usa WhatsApp/push)
 
 **Não-técnico (do usuário, não do Code)**: estrutura de recebimento (MEI), registro da marca no INPI, pesquisa a fundo do concorrente Athlo (athloapp.eu), alinhar termos com o cliente 0.
+
+**Pendências decididas pro final do projeto (2026-07-18)**: o usuário pediu pra revisar essas duas coisas só quando o dev estiver mais fechado, não agora — não sugerir de novo antes disso:
+1. **Backup/PITR do Supabase**: hoje `pitr_enabled: false`, nenhum backup automático ativo (confirmado via `supabase backups list --project-ref yumqmramxbahkfxsthtt`). Envolve investimento (upgrade de plano/add-on) — o usuário quer decidir isso na revisão final de plataformas, junto com a decisão de assinar um plano pago do Supabase pra garantir storage.
+2. **Organizar contas** (e-mail e planos pagos das plataformas usadas no projeto — Supabase, Mercado Pago, Resend, Cloudflare, etc.) — revisão geral pro final do dev, não é tarefa técnica de código.

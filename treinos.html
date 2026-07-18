@@ -89,6 +89,10 @@
   .creation-btn.ia { background:linear-gradient(135deg,var(--primary),#1e4fb0); color:#fff; border:none; box-shadow:0 10px 24px -10px rgba(45,107,228,.5); }
   .creation-btn.manual { background:var(--card-grad); color:var(--text); border:1px solid rgba(20,30,45,.06); box-shadow:var(--shadow-card); }
   .creation-btn.manual svg { color:var(--muted); }
+  .creation-btn.active { box-shadow:0 0 0 2px var(--primary) inset, 0 10px 24px -10px rgba(45,107,228,.5); }
+
+  @keyframes panelDrop { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
+  .panel-drop { animation:panelDrop .22s ease; transform-origin:top center; }
 
   .modal-overlay { position:fixed; inset:0; z-index:400; background:rgba(15,20,28,.55); display:none; align-items:center; justify-content:center; padding:24px; }
   .modal-overlay.show { display:flex; }
@@ -301,7 +305,11 @@
   let searchDebounce = null;
   let muscleGroups = [];
   let viewMode = 'none'; // 'none' | 'edit' | 'wizard'
-  let pendingCreationAction = null; // 'manual' | 'ia'
+  let creationMode = null; // null | 'manual' | 'ia' — qual botão de criação está aberto (dropdown)
+  let creationConfirmed = false; // já resolveu o modal "o que fazer com o treino atual" nesta sessão de criação?
+  let stashedProtocol = null; // snapshot do que estava sendo mostrado antes de abrir a criação, pra restaurar se fechar sem salvar
+  let stashedViewMode = 'none';
+  let pendingCommitAction = null; // função a rodar depois que o modal "o que fazer com o treino atual" for resolvido
   let currentAnamnese = null;
 
   const PERIODIZATION_HINTS = {
@@ -499,23 +507,23 @@
     await loadTemplates();
   });
 
-  async function saveCurrentAsTemplate() {
-    if (!currentProtocol || !currentProtocol.workouts.length) { toast('Monte pelo menos um treino antes de salvar como modelo.'); return; }
-    const titulo = prompt('Nome do modelo:', currentProtocol.titulo || 'Modelo de protocolo');
+  async function saveProtocolAsTemplate(protocol) {
+    if (!protocol || !protocol.workouts || !protocol.workouts.length) { toast('Monte pelo menos um treino antes de salvar como modelo.'); return; }
+    const titulo = prompt('Nome do modelo:', protocol.titulo || 'Modelo de protocolo');
     if (!titulo) return;
     const payload = {
       professional_id: professional.id,
       titulo,
-      periodizacao: currentProtocol.periodizacao,
-      duracao_semanas: currentProtocol.duracao_semanas,
-      workouts: stripInternalFields(currentProtocol.workouts),
+      periodizacao: protocol.periodizacao,
+      duracao_semanas: protocol.duracao_semanas,
+      workouts: stripInternalFields(protocol.workouts),
     };
     const { error } = await supa.from('protocol_templates').insert(payload);
     if (error) { toast('Erro ao salvar modelo: ' + error.message); return; }
     toast('Modelo salvo na biblioteca.');
     await loadTemplates();
   }
-  $('saveAsTemplateBtn').addEventListener('click', saveCurrentAsTemplate);
+  $('saveAsTemplateBtn').addEventListener('click', () => saveProtocolAsTemplate(currentProtocol));
 
   function updateDuplicateArea(currentStudentId) {
     const candidates = Object.values(latestProtocolByStudent).filter(p => p.student_id !== currentStudentId);
@@ -550,7 +558,9 @@
     toast('Protocolo duplicado — revise e publique quando estiver pronto.');
   });
 
-  $('generateAiBtn').addEventListener('click', async () => {
+  $('generateAiBtn').addEventListener('click', () => commitCreation(doGenerateAi));
+
+  async function doGenerateAi() {
     if (!currentProtocol.student_id) return;
 
     const objetivo = $('aiObjetivoInput').value.trim();
@@ -635,7 +645,7 @@
     renderProtocol();
     showViewMode();
     toast('Treino criado pela IA — revise antes de publicar.');
-  });
+  }
 
   async function matchExerciseByName(nome) {
     const { data } = await supa.rpc('search_exercise_library', { q: nome });
@@ -728,13 +738,17 @@
       currentProtocol = blankProtocol(studentId);
       viewMode = 'none';
     }
+    creationMode = null;
+    creationConfirmed = false;
+    stashedProtocol = null;
     renderProtocol();
     $('creationButtons').style.display = 'block';
     showViewMode();
+    updateCreationButtonsActiveState();
   }
 
-  function hasMeaningfulContent() {
-    return !!(currentProtocol && (currentProtocol.id || (currentProtocol.workouts && currentProtocol.workouts.length)));
+  function hasMeaningfulContentFor(protocol) {
+    return !!(protocol && (protocol.id || (protocol.workouts && protocol.workouts.length)));
   }
 
   function showViewMode() {
@@ -743,23 +757,34 @@
     $('creationEmptyState').style.display = viewMode === 'none' ? 'block' : 'none';
   }
 
-  async function requestCreation(kind) {
-    if (!currentProtocol) return;
-    if (!hasMeaningfulContent()) { await startFreshCreation(kind); return; }
-    pendingCreationAction = kind;
-    $('confirmOverlay').classList.add('show');
+  function updateCreationButtonsActiveState() {
+    $('newManualBtn').classList.toggle('active', creationMode === 'manual');
+    $('newAiBtn').classList.toggle('active', creationMode === 'ia');
   }
 
-  async function demoteCurrentIfPublished() {
-    if (currentProtocol.id && currentProtocol.status === 'publicado') {
-      const { error } = await supa.from('training_protocols').update({ status: 'rascunho' }).eq('id', currentProtocol.id);
-      if (error) console.error('Falha ao rebaixar protocolo publicado:', error.message);
+  function playOpenAnimation() {
+    const el = viewMode === 'wizard' ? $('aiWizardArea') : $('builderArea');
+    el.classList.remove('panel-drop');
+    void el.offsetWidth; // força reflow pra reiniciar a animação mesmo se já tinha rodado
+    el.classList.add('panel-drop');
+  }
+
+  // Toggle-dropdown: clicar no botão ativo recolhe de volta pro que estava
+  // sendo mostrado antes (treino salvo ou o estado vazio); clicar no outro
+  // botão troca o painel aberto.
+  function toggleCreation(kind) {
+    if (creationMode === kind) { collapseCreation(); return; }
+    openCreation(kind);
+  }
+
+  async function openCreation(kind) {
+    if (creationMode === null) {
+      stashedProtocol = currentProtocol;
+      stashedViewMode = viewMode;
     }
-  }
-
-  async function startFreshCreation(kind) {
-    await demoteCurrentIfPublished();
-    currentProtocol = blankProtocol(currentProtocol.student_id);
+    creationMode = kind;
+    creationConfirmed = false;
+    currentProtocol = blankProtocol(stashedProtocol ? stashedProtocol.student_id : currentProtocol.student_id);
     if (kind === 'ia') {
       viewMode = 'wizard';
       await loadWizardAnamnese(currentProtocol.student_id);
@@ -768,28 +793,63 @@
       renderProtocol();
     }
     showViewMode();
+    updateCreationButtonsActiveState();
+    playOpenAnimation();
   }
 
-  $('newManualBtn').addEventListener('click', () => requestCreation('manual'));
-  $('newAiBtn').addEventListener('click', () => requestCreation('ia'));
-  $('wizardBackBtn').addEventListener('click', () => { loadOrCreateProtocol(currentProtocol.student_id); });
+  function collapseCreation() {
+    creationMode = null;
+    creationConfirmed = false;
+    currentProtocol = stashedProtocol || currentProtocol;
+    viewMode = stashedViewMode;
+    stashedProtocol = null;
+    renderProtocol();
+    showViewMode();
+    updateCreationButtonsActiveState();
+  }
+
+  // Só pede confirmação sobre "o que fazer com o treino atual" na hora de
+  // realmente criar (salvar no modo manual, gerar no modo IA) — nunca só
+  // por ter clicado no botão de abrir o painel — e só uma vez por sessão
+  // de criação (creationConfirmed evita perguntar de novo no segundo save).
+  async function commitCreation(action) {
+    const needsConfirm = creationMode && !creationConfirmed && hasMeaningfulContentFor(stashedProtocol);
+    if (!needsConfirm) { await action(); return; }
+    pendingCommitAction = action;
+    $('confirmOverlay').classList.add('show');
+  }
+
+  async function demoteIfPublished(protocol) {
+    if (protocol && protocol.id && protocol.status === 'publicado') {
+      const { error } = await supa.from('training_protocols').update({ status: 'rascunho' }).eq('id', protocol.id);
+      if (error) console.error('Falha ao rebaixar protocolo publicado:', error.message);
+    }
+  }
+
+  $('newManualBtn').addEventListener('click', () => toggleCreation('manual'));
+  $('newAiBtn').addEventListener('click', () => toggleCreation('ia'));
+  $('wizardBackBtn').addEventListener('click', () => collapseCreation());
 
   $('confirmCancelModalBtn').addEventListener('click', () => {
-    pendingCreationAction = null;
+    pendingCommitAction = null;
     $('confirmOverlay').classList.remove('show');
   });
   $('confirmContinueBtn').addEventListener('click', async () => {
     $('confirmOverlay').classList.remove('show');
-    const kind = pendingCreationAction;
-    pendingCreationAction = null;
-    if (kind) await startFreshCreation(kind);
+    await demoteIfPublished(stashedProtocol);
+    creationConfirmed = true;
+    const action = pendingCommitAction;
+    pendingCommitAction = null;
+    if (action) await action();
   });
   $('confirmSaveTemplateBtn').addEventListener('click', async () => {
-    await saveCurrentAsTemplate();
+    await saveProtocolAsTemplate(stashedProtocol);
+    await demoteIfPublished(stashedProtocol);
     $('confirmOverlay').classList.remove('show');
-    const kind = pendingCreationAction;
-    pendingCreationAction = null;
-    if (kind) await startFreshCreation(kind);
+    creationConfirmed = true;
+    const action = pendingCommitAction;
+    pendingCommitAction = null;
+    if (action) await action();
   });
 
   const WIZARD_CHIP_GROUPS = ['wizardObjetivo', 'wizardNivel', 'wizardFrequencia', 'wizardDuracaoSessao'];
@@ -1090,12 +1150,18 @@
     }
     currentProtocol.id = result.data.id;
     currentProtocol.status = result.data.status;
+    if (creationMode) {
+      creationMode = null;
+      creationConfirmed = false;
+      stashedProtocol = null;
+      updateCreationButtonsActiveState();
+    }
     renderProtocol();
     toast(status === 'publicado' ? 'Protocolo publicado para o aluno.' : 'Rascunho salvo.');
   }
 
-  $('saveDraftBtn').addEventListener('click', () => saveProtocol('rascunho'));
-  $('publishBtn').addEventListener('click', () => saveProtocol('publicado'));
+  $('saveDraftBtn').addEventListener('click', () => commitCreation(() => saveProtocol('rascunho')));
+  $('publishBtn').addEventListener('click', () => commitCreation(() => saveProtocol('publicado')));
 
   boot();
 </script>

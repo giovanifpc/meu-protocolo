@@ -247,13 +247,13 @@ Feito direto na `main` enquanto a branch do Mercado Pago esteve bloqueada — j�
 - **Backup automático do banco** (item 6): depende do plano do Supabase (Point-in-Time Recovery é add-on pago; plano Free não tem backup automático). Não deu pra confirmar o plano atual via CLI — **checar em Dashboard → Settings → Add-ons/Billing**.
 - **Monitoramento** (item 7 da Fase B): nada implementado ainda — depende de contas externas do usuário (UptimeRobot free tier pra uptime de `meuprotocolo.app`; Sentry pra erros críticos, precisa criar projeto e colar o DSN nas páginas). Ver "Pendências externas" abaixo pro passo a passo.
 
-**Pendências externas (preciso que o usuário faça, mesmo padrão do setup do Mercado Pago):**
-1. **Cloudflare**: confirmar se `meuprotocolo.app` está com proxy ativado (nuvem laranja) no DNS; se sim, criar uma Transform Rule (Rules → Transform Rules → Modify Response Header) adicionando `Strict-Transport-Security: max-age=31536000; includeSubDomains`, `X-Frame-Options: DENY` e `X-Content-Type-Options: nosniff` em toda resposta.
-2. **Supabase → Rate Limits**: conferir em Authentication → Rate Limits se o limite de OTP por e-mail/hora está num valor razoável (padrão costuma ser suficiente, é só checar).
-3. **Supabase → Backups**: conferir em Settings → Add-ons se Point-in-Time Recovery/backup diário está ativo; se não, decidir se vale o custo do upgrade de plano (decisão de negócio, não técnica).
-4. **UptimeRobot** (free): criar conta, adicionar monitor HTTP(s) pra `https://meuprotocolo.app` (ou o domínio de fallback do GitHub Pages), configurar alerta por e-mail/WhatsApp.
-5. **Sentry** (free tier): criar conta + projeto JavaScript, colar o DSN gerado — aviso pro Code fazer a integração nas páginas depois que a conta existir.
-6. **Revisão jurídica**: `termos.html`/`privacidade.html` são rascunho — alinhar com o cliente 0 (item não-técnico já listado no fim deste arquivo) antes de tratar como definitivo.
+**Pendências externas — status atualizado em 2026-07-18, ver seção "Fase B fechada" no topo do arquivo pro detalhamento completo:**
+1. ~~Cloudflare~~ — **feito**: proxy ativado, Transform Rule com os 3 headers criada e confirmada ao vivo.
+2. ~~Supabase → Rate Limits~~ — **conferido**: valores padrão, adequados pro estágio atual, nada mudou.
+3. **Supabase → Backups**: ainda pendente, **deliberadamente adiada pro final do projeto** a pedido do usuário (junto com a decisão de assinar um plano pago do Supabase) — ver seção "Pendências decididas pro final do projeto" no fim deste arquivo. Não sugerir de novo antes disso.
+4. ~~UptimeRobot~~ — **feito**: monitor HTTP(s) criado pra `meuprotocolo.app`, alerta por e-mail confirmado.
+5. ~~Sentry~~ — **feito**: projeto criado, integrado em todas as 13 páginas.
+6. **Revisão jurídica**: ainda pendente — `termos.html`/`privacidade.html` continuam rascunho, precisa alinhar com o cliente 0. Não é tarefa técnica.
 
 ### Testes e correções do pacote de comodidades (2026-07-12)
 

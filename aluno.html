@@ -189,6 +189,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .rating-btn small{display:block;font-size:11px;margin-top:6px;color:var(--muted);font-weight:600}
 
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#23263a;color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:300;opacity:0;transition:.3s;pointer-events:none;max-width:90%;text-align:center}
+.toast svg{width:14px;height:14px;vertical-align:-2px;display:inline-block}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .empty-state{text-align:center;padding:60px 30px;color:var(--faint)}
 .empty-state .es-ico{width:52px;height:52px;margin:0 auto 16px;color:var(--faint);opacity:.6;display:flex;align-items:center;justify-content:center}
@@ -602,9 +603,9 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   let notifications = [];
   let state = { workoutIndex:0, currentExercise:0, sessionData:[], startTime:null, restInterval:null, restRemaining:0, restTotal:0, rating:null };
 
-  function toast(msg) {
+  function toast(msg, isHtml) {
     const t = $('toast');
-    t.textContent = msg;
+    if (isHtml) t.innerHTML = msg; else t.textContent = msg;
     t.classList.add('show');
     clearTimeout(t._timer);
     t._timer = setTimeout(() => t.classList.remove('show'), 2800);
@@ -1654,7 +1655,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     else {
       history.unshift(record);
       const newBadges = BADGES.filter(b => !earnedBefore.includes(b.id) && b.test());
-      newBadges.forEach((b,i) => setTimeout(() => toast(`${b.ico} Conquista: ${b.name}`), 1200 + i * 2000));
+      newBadges.forEach((b,i) => setTimeout(() => toast(`${b.ico} Conquista: ${escapeHtml(b.name)}`, true), 1200 + i * 2000));
     }
 
     $('fsEx').textContent = exDone;

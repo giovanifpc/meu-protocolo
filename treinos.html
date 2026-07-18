@@ -29,8 +29,9 @@
   .card h2 { font-size:15px; margin:0 0 12px; }
   .field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
   .field label { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
-  .field input, .field select { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; color:var(--text); font-family:var(--font); }
-  .field input:focus, .field select:focus { outline:none; border-color:var(--primary); }
+  .field input, .field select, .field textarea { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; color:var(--text); font-family:var(--font); }
+  .field textarea { resize:vertical; width:100%; }
+  .field input:focus, .field select:focus, .field textarea:focus { outline:none; border-color:var(--primary); }
   .row.three { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
   .btn { padding:10px 16px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; border:none; background:var(--primary); color:#fff; font-family:var(--font); transition:transform .15s ease; }
   .btn:active { transform:scale(.97); }
@@ -307,6 +308,45 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="cardioModalOverlay">
+    <div class="modal-card">
+      <h3>Adicionar cardio</h3>
+      <p>Fica sempre como o último item do treino, depois dos exercícios de força.</p>
+      <div class="field">
+        <label>Nome</label>
+        <input type="text" id="cardioNomeInput" placeholder="Ex: Caminhada, Bike, Esteira...">
+      </div>
+      <div class="row three" style="grid-template-columns:1fr 1fr;">
+        <div class="field">
+          <label>Duração (min)</label>
+          <input type="number" id="cardioDuracaoInput" min="5" max="120" value="30">
+        </div>
+        <div class="field">
+          <label>Intensidade</label>
+          <select id="cardioIntensidadeSelect">
+            <option value="leve">Leve</option>
+            <option value="leve a moderada" selected>Leve a moderada</option>
+            <option value="moderada">Moderada</option>
+            <option value="moderada a intensa">Moderada a intensa</option>
+            <option value="intensa">Intensa</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Orientação pro aluno</label>
+        <textarea id="cardioNoteInput" rows="2" placeholder="Ex: ritmo constante, dá pra falar frases curtas mas sentindo esforço..."></textarea>
+      </div>
+      <div class="field">
+        <label>Dicas (uma por linha, opcional)</label>
+        <textarea id="cardioTipsInput" rows="3"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="cardioModalConfirmBtn" type="button">Adicionar</button>
+        <button class="btn secondary" id="cardioModalCancelBtn" type="button">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
 <script>
   const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';
@@ -350,6 +390,24 @@
 
   function defaultWeek() {
     return { sets: 3, reps: '12', rest: 75, nota: '' };
+  }
+
+  // Cardio é um tipo de exercício à parte (sem sets/reps/weeks/exercise_id) —
+  // fica sempre por último no bloco, tanto na criação manual quanto pela IA.
+  function isCardioExercise(ex) {
+    return !!(ex && ex.tipo === 'cardio');
+  }
+
+  function insertBeforeTrailingCardio(w, ex) {
+    let idx = w.exercises.length;
+    while (idx > 0 && isCardioExercise(w.exercises[idx - 1])) idx--;
+    w.exercises.splice(idx, 0, ex);
+  }
+
+  function sortCardioLast(exercises) {
+    const strength = exercises.filter((ex) => !isCardioExercise(ex));
+    const cardio = exercises.filter(isCardioExercise);
+    return [...strength, ...cardio];
   }
 
   function generateWeeks(technique, base, duration, workoutIndex) {
@@ -627,6 +685,17 @@
     for (const w of (data.workouts || [])) {
       const exercises = [];
       for (const ex of (w.exercises || [])) {
+        if (ex.tipo === 'cardio') {
+          exercises.push({
+            nome: ex.nome || 'Cardio',
+            tipo: 'cardio',
+            duracao_min: Math.max(5, Number(ex.duracao_min) || 20),
+            intensidade: ex.intensidade || 'leve a moderada',
+            note: ex.nota_execucao || '',
+            tips: Array.isArray(ex.tips) ? ex.tips.filter(Boolean) : [],
+          });
+          continue;
+        }
         const match = await matchExerciseByName(ex.nome);
         const base = { sets: Number(ex.sets) || 3, reps: String(ex.reps || '12'), rest: Number(ex.rest) || 60, nota: '' };
         exercises.push({
@@ -640,7 +709,8 @@
           weeks: [base],
         });
       }
-      workouts.push({ _uid: uid(), id: w.id || String.fromCharCode(65 + workouts.length), name: w.name, exercises });
+      // garantia por código, não só instrução de prompt: cardio nunca fica no meio
+      workouts.push({ _uid: uid(), id: w.id || String.fromCharCode(65 + workouts.length), name: w.name, exercises: sortCardioLast(exercises) });
     }
 
     currentProtocol.titulo = data.titulo || currentProtocol.titulo;
@@ -655,6 +725,7 @@
     const durationForWeeks = usesDuration ? duracaoSemanas : 1;
     currentProtocol.workouts.forEach((w, wIdx) => {
       w.exercises.forEach(ex => {
+        if (isCardioExercise(ex)) return;
         const base = ex.weeks[0];
         ex.weeks = generateWeeks(periodizacao, base, durationForWeeks, wIdx);
       });
@@ -674,7 +745,10 @@
   async function regenerateWorkoutExercises(workoutUid, btn) {
     const w = currentProtocol.workouts.find(x => x._uid === workoutUid);
     if (!w || !w.exercises.length) return;
-    if (!confirm(`Trocar os exercícios de "${w.name}"? Sets, reps, descanso e periodização de cada um continuam como estão — só o exercício em si muda.`)) return;
+    // cardio não passa pela troca — não tem exercise_id/grupo_muscular pra buscar alternativa
+    const strengthIdx = w.exercises.map((ex, i) => (isCardioExercise(ex) ? -1 : i)).filter((i) => i >= 0);
+    if (!strengthIdx.length) { toast('Esse treino só tem cardio — nada pra trocar.'); return; }
+    if (!confirm(`Trocar os exercícios de "${w.name}"? Sets, reps, descanso, periodização e o cardio (se houver) continuam como estão — só os exercícios de força mudam.`)) return;
 
     const originalLabel = btn.innerHTML;
     btn.disabled = true;
@@ -683,7 +757,7 @@
     const { data, error } = await supa.functions.invoke('regenerate-exercises', {
       body: {
         student_id: currentProtocol.student_id,
-        exercises: w.exercises.map(ex => ({ exercise_id: ex.exercise_id || null, nome: ex.nome, tecnica: ex.tecnica || null })),
+        exercises: strengthIdx.map((i) => { const ex = w.exercises[i]; return { exercise_id: ex.exercise_id || null, nome: ex.nome, tecnica: ex.tecnica || null }; }),
       },
     });
 
@@ -699,14 +773,15 @@
       return;
     }
 
-    for (let i = 0; i < w.exercises.length; i++) {
-      const novoNome = data.exercises[i]?.nome;
+    for (let k = 0; k < strengthIdx.length; k++) {
+      const novoNome = data.exercises[k]?.nome;
       if (!novoNome) continue;
       const match = await matchExerciseByName(novoNome);
-      w.exercises[i].nome = match ? match.nome : novoNome;
-      w.exercises[i].exercise_id = match?.exercise_id;
-      w.exercises[i].exercise_ref = match?.exercise_ref;
-      w.exercises[i].media = match?.gif_url;
+      const idx = strengthIdx[k];
+      w.exercises[idx].nome = match ? match.nome : novoNome;
+      w.exercises[idx].exercise_id = match?.exercise_id;
+      w.exercises[idx].exercise_ref = match?.exercise_ref;
+      w.exercises[idx].media = match?.gif_url;
     }
     renderWorkouts();
     toast(`Exercícios de "${w.name}" trocados.`);
@@ -899,6 +974,39 @@
     if (action) await action();
   });
 
+  let pendingCardioWorkoutId = null;
+
+  function openCardioModal(workoutId) {
+    pendingCardioWorkoutId = workoutId;
+    $('cardioNomeInput').value = 'Caminhada';
+    $('cardioDuracaoInput').value = 30;
+    $('cardioIntensidadeSelect').value = 'leve a moderada';
+    $('cardioNoteInput').value = '';
+    $('cardioTipsInput').value = '';
+    $('cardioModalOverlay').classList.add('show');
+  }
+
+  $('cardioModalCancelBtn').addEventListener('click', () => {
+    pendingCardioWorkoutId = null;
+    $('cardioModalOverlay').classList.remove('show');
+  });
+
+  $('cardioModalConfirmBtn').addEventListener('click', () => {
+    const w = currentProtocol.workouts.find((x) => x._uid === pendingCardioWorkoutId);
+    $('cardioModalOverlay').classList.remove('show');
+    if (!w) return;
+    const nome = $('cardioNomeInput').value.trim() || 'Cardio';
+    const duracao_min = Math.max(5, Number($('cardioDuracaoInput').value) || 30);
+    const intensidade = $('cardioIntensidadeSelect').value;
+    const note = $('cardioNoteInput').value.trim();
+    const tips = $('cardioTipsInput').value.split('\n').map((t) => t.trim()).filter(Boolean);
+    // sempre no final — nunca via insertBeforeTrailingCardio, cardio pode empilhar depois de outro cardio
+    w.exercises.push({ nome, tipo: 'cardio', duracao_min, intensidade, note, tips });
+    pendingCardioWorkoutId = null;
+    renderWorkouts();
+    toast('Cardio adicionado ao final do treino.');
+  });
+
   const WIZARD_CHIP_GROUPS = ['wizardObjetivo', 'wizardNivel', 'wizardFrequencia', 'wizardDuracaoSessao'];
   WIZARD_CHIP_GROUPS.forEach(groupId => {
     $(groupId).querySelectorAll('.chip').forEach(chip => {
@@ -967,6 +1075,7 @@
     currentProtocol.duracao_semanas = usesDuration ? duration : null;
     currentProtocol.workouts.forEach((w, wIdx) => {
       w.exercises.forEach(ex => {
+        if (isCardioExercise(ex)) return;
         const base = (ex.weeks && ex.weeks[0]) || defaultWeek();
         ex.weeks = generateWeeks(technique, base, duration, wIdx);
       });
@@ -983,7 +1092,22 @@
     return chip + note;
   }
 
+  function renderCardioExerciseRow(w, ex, i) {
+    const tipsHtml = (ex.tips && ex.tips.length) ? `<div class="ex-note">${ex.tips.map((t) => escapeHtml(t)).join(' · ')}</div>` : '';
+    const noteHtml = ex.note ? `<div class="ex-note">${escapeHtml(ex.note)}</div>` : '';
+    return `
+      <div class="exercise-row exercise-row-edit">
+        <div class="ex-name-col">
+          <span class="tecnica-chip">Cardio</span><br>
+          ${escapeHtml(ex.nome)} — ${escapeHtml(String(ex.duracao_min || 0))} min · ${escapeHtml(ex.intensidade || '')}
+          ${noteHtml}${tipsHtml}
+        </div>
+        <button class="btn danger small" data-role="remove-exercise" data-workout-id="${w._uid}" data-idx="${i}">×</button>
+      </div>`;
+  }
+
   function renderExerciseRow(w, ex, i) {
+    if (isCardioExercise(ex)) return renderCardioExerciseRow(w, ex, i);
     const weeks = ex.weeks && ex.weeks.length ? ex.weeks : [{ sets: ex.sets || 3, reps: ex.reps || '12', rest: ex.rest || 60, nota: '' }];
     if (weeks.length <= 1) {
       const wk = weeks[0];
@@ -1050,6 +1174,7 @@
           </div>
           <div class="search-results" data-role="search-results" data-workout-id="${w._uid}" style="display:none;"></div>
         </div>
+        <button class="btn secondary small" data-role="add-cardio" data-workout-id="${w._uid}" type="button" style="margin-top:8px;">+ Cardio</button>
       </div>
     `).join('');
 
@@ -1078,6 +1203,9 @@
     });
     container.querySelectorAll('[data-role="regenerate-exercises"]').forEach(btn => {
       btn.addEventListener('click', () => regenerateWorkoutExercises(btn.dataset.workoutId, btn));
+    });
+    container.querySelectorAll('[data-role="add-cardio"]').forEach(btn => {
+      btn.addEventListener('click', () => openCardioModal(btn.dataset.workoutId));
     });
     container.querySelectorAll('[data-role="remove-exercise"]').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -1152,7 +1280,7 @@
   function addExerciseToWorkout(workoutId, ex) {
     const w = currentProtocol.workouts.find(x => x._uid === workoutId);
     if (!w) return;
-    w.exercises.push({
+    insertBeforeTrailingCardio(w, {
       nome: ex.nome,
       exercise_id: ex.exercise_id,
       exercise_ref: ex.exercise_ref,

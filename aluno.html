@@ -121,6 +121,21 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .coach-note .cn-lbl{font-size:10px;color:var(--primary);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
 .coach-note .cn-txt{font-size:13px;color:var(--text);line-height:1.5}
 
+.cardio-panel{background:linear-gradient(135deg,rgba(45,107,228,.08),transparent 55%),var(--card-grad);border:1px solid rgba(45,107,228,.16);box-shadow:var(--shadow-card);border-radius:var(--radius);padding:18px;margin-bottom:14px}
+.cardio-kicker{font-size:10px;color:var(--primary);font-weight:800;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px}
+.cardio-title{font-size:19px;font-weight:800;margin-bottom:8px;letter-spacing:-.2px}
+.cardio-text{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:12px}
+.cardio-tips{display:grid;gap:8px;margin-bottom:14px}
+.cardio-tip{display:flex;gap:8px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 10px;font-size:12px;line-height:1.35;color:var(--text)}
+.cardio-tip span{color:var(--primary);font-weight:900;flex-shrink:0}
+.cardio-fields{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
+.cardio-minutes label{display:block;font-size:10px;color:var(--faint);font-weight:800;letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px}
+.cardio-minutes input{width:100%;background:var(--elev);border:1px solid var(--line);border-radius:10px;color:var(--text);font-size:18px;font-weight:800;text-align:center;padding:11px 8px;font-family:var(--font)}
+.cardio-minutes input:focus{outline:none;border-color:var(--primary)}
+.cardio-check{height:46px;border-radius:12px;border:1px solid rgba(45,107,228,.35);background:rgba(45,107,228,.1);color:var(--text);font-size:13px;font-weight:800;padding:0 16px;cursor:pointer;font-family:var(--font)}
+.cardio-check.done{background:linear-gradient(135deg,var(--accent),var(--accent-dim));border-color:var(--accent-dim);color:#fff}
+@media(max-width:380px){.cardio-fields{grid-template-columns:1fr}.cardio-check{width:100%}}
+
 .sets-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .sets-head .sh-title{font-size:14px;font-weight:700}
 .sets-head .sh-target{font-size:12px;color:var(--muted)}
@@ -574,6 +589,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     gem: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3h12l4 6-10 12L2 9z"/></svg>`,
     spiral: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`,
     trophy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 4H4.5a2.5 2.5 0 0 0 0 5H7"/><path d="M17 4h2.5a2.5 2.5 0 0 1 0 5H17"/></svg>`,
+    activity: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
   };
 
   let student = null;
@@ -810,6 +826,8 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     if (ex.weeks && ex.weeks.length) return ex.weeks[Math.min(currentCycleWeek(), ex.weeks.length - 1)];
     return { sets: ex.sets || 3, reps: ex.reps || '12', rest: ex.rest || 60, nota: '' };
   }
+  function isCardioExercise(ex) { return !!(ex && ex.tipo === 'cardio'); }
+  function exerciseTargetMinutes(ex) { return Math.max(0, Math.round(Number(ex.duracao_min) || 0)); }
   function completedCount() {
     return history.filter(h => !(h.detail && h.detail.incomplete)).length;
   }
@@ -1368,16 +1386,27 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     hideNav();
     state.workoutIndex = idx;
     const w = protocol.workouts[idx];
-    const totalSets = w.exercises.reduce((a,ex) => a + Number(exerciseWeekConfig(ex).sets||0), 0);
+    const totalSets = w.exercises.reduce((a,ex) => a + (isCardioExercise(ex) ? 0 : Number(exerciseWeekConfig(ex).sets||0)), 0);
+    const cardioMinutes = w.exercises.reduce((a,ex) => a + (isCardioExercise(ex) ? exerciseTargetMinutes(ex) : 0), 0);
 
     $('ovTitle').textContent = 'Treino ' + w.id;
     $('ovName').textContent = w.name;
     $('ovExCount').textContent = w.exercises.length;
     $('ovSetCount').textContent = totalSets;
-    $('ovTime').textContent = '~' + Math.max(1, Math.round(totalSets * 1.4));
+    $('ovTime').textContent = '~' + Math.max(1, Math.round(totalSets * 1.4) + cardioMinutes);
 
     const listEl = $('ovExList');
-    listEl.innerHTML = w.exercises.map((ex,i) => { const cfg = exerciseWeekConfig(ex); return `
+    listEl.innerHTML = w.exercises.map((ex,i) => {
+      if (isCardioExercise(ex)) return `
+        <div class="ex-list-item">
+          <div class="ex-li-num">${i+1}</div>
+          <div class="ex-thumb">${mediaThumb(ex)}</div>
+          <div class="ex-li-info">
+            <div class="eli-name">${escapeHtml(ex.nome)}</div>
+            <div class="eli-sets">Cardio · meta ${exerciseTargetMinutes(ex) || 30} min</div>
+          </div>
+        </div>`;
+      const cfg = exerciseWeekConfig(ex); return `
       <div class="ex-list-item">
         <div class="ex-li-num">${i+1}</div>
         <div class="ex-thumb">${mediaThumb(ex)}</div>
@@ -1390,6 +1419,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     showScreen('overview');
   }
   function mediaThumb(ex) {
+    if (isCardioExercise(ex)) return `<span class="ph">${ICONS.activity}</span>`;
     if (ex.media) return mediaImgMarkup(ex.media, '', `<span class="ph">${ICONS.dumbbell}</span>`);
     return `<span class="ph">${ICONS.dumbbell}</span>`;
   }
@@ -1402,8 +1432,11 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     state.startTime = Date.now();
     state.rating = null;
     state.sessionData = w.exercises.map(ex => {
+      if (isCardioExercise(ex)) {
+        return { type: 'cardio', done: false, minutesDone: '', targetMinutes: exerciseTargetMinutes(ex) };
+      }
       const cfg = exerciseWeekConfig(ex);
-      return { sets: Array.from({ length: Number(cfg.sets) || 1 }, () => ({ done:false, carga: lastCargaFor(ex.nome), reps: String(cfg.reps || '') })) };
+      return { type: 'strength', sets: Array.from({ length: Number(cfg.sets) || 1 }, () => ({ done:false, carga: lastCargaFor(ex.nome), reps: String(cfg.reps || '') })) };
     });
     $('execWoName').textContent = w.name;
     buildExecProgress();
@@ -1418,7 +1451,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     w.exercises.forEach(() => { const s = document.createElement('div'); s.className = 'exec-pseg'; wrap.appendChild(s); });
     updateExecProgress();
   }
-  function isExerciseDone(sd) { return sd.sets.some(s => s.done); }
+  function isExerciseDone(sd) { return sd.type === 'cardio' ? !!sd.done : sd.sets.some(s => s.done); }
   function updateExecProgress() {
     document.querySelectorAll('#execProgress .exec-pseg').forEach((s,i) => {
       s.classList.remove('done','active');
@@ -1432,9 +1465,22 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     const i = state.currentExercise;
     const ex = w.exercises[i];
     const sd = state.sessionData[i];
-    const cfg = exerciseWeekConfig(ex);
 
     $('execCounter2').textContent = `${i+1}/${w.exercises.length}`;
+
+    if (isCardioExercise(ex)) {
+      $('execBody').innerHTML = `
+        <div class="exec-counter">Exercício ${i+1} de ${w.exercises.length}</div>
+        <div class="exec-name">${escapeHtml(ex.nome)}</div>
+        ${renderCardioPanel(ex, sd)}`;
+      $('prevBtn').style.visibility = i === 0 ? 'hidden' : 'visible';
+      $('nextBtn').textContent = i === w.exercises.length - 1 ? 'Finalizar treino' : 'Próximo';
+      $('execBody').scrollTop = 0;
+      updateExecProgress();
+      return;
+    }
+
+    const cfg = exerciseWeekConfig(ex);
 
     const media = ex.media
       ? mediaImgMarkup(ex.media, ex.nome, `<div class="media-ph"><span class="ph-ico">${ICONS.dumbbell}</span>Vídeo indisponível.</div>`)
@@ -1463,6 +1509,46 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     $('prevBtn').style.visibility = i === 0 ? 'hidden' : 'visible';
     $('nextBtn').textContent = i === w.exercises.length - 1 ? 'Finalizar treino' : 'Próximo';
     $('execBody').scrollTop = 0;
+    updateExecProgress();
+  }
+
+  function renderCardioPanel(ex, sd) {
+    const target = exerciseTargetMinutes(ex) || sd.targetMinutes || 30;
+    const intensidade = ex.intensidade || 'leve a moderada';
+    const tips = Array.isArray(ex.tips) && ex.tips.length ? ex.tips : [
+      'Mantenha um ritmo constante, sem sair muito forte no início.',
+      'Use uma intensidade em que consiga falar frases curtas, mas sentindo esforço.',
+      'Hidrate-se antes e depois.',
+    ];
+    const note = ex.note || 'Cardio orientado do treino. Marque como feito e registre o tempo real realizado.';
+    const tipsHtml = tips.map((tip, idx) => `<div class="cardio-tip"><span>${idx+1}</span><div>${escapeHtml(tip)}</div></div>`).join('');
+    return `
+      <div class="cardio-panel">
+        <div class="cardio-kicker">Cardio orientado</div>
+        <div class="cardio-title">Meta: ${target} min</div>
+        <div class="cardio-text">${escapeHtml(note)} Intensidade: <b>${escapeHtml(intensidade)}</b>.</div>
+        <div class="cardio-tips">${tipsHtml}</div>
+        <div class="cardio-fields">
+          <div class="cardio-minutes">
+            <label>Tempo feito</label>
+            <input type="number" min="0" step="1" inputmode="numeric" value="${escapeHtml(String(sd.minutesDone || target))}" onchange="updateCardioMinutes(this.value)" oninput="updateCardioMinutes(this.value)">
+          </div>
+          <button class="cardio-check ${sd.done?'done':''}" onclick="toggleCardioDone()">${sd.done?'Feito':'Marcar feito'}</button>
+        </div>
+      </div>`;
+  }
+
+  function updateCardioMinutes(val) {
+    const sd = state.sessionData[state.currentExercise];
+    if (sd.type !== 'cardio') return;
+    sd.minutesDone = String(Math.max(0, Math.round(Number(val) || 0)));
+  }
+  function toggleCardioDone() {
+    const sd = state.sessionData[state.currentExercise];
+    if (sd.type !== 'cardio') return;
+    if (!sd.minutesDone) sd.minutesDone = String(sd.targetMinutes || 30);
+    sd.done = !sd.done;
+    renderExercise();
     updateExecProgress();
   }
 
@@ -1507,7 +1593,8 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     const sd = state.sessionData[state.currentExercise];
     const isLast = state.currentExercise === w.exercises.length - 1;
     if (!isExerciseDone(sd) && !isLast) {
-      if (!confirm('Você ainda não marcou nenhuma série deste exercício. Pular mesmo assim?')) return;
+      const msg = sd.type === 'cardio' ? 'Você ainda não marcou esse cardio como feito. Pular mesmo assim?' : 'Você ainda não marcou nenhuma série deste exercício. Pular mesmo assim?';
+      if (!confirm(msg)) return;
     }
     if (isLast) { checkAndFinish(); return; }
     skipRest(); state.currentExercise++; renderExercise();
@@ -1535,8 +1622,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     skipRest();
     const w = protocol.workouts[state.workoutIndex];
     const elapsedMin = Math.max(1, Math.round((Date.now() - state.startTime) / 60000));
-    const setsDone = state.sessionData.reduce((a,sd) => a + sd.sets.filter(s=>s.done).length, 0);
+    const setsDone = state.sessionData.reduce((a,sd) => a + (sd.type === 'cardio' ? 0 : sd.sets.filter(s=>s.done).length), 0);
     const exDone = state.sessionData.filter(isExerciseDone).length;
+    const cardioMinutes = state.sessionData.reduce((a,sd) => a + (sd.type === 'cardio' && sd.done ? (Number(sd.minutesDone) || 0) : 0), 0);
+    const reportedMinutes = Math.max(elapsedMin, cardioMinutes);
 
     const record = {
       student_id: student.id,
@@ -1545,16 +1634,16 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       completed_at: new Date().toISOString(),
       workout_id: w.id,
       workout_name: w.name,
-      minutes: elapsedMin,
+      minutes: reportedMinutes,
       detail: {
         incomplete: !!incomplete,
         sets_done: setsDone,
         exercises_done: exDone,
+        cardio_minutes: cardioMinutes,
         rating: state.rating,
-        exercises: state.sessionData.map((sd,i) => ({
-          nome: w.exercises[i].nome,
-          sets: sd.sets.map(s => ({ done: s.done, carga: s.carga, reps: s.reps }))
-        }))
+        exercises: state.sessionData.map((sd,i) => sd.type === 'cardio'
+          ? { nome: w.exercises[i].nome, tipo: 'cardio', done: !!sd.done, targetMinutes: sd.targetMinutes, minutesDone: Number(sd.minutesDone) || 0 }
+          : { nome: w.exercises[i].nome, sets: sd.sets.map(s => ({ done: s.done, carga: s.carga, reps: s.reps })) })
       }
     };
 
@@ -1569,7 +1658,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 
     $('fsEx').textContent = exDone;
     $('fsSets').textContent = setsDone;
-    $('fsTime').textContent = elapsedMin;
+    $('fsTime').textContent = reportedMinutes;
 
     const ring = $('finishRing'), status = $('finishStatus'), title = $('finishTitle'), quote = $('finishQuote');
     const quotes = ['Mais um. Guardado.', 'Consistência vence intensidade.', 'Você apareceu — isso já é vitória.'];

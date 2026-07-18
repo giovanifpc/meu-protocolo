@@ -170,13 +170,15 @@ REGRAS DE MONTAGEM (siga rigorosamente)
 6. Cada exercício tem um campo "nota_execucao": uma dica curta e específica de execução (ex: "1-3 na reserva, carga sobe a cada série", "pausa de 15s dentro da série", "reduz 20% de carga a cada drop, sem descanso entre eles") — coerente com a técnica aplicada, quando houver.
 7. Use nomes de exercícios comuns e específicos em português do Brasil (ex: "Supino reto com barra", "Agachamento livre", "Puxada frente na polia").
 8. sets/reps/rest de cada exercício são o ponto de partida da semana 1 — não invente uma progressão semana a semana, isso é calculado depois por outro sistema.
+9. Opcionalmente, inclua UM item de cardio orientado como o ÚLTIMO exercício de um treino (nunca no meio nem no início do array) — especialmente quando o objetivo for emagrecimento ou saúde, ou quando fizer sentido como finalizador. Não é obrigatório em todo treino nem em todo protocolo. Um item de cardio usa um formato diferente dos exercícios de força (sem sets/reps/rest/tecnica): {"tipo":"cardio","nome":"string (ex: Caminhada, Bike ergométrica, Elíptico)","duracao_min":number,"intensidade":"leve"|"leve a moderada"|"moderada"|"moderada a intensa"|"intensa","nota_execucao":"string","tips":["string","string"]} — 2 a 4 dicas curtas de execução em "tips".
 
 Responda APENAS com um JSON válido, sem texto antes ou depois, exatamente neste formato:
 {
   "titulo": "string",
   "workouts": [
     { "id": "A", "name": "Treino A — nome descritivo do foco do dia", "exercises": [
-      { "nome": "string", "sets": number, "reps": "string", "rest": number, "tecnica": "string ou null", "nota_execucao": "string" }
+      { "nome": "string", "sets": number, "reps": "string", "rest": number, "tecnica": "string ou null", "nota_execucao": "string" },
+      { "tipo": "cardio", "nome": "string", "duracao_min": number, "intensidade": "string", "nota_execucao": "string", "tips": ["string"] }
     ] }
   ]
 }`;

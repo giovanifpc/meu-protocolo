@@ -36,13 +36,21 @@ Estas regras existem porque suporte via IA é um alvo conhecido de ataque: algu�
 
 ## 4. Quando escalar (a IA não resolveu)
 
-Escala por **e-mail/ticket** (não WhatsApp pessoal do Giovani) quando:
-- O profissional pede algo fora do escopo da IA (mudança de cobrança, plano, reembolso)
-- É um bug confirmado (comportamento que contraria o que este documento descreve como esperado)
-- A IA tentou entender o problema (fez as perguntas de diagnóstico) e ainda não tem uma resposta segura
-- O profissional pede explicitamente para falar com uma pessoa
+Escala por **e-mail** — `suporte@meuprotocolo.app` (Cloudflare Email Routing, encaminha pra caixa de entrada do Giovani; configurado em 2026-07-18) — nunca pelo WhatsApp pessoal do Giovani.
 
-`[A CONFIRMAR COM GIOVANI: endereço de e-mail/sistema de ticket a usar — hoje o domínio só tem contato@meuprotocolo.app configurado no Resend para transacional (OTP), precisa decidir se cria um endereço dedicado tipo suporte@meuprotocolo.app e como a IA "abre" esse ticket tecnicamente (só instrui o profissional a mandar e-mail? ou a IA monta o e-mail e dispara?).]`
+`[A CONFIRMAR COM GIOVANI: mecanismo técnico exato — a IA só instrui o profissional a mandar e-mail pra esse endereço com o resumo do problema? Ou a IA monta e dispara o e-mail sozinha (via alguma function de envio) assim que decide escalar? A segunda opção é mais fluida pro profissional, mas precisa de desenho de segurança pra função de envio (nunca deve virar um vetor pra mandar e-mail arbitrário pra endereço arbitrário).]`
+
+Situações concretas que sempre escalam (não é lista fechada, mas cobre os casos mais prováveis):
+
+1. **Bug de verdade** — comportamento que contraria o que este documento descreve como esperado (ex: treino publicado que o aluno não consegue ver).
+2. **Dado apagado por engano, sem "desfazer"** — hoje só existe retenção de 30 dias no nível da *conta inteira* (após cancelamento). Não existe lixeira pra um aluno excluído, treino apagado ou avaliação física deletada — pedido de recuperação sempre escala, a IA não tem ferramenta pra isso.
+3. **Disputa ou dúvida de cobrança fora do padrão** — cartão cobrado duas vezes, valor que não bate com o esperado, pedido de reembolso. Nunca só "explica", sempre escala (reforça a regra 5 da seção 3).
+4. **Estado de conta que parece errado mas pode ser um acordo especial do Giovani** — profissional no limite de alunos do plano, ou com preço customizado diferente da tabela por combinado informal. A IA só conhece a regra geral, não sabe de exceção combinada por fora do sistema.
+5. **Problema relatado de segunda mão sobre o aparelho do aluno** — ex: "meu aluno diz que a notificação não chega" é quase sempre específico de aparelho/navegador/cache; a IA dá o passo a passo padrão (reinstalar o PWA, checar permissão de notificação) mas não consegue diagnosticar remotamente um aparelho que não está na conversa.
+6. **OTP que nunca chega mesmo fora do spam** — pode ser falha de entrega do Resend/DNS, fora do alcance da IA.
+7. **Pedido de exclusão de dado (LGPD)** — diferente de dúvida jurídica (já fora de escopo pela regra 6 da seção 3): um pedido real de apagar dados de uma conta ou de um aluno específico tem processo por trás e hoje só existe a purga automática de 30 dias — não há botão de "apagar agora". Sempre escala.
+8. **Confusão entre contas/tenants** — aluno cadastrado no profissional errado, e-mail duplicado entre contas. Só o Giovani resolve; a IA nunca teria visibilidade disso por desenho (regra 2 da seção 3).
+9. **A IA tentou entender o problema (fez as perguntas de diagnóstico) e ainda não tem resposta segura**, ou o profissional pede explicitamente para falar com uma pessoa.
 
 ---
 
@@ -125,6 +133,6 @@ O profissional cancela a própria assinatura em Perfil/Configurações. Ao cance
 ## 7. Coisas que ainda precisam de decisão do Giovani antes de implementar
 
 - Lista final e contrato exato das funções de acesso só-leitura (seção 3, item 3)
-- Destino e mecanismo do escalonamento por e-mail/ticket (seção 4)
+- Mecanismo técnico exato do escalonamento por e-mail — instrução pro profissional mandar, ou a IA dispara sozinha (seção 4)
 - Revisar se a seção 5 (conhecimento de produto) está 100% atual — este documento foi escrito a partir do que já existe no código e no CLAUDE.md, mas o Giovani conhece nuance de negócio que não está escrita em lugar nenhum
 - Definir se a IA deve ter algum limite de mensagens/custo por conversa (a API da Claude não é gratuita)

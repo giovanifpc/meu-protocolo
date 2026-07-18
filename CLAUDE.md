@@ -19,6 +19,7 @@ Produto **totalmente separado da marca Fox Performance** — projetos distintos,
 - **GitHub Pages** serve a main automaticamente — mudanças ficam ao vivo após push
 - **Domínio de produção:** `https://meuprotocolo.app` (Cloudflare Registrar). Fallback: `https://giovanifpc.github.io/meu-protocolo`
 - **E-mail transacional:** SMTP customizado via Resend configurado no Supabase (Authentication → Emails → SMTP Settings), sender `contato@meuprotocolo.app`. Templates "Confirm signup" e "Magic Link or OTP" incluem `{{ .Token }}` — é isso que faz o OTP chegar como código numérico em vez de link mágico
+- **E-mail de suporte:** `suporte@meuprotocolo.app`, via Cloudflare Email Routing (grátis, configurado 2026-07-18) — encaminha pra caixa de entrada do Giovani, sem precisar de Google Workspace nem conflitar com o Resend (que usa o subdomínio `send.meuprotocolo.app`, hostname diferente). É o endereço de escalonamento da IA de suporte (ver `contexto-ia-suporte.md`)
 - **No PC (Windows):** edições via PowerShell/terminal + `git pull` para sincronizar após commits feitos em outro lugar
 - **Aqui (Claude Code web/celular):** faço edições, commit e push direto na main
 - **RLS sempre habilitado** em toda tabela nova, sem exceção — dado sensível de saúde (LGPD), multi-tenant real

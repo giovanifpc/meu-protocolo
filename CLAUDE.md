@@ -44,13 +44,18 @@ Produto **totalmente separado da marca Fox Performance** — projetos distintos,
 :root {
   --bg:#F8F9FA;
   --primary:#2D6BE4;
-  --accent:#3BB08F;
+  --accent:#1E8C64;      /* atualizado 2026-07-18 — era #3BB08F (mint), agora verde mais sóbrio/premium */
+  --accent-dim:#146B4D;
   --text:#1E2A3A;
   --font:'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --card-grad:linear-gradient(165deg,#FFFFFF 0%,#F7FBF9 55%,#F6F8FE 100%);
+  --shadow-card:0 1px 2px rgba(20,30,45,.04), 0 10px 24px -14px rgba(20,30,45,.14);
 }
 ```
 
 Fonte **Inter** via Google Fonts — pesos 400 (corpo), 500 (labels), 700 (títulos). Paleta é o padrão do plano Starter — sobrescrita pelo white-label lite (`professionals.logo_url` / `primary_color`) nos planos Pro/Elite.
+
+**Sistema de design (UI polish, 2026-07-18)**: cards usam sombra suave + `--card-grad` (degradê quase imperceptível branco→verde→azul) em vez de borda forte; `--radius`/`--radius-lg` consistentes; **ícones sempre SVG inline** (`stroke="currentColor"`, estilo Feather/Lucide) — nunca emoji em UI/botões/nav (emoji só é aceitável em conteúdo expressivo pontual, tipo a avaliação de humor pós-treino do aluno). Ver seção "UI Polish completo" abaixo pro detalhamento por arquivo.
 
 ---
 
@@ -83,7 +88,38 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
-Última atualização: 2026-07-16 (web — branch do Mercado Pago mesclada na `main` **com credenciais de produção já configuradas** (Access Token, Public Key e webhook, tudo trocado de teste pra real antes da mescla). Também nesta janela de trabalho: desenvolvimento em paralelo enquanto o Mercado Pago esteve bloqueado — painel master, LGPD, CSP, fluxo de cancelamento, gating de plano, expurgo de retenção. Ver as duas seções abaixo).
+Última atualização: 2026-07-18 (web/celular — três frentes na mesma janela, todas já commitadas e no ar via GitHub Pages: (1) UI polish completo do app inteiro + foto de perfil do aluno com crop circular, (2) reestruturação de `treinos.html` com criação de treino guiada por IA + botão de trocar exercícios. **Pendência crítica pra próxima sessão no notebook**: as duas Edge Functions da frente 2 (`generate-workout` atualizada e `regenerate-exercises` nova) **ainda não foram implantadas** — só existem no repo, não em produção. Rodar `supabase functions deploy generate-workout` e `supabase functions deploy regenerate-exercises` antes de testar a geração de treino de verdade. Ver as duas seções novas abaixo pro detalhamento completo).
+
+### UI Polish completo + foto de perfil do aluno (2026-07-18)
+
+Pedido do usuário: elevar a percepção de qualidade visual do app inteiro (referência: Trainerize/Whoop/Fitbod), sem alterar estrutura/navegação/funcionalidades — só estética. Aplicado em **todas as páginas** (`aluno.html`, `index.html`, `alunos.html`, `treinos.html`, `avaliacoes.html`, `nutri.html`, `perfil.html`, `relatorios.html`, `master.html`, `login.html`, `onboarding.html`, `termos.html`, `privacidade.html`), 3 commits.
+
+- **Tokens novos**: verde `--accent` mais escuro/sóbrio (`#1E8C64`, era `#3BB08F` mint), sistema de sombra suave (`--shadow-card`) substituindo borda forte nos cards, degradê quase imperceptível (`--card-grad`, branco→verde→azul) nos cards principais, raio de borda consistente (`--radius`/`--radius-lg`). Ver bloco CSS na seção "Identidade visual" acima.
+- **Ícones**: todo emoji usado como ícone de UI (nav inferior, botões, empty states, badges de conquista) foi trocado por SVG inline da mesma família (stroke, estilo Feather/Lucide) — **regra daqui pra frente: nunca introduzir emoji novo em botão/ícone/nav**, só SVG. Emoji expressivo pontual (ex: 😴😐💪 na avaliação de humor pós-treino do aluno) foi mantido deliberadamente.
+- **Conquistas do aluno** (`aluno.html` → Perfil): badges ganharam selo circular com gradiente de cor quando desbloqueados (cinza + cadeado quando bloqueados), com animação de entrada escalonada.
+- **Microinterações**: entrada animada das conquistas e barras de gráfico (SVG bar chart com `barGrow` via CSS), pop do troféu na tela de finalização de treino, feedback elástico no check de série.
+- **Testado**: via screenshots com Playwright + dados mockados (não deu pra logar de verdade via OTP nesta sessão) — todas as telas principais conferidas visualmente antes de cada commit.
+
+**Foto de perfil do aluno** (pedido em seguida, mesma sessão):
+- Aluno sobe foto em Perfil (`aluno.html`) → modal de crop circular obrigatório (arrastar pra posicionar + slider de zoom, usando o truque CSS de `box-shadow` gigante pra mascarar o círculo) → exporta um JPEG 480×480 via canvas antes de subir, reduzindo o arquivo física e digitalmente. CSP de `aluno.html` precisou ganhar `blob:` no `img-src` — sem isso a pré-visualização da foto escolhida no picker é bloqueada pelo navegador (bug real encontrado e corrigido durante o teste).
+- **Sem coluna nova em nenhuma tabela**: o caminho no Storage é sempre determinístico (`{student_id}/avatar.jpg`, upsert a cada troca) — o front só tenta gerar a signed URL e trata "não existe" como "sem foto ainda".
+- **Bucket `student-avatars`** (`supabase_18_student_avatar.sql`, **já rodado em produção pelo usuário e confirmado funcionando** — testado via curl anônimo, retornou `403 new row violates row-level security policy` como esperado, confirmando bucket+RLS ativos): privado, aluno tem CRUD da própria foto, profissional só lê. Papel invertido do padrão de `assessment-photos` (lá é profissional que escreve, aluno que lê).
+- **Profissional vê a foto** em `alunos.html`, dentro do painel expansível de cada aluno (mesmo botão que já abria nota privada/status/WhatsApp) — carregada só quando o painel é aberto, não na lista colapsada (evita N requisições simultâneas).
+
+### Criação de treino guiada por IA — reestruturação de `treinos.html` (2026-07-18)
+
+Pedido do usuário, baseado em prints de um app concorrente (anúncio do @thiagolasevicius) que mostrava um fluxo de prescrição por IA bem mais sofisticado que o "Gerar sugestão com IA" simples que já existia. Depois de uma sessão de design conversacional (documentada em detalhe no histórico do chat, não repetida aqui), o modelo fechado foi:
+
+- **Dois botões grandes sempre visíveis no topo de `treinos.html`** ("Criar novo com IA" / "Criar novo manual"), independente de já existir treino ou não pro aluno selecionado. Clicar em qualquer um com treino já existente abre um modal: "Salvar o atual como modelo e continuar" / "Continuar (o atual vira rascunho)" / "Cancelar" — nunca sobrescreve silenciosamente. Se o protocolo existente estava `publicado`, vira `rascunho` antes de criar o novo (mesma linha, múltiplas linhas de `training_protocols` por aluno já eram toleradas — o app sempre carrega a mais recente por `created_at`).
+- **"Criar novo manual"** = o builder que já existia (título, periodização, adicionar treino A/B/C, buscar exercício, duplicar de outro aluno, aplicar modelo da biblioteca) — só que agora atrás do botão, e zerado.
+- **"Criar novo IA"** = wizard novo: objetivo (Hipertrofia/Emagrecimento/Saúde), nível do aluno, periodização, frequência semanal (2x-6x), duração de sessão (30/45/60/75min), semanas do mesociclo — mais anamnese/lesões do aluno **mostradas automaticamente** (lidas de `student_anamnese`, sem o profissional redigitar nada). Botão "Criar treino perfeito" chama a Edge Function e o resultado cai **na mesma tela de edição de sempre** (editar É revisar — decisão deliberada de não construir uma tela de revisão separada).
+- **Divisão de responsabilidade importante**: a IA decide exercícios/divisão/técnica de intensificação; a progressão numérica semana a semana continua sendo calculada pelo `generateWeeks()` determinístico que já existia (mesmo código do botão "Aplicar periodização" do modo manual) — nunca se pede pro modelo fazer aritmética de progressão.
+- **Campo novo dentro do jsonb** (sem migration, é só uma chave nova no objeto de cada exercício dentro de `workouts`): `tecnica` (Drop-Set/Rest-Pause/Cluster/Myo-Reps/Pirâmide Cresc./Decresc./Super Slow/Bi-Set/Tri-Set/Negativo) e `note` (dica de execução curta) — exibidos como chip + texto muted acima do nome do exercício em `treinos.html`.
+- **Botão "🔄 Trocar exercícios" em cada bloco de treino** (Treino A, B, C...), sempre visível, independente de origem manual ou IA — troca só o nome/mídia dos exercícios daquele bloco, preservando sets/reps/descanso/periodização/técnica intactos. Pensado pra "profissional cansado" que só quer dar variedade sem remontar nada.
+- **Edge Function `generate-workout` (evoluída)**: recebe agora `categoria_objetivo`, `nivel`, `frequencia`, `duracao_sessao_min` além do que já tinha (`objetivo`, histórico, protocolo anterior); busca `student_anamnese` (lesões/restrições/histórico médico/fumante) server-side e injeta no prompt; prompt instrui regras de técnica (finalizador no último isolador, nunca no primeiro composto pesado) e **veto de técnicas arriscadas (Drop-Set/Cluster/Negativo/Rest-Pause) pra nível iniciante aplicado por código depois da resposta da IA** (`aplicarVetoPorNivel()`), não só por instrução de prompt — é uma garantia, não uma esperança de que o modelo obedeceu.
+- **Edge Function `regenerate-exercises` (nova)**: recebe a lista de exercícios de um bloco + `exercise_id` de cada um (quando existe), busca o `grupo_muscular` real na `exercise_library` (mais confiável que o modelo adivinhar pelo nome), pede alternativas mantendo o mesmo grupo/padrão de movimento, considera lesões/restrições da anamnese. Prompt pequeno e barato (task bem restrita), separado do `generate-workout` que monta o protocolo inteiro.
+- **Testado com dados mockados via Playwright** (screenshots de: botões vazios, wizard preenchido, resultado gerado com técnica+nota+periodização aplicada, modal de confirmação nos 3 caminhos — cancelar/continuar/salvar como modelo —, e trocar exercícios preservando sets/reps/técnica). **Não testado com a API da Claude de verdade** — as duas Edge Functions só existem no código do repo, precisam de `supabase functions deploy` (só funciona rodando localmente, ver seção "Limitação de rede" abaixo) antes de qualquer teste real.
+- **Próximo passo pendente, crítico**: depois do deploy, validar se a qualidade da geração está no nível dos prints de referência que o usuário mandou (o prompt foi desenhado pra isso, mas precisa de julgamento humano em cima de caso real, não só o teste mockado).
 
 ### Fluxo de assinatura validado em sandbox (2026-07-14/15)
 
@@ -253,7 +289,7 @@ Duas vezes nesta sessão o deploy automático (`pages build and deployment`) fal
 
 **Painel do profissional** — reestruturado com nav inferior em sessão anterior, navegação por aluno reorganizada nesta sessão
 - `index.html` — dashboard "Início": nº de alunos, treinos na semana, lista "precisam de atenção" (quem não treina há 7+ dias ou nunca treinou, excluindo alunos pausados/inativos)
-- `alunos.html` — lista de alunos + cadastro (antes vivia em `index.html`). Cada aluno tem bolinha de status (ativo/pausado/inativo), 3 links de área (Treino / Avaliação / Nutri) e painel expansível (botão 📝) com nota privada + status — guardados em `student_notes`, **sem policy de leitura pro aluno** (informação privada do profissional)
+- `alunos.html` — lista de alunos + cadastro (antes vivia em `index.html`). Cada aluno tem bolinha de status (ativo/pausado/inativo), 3 links de área (Treino / Avaliação / Nutri) e painel expansível (ícone de lápis, SVG) com nota privada + status — guardados em `student_notes`, **sem policy de leitura pro aluno** (informação privada do profissional). Painel expansível também mostra a foto de perfil do aluno (ver "Foto de perfil do aluno", 2026-07-18), carregada só quando aberto.
 - `perfil.html` — branding (nome exibido, cor principal, logo) + logout. Fechava uma lacuna antiga (campos existiam no banco, sem tela pra editar)
 - `relatorios.html` — gera relatório em **texto estruturado** (não PDF) por aluno: resumo, adesão %, evolução de carga, histórico de sessões. Botões copiar/baixar `.txt` — formato deliberado pra colar em IA externa
 - `treinos.html` / `avaliacoes.html` / `nutri.html` são sub-telas por aluno (chegam a partir de `alunos.html`), com a barra `#studentTabbar` pra trocar de área mantendo o aluno selecionado — sem nav inferior própria, mesmo padrão do Overview/Exec no app do aluno
@@ -263,7 +299,7 @@ Duas vezes nesta sessão o deploy automático (`pages build and deployment`) fal
 - GIF de exercício: corrigido problema de não animar em navegador real (link cru do Google Drive falha ao decodificar como `<img>` com frequência) — 3 variações de URL (`uc?export=download`, `uc?export=view`, `thumbnail?sz=w900`) com fallback automático via `onerror`, mesma técnica do Fox
 - **Periodização**: dropdown com 6 técnicas (Linear, Ondulatória diária, Ondulatória semanal, Em blocos, Reversa, Manual). Botão "Aplicar periodização" gera automaticamente `weeks[]` (sets/reps/descanso por semana) por exercício a partir do valor atual como base — grade fica editável depois, nunca é uma trava. Ondulatória diária é a exceção: varia por treino do loop (A=pesado, B=moderado, C=leve) em vez de por semana, já que o protocolo não tem calendário fixo
 - **Duplicar protocolo de outro aluno**: aparece quando existe pelo menos um outro aluno com protocolo salvo; clona workouts/exercícios/periodização como rascunho novo, sem alterar o protocolo de origem
-- **Gerar treino com IA**: card que chama a Edge Function `generate-workout` (implantada e funcionando, ver "Resolvido nesta sessão") — profissional digita objetivo/observação, recebe sugestão baseada no histórico do aluno, carregada como rascunho pra revisão manual antes de publicar
+- **Criação guiada por IA + trocar exercícios** (2026-07-18, reestruturação completa — ver seção própria acima): dois botões sempre visíveis no topo ("Criar novo com IA"/"Criar novo manual"), wizard de perguntas pra IA (objetivo/nível/periodização/frequência/duração/anamnese automática), botão de trocar exercícios por bloco preservando técnica/periodização. **Edge Functions ainda não implantadas em produção** — ver "Pendência crítica" no topo da seção Status atual.
 
 **App do aluno** (`aluno.html`) — reescrito nesta sessão pra ter paridade de recursos com o Training da Fox (repo `giovanifpc/fox-app`), com a identidade visual clara do Meu Protocolo
 - Fase 1 (execução): Home (próximo treino do loop, estatísticas), Overview (pré-treino), Exec (séries, reps/carga com última carga pré-preenchida, timer de descanso), Finish (resumo + avaliação) — tudo em `training_history.detail` (JSONB)

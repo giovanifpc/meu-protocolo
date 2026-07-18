@@ -7,9 +7,9 @@
 // Deploy:   supabase functions deploy mercadopago-create-preapproval
 // Secret:   supabase secrets set MERCADOPAGO_ACCESS_TOKEN=...
 //
-// Nota: preço fixo por plano abaixo (PLAN_PRICES). Quando o item "diferenciação
-// de plano + preço customizado" (valor_customizado em professionals) for
-// implementado, este valor precisa ser lido de lá em vez do mapa fixo.
+// Preço: usa professionals.valor_customizado quando setado (editável no painel
+// master, pra casos como plano completo cobrando menos de um amigo/tester);
+// cai pro preço de tabela fixo (PLAN_PRICES) quando não há customização.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -49,11 +49,11 @@ Deno.serve(async (req) => {
     if (!card_token_id) throw new Error('card_token_id é obrigatório.');
 
     const { data: professional, error: proErr } = await supa
-      .from('professionals').select('id, email, plan, mp_preapproval_id').eq('email', user.email).maybeSingle();
+      .from('professionals').select('id, email, plan, valor_customizado, mp_preapproval_id').eq('email', user.email).maybeSingle();
     if (proErr || !professional) throw new Error('Profissional não encontrado.');
     if (professional.mp_preapproval_id) throw new Error('Este profissional já tem uma assinatura ativa.');
 
-    const valor = PLAN_PRICES[professional.plan] || PLAN_PRICES.starter;
+    const valor = professional.valor_customizado ?? PLAN_PRICES[professional.plan] ?? PLAN_PRICES.starter;
 
     // Com Access Token de teste (TEST-...), o Mercado Pago exige o header
     // X-scope: stage — sem ele, a API procura o card_token_id no ambiente de

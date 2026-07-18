@@ -199,16 +199,35 @@
   $('confirmCancelBtn').addEventListener('click', async () => {
     $('confirmCancelBtn').disabled = true;
     $('backCancelBtn').disabled = true;
-    $('cancelMsg').textContent = '';
+    $('cancelMsg').textContent = 'Cancelando assinatura...';
     $('cancelMsg').className = 'msg';
+
+    // Cancela no Mercado Pago primeiro — só marca a conta como inativa
+    // localmente depois de confirmar que a cobrança recorrente foi
+    // encerrada de verdade lá, pra nunca ficar num estado em que o app
+    // acha que cancelou mas o profissional continua sendo cobrado.
+    const { data: cancelData, error: cancelError } = await supa.functions.invoke('mercadopago-cancel-preapproval', { body: {} });
+
+    if (cancelError || !cancelData || cancelData.error) {
+      let motivo = cancelData?.error || cancelError?.message || 'erro desconhecido';
+      if (cancelError?.context?.json) {
+        try { const body = await cancelError.context.json(); if (body?.error) motivo = body.error; } catch {}
+      }
+      $('cancelMsg').textContent = 'Erro ao cancelar no Mercado Pago: ' + motivo + '. Sua assinatura não foi alterada — tente de novo ou fale com o suporte.';
+      $('cancelMsg').className = 'msg error';
+      $('confirmCancelBtn').disabled = false;
+      $('backCancelBtn').disabled = false;
+      return;
+    }
 
     const { error } = await supa.from('professionals').update({
       status: 'inativo',
       inactive_since: new Date().toISOString(),
+      mp_subscription_status: cancelData.cancelled ? 'cancelled' : undefined,
     }).eq('id', professional.id);
 
     if (error) {
-      $('cancelMsg').textContent = 'Erro ao cancelar: ' + error.message;
+      $('cancelMsg').textContent = 'Assinatura cancelada no Mercado Pago, mas houve erro ao atualizar aqui: ' + error.message + '. Fale com o suporte.';
       $('cancelMsg').className = 'msg error';
       $('confirmCancelBtn').disabled = false;
       $('backCancelBtn').disabled = false;

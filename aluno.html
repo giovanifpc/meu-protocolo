@@ -232,6 +232,18 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .chart-bar{transform-box:fill-box;transform-origin:50% 100%;animation:barGrow .5s cubic-bezier(.2,.8,.2,1) backwards}
 
 /* CONQUISTAS */
+.ranking-list{display:flex;flex-direction:column;gap:8px;margin-bottom:6px}
+.ranking-row{display:flex;align-items:center;gap:12px;background:var(--card-grad);border:1px solid rgba(20,30,45,.04);box-shadow:var(--shadow-card);border-radius:var(--radius);padding:12px 14px}
+.ranking-row.me{border-color:var(--primary);box-shadow:0 0 0 1.5px var(--primary),var(--shadow-card)}
+.ranking-pos{width:22px;text-align:center;font-weight:800;color:var(--faint);flex-shrink:0}
+.ranking-row:nth-child(1) .ranking-pos{color:#D4A017}
+.ranking-row:nth-child(2) .ranking-pos{color:#9AA5B1}
+.ranking-row:nth-child(3) .ranking-pos{color:#B8804A}
+.ranking-info{flex:1;min-width:0}
+.ranking-name{font-size:13.5px;font-weight:700}
+.ranking-row.me .ranking-name{color:var(--primary)}
+.ranking-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.ranking-score{font-size:16px;font-weight:800;color:var(--text);flex-shrink:0}
 .ach-summary{background:linear-gradient(135deg,rgba(45,107,228,.09),transparent 55%),var(--card-grad);border:1px solid rgba(45,107,228,.14);box-shadow:var(--shadow-card);border-radius:var(--radius-lg);padding:22px;margin-bottom:6px;text-align:center}
 .ach-summary .as-big{font-size:34px;font-weight:800;color:var(--primary)}
 .ach-summary .as-lbl{font-size:13px;color:var(--muted);margin-top:4px}
@@ -406,6 +418,11 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     <div class="ach-summary" id="achSummary"></div>
     <div class="section-label">Conquistas</div>
     <div class="badge-grid" id="badgeGrid"></div>
+
+    <div id="rankingBlock" style="display:none;">
+      <div class="section-label">Ranking do mês entre alunos</div>
+      <div class="ranking-list" id="rankingList"></div>
+    </div>
 
     <div class="section-label">Anamnese de saúde</div>
     <div class="anamnese-card">
@@ -745,7 +762,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 
     const { data: st, error } = await supa
       .from('students')
-      .select('*, professionals(display_name, primary_color, logo_url)')
+      .select('*, professionals(display_name, primary_color, logo_url, ranking_enabled)')
       .eq('email', session.user.email)
       .maybeSingle();
 
@@ -1193,6 +1210,22 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     }).join('');
   }
 
+  async function loadRanking() {
+    if (!student.professionals?.ranking_enabled) { $('rankingBlock').style.display = 'none'; return; }
+    const { data, error } = await supa.rpc('get_student_ranking');
+    if (error || !data || !data.length) { $('rankingBlock').style.display = 'none'; return; }
+    $('rankingBlock').style.display = 'block';
+    $('rankingList').innerHTML = data.map((r, i) => `
+      <div class="ranking-row ${r.is_me ? 'me' : ''}">
+        <div class="ranking-pos">${i + 1}</div>
+        <div class="ranking-info">
+          <div class="ranking-name">${escapeHtml(r.display_name)}${r.is_me ? ' (você)' : ''}</div>
+          <div class="ranking-meta">${r.sessions_completas} treino(s) · ${r.medalhas} medalha(s) · ${r.recordes} recorde(s)</div>
+        </div>
+        <div class="ranking-score">${r.score}</div>
+      </div>`).join('');
+  }
+
   /* ---- PERFIL ---- */
   function buildProfile() {
     $('profileAvatar').textContent = (student.nome || '?').trim().charAt(0).toUpperCase();
@@ -1200,6 +1233,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     $('profileSub').textContent = student.professionals?.display_name ? `Aluno(a) de ${student.professionals.display_name}` : student.email || '';
     $('profileFoot').innerHTML = `Meu Protocolo<br>${completedCount()} treino(s) concluído(s) · ${earnedBadgeIds().length}/${BADGES.length} conquistas`;
     buildAchievements();
+    loadRanking();
     updatePushButtonState();
     loadAvatar();
 
@@ -1875,6 +1909,12 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       history.unshift(record);
       const newBadges = BADGES.filter(b => !earnedBefore.includes(b.id) && b.test());
       newBadges.forEach((b,i) => setTimeout(() => toast(`${b.ico} Conquista: ${escapeHtml(b.name)}`, true), 1200 + i * 2000));
+      if (newBadges.length) {
+        supa.from('student_badge_unlocks').upsert(
+          newBadges.map(b => ({ student_id: student.id, badge_id: b.id })),
+          { onConflict: 'student_id,badge_id', ignoreDuplicates: true }
+        ).then(({ error: badgeErr }) => { if (badgeErr) console.error('Falha ao registrar medalha:', badgeErr.message); });
+      }
     }
 
     $('fsEx').textContent = exDone;

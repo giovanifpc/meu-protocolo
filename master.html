@@ -48,6 +48,18 @@
   .msg.ok { color:var(--accent); }
   .row-save { display:flex; align-items:center; gap:6px; }
   #loadingMsg, #emptyMsg { padding:40px; text-align:center; color:var(--muted); font-size:14px; }
+  .card { background:var(--card-grad); border:1px solid rgba(20,30,45,.04); box-shadow:var(--shadow-card); border-radius:16px; padding:16px 18px; margin-top:24px; }
+  .card h2 { font-size:15px; margin:0 0 12px; }
+  .conv-item { border-bottom:1px solid var(--line); padding:10px 0; }
+  .conv-item:last-child { border-bottom:none; }
+  .conv-row { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; font-size:13px; cursor:pointer; }
+  .conv-name { font-weight:700; }
+  .conv-meta { font-size:11px; color:var(--muted); white-space:nowrap; }
+  .conv-preview { font-size:12px; color:var(--muted); margin-top:2px; max-width:520px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .conv-transcript { display:none; margin-top:10px; padding:10px 12px; background:var(--bg); border-radius:10px; font-size:12.5px; max-height:340px; overflow-y:auto; }
+  .conv-transcript.open { display:block; }
+  .conv-msg { margin-bottom:10px; white-space:pre-wrap; line-height:1.4; }
+  .conv-msg .who { font-weight:700; font-size:10px; text-transform:uppercase; color:var(--muted); letter-spacing:.4px; margin-bottom:2px; }
 </style>
 </head>
 <body>
@@ -76,6 +88,11 @@
         </thead>
         <tbody id="tbody"></tbody>
       </table>
+    </div>
+
+    <div class="card">
+      <h2>Conversas de suporte (últimos 30 dias)</h2>
+      <div id="supportConvList"><div class="msg">Carregando...</div></div>
     </div>
   </main>
 
@@ -155,6 +172,59 @@
     return tr;
   }
 
+  function renderConvTranscript(box, msgs) {
+    box.innerHTML = (msgs || []).map((m) => `
+      <div class="conv-msg">
+        <div class="who">${m.role === 'user' ? 'Profissional' : 'IA'}</div>
+        ${escapeHtml(m.content)}
+      </div>`).join('') || '<div class="msg">Sem mensagens.</div>';
+  }
+
+  async function loadSupportConversations() {
+    const { data, error } = await supa.rpc('master_list_support_conversations');
+    const el = $('supportConvList');
+    if (error) {
+      console.error('Falha ao carregar conversas de suporte:', error.message);
+      el.innerHTML = `<div class="msg error">Erro ao carregar: ${escapeHtml(error.message)}</div>`;
+      return;
+    }
+    if (!data || !data.length) {
+      el.innerHTML = '<div class="msg">Nenhuma conversa nos últimos 30 dias.</div>';
+      return;
+    }
+
+    el.innerHTML = data.map((c, i) => `
+      <div class="conv-item">
+        <div class="conv-row" data-role="toggle-conv" data-idx="${i}" data-id="${c.conversation_id}">
+          <div>
+            <div class="conv-name">${escapeHtml(c.professional_nome)}</div>
+            <div class="conv-preview">${escapeHtml(c.preview || '')}</div>
+          </div>
+          <div class="conv-meta">${c.message_count} msg(s) · ${new Date(c.last_message_at).toLocaleString('pt-BR')}</div>
+        </div>
+        <div class="conv-transcript" id="convTranscript-${i}"></div>
+      </div>`).join('');
+
+    el.querySelectorAll('[data-role="toggle-conv"]').forEach((row) => {
+      row.addEventListener('click', async () => {
+        const box = $('convTranscript-' + row.dataset.idx);
+        const wasOpen = box.classList.contains('open');
+        box.classList.toggle('open');
+        if (wasOpen || box.dataset.loaded) return;
+
+        box.innerHTML = '<div class="msg">Carregando...</div>';
+        const { data: msgs, error: msgErr } = await supa.rpc('master_get_support_conversation', { conv_id: row.dataset.id });
+        if (msgErr) {
+          console.error('Falha ao carregar transcript:', msgErr.message);
+          box.innerHTML = `<div class="msg error">Erro: ${escapeHtml(msgErr.message)}</div>`;
+          return;
+        }
+        renderConvTranscript(box, msgs);
+        box.dataset.loaded = '1';
+      });
+    });
+  }
+
   async function boot() {
     const { data: { session } } = await supa.auth.getSession();
     if (!session) { window.location.href = 'login.html'; return; }
@@ -167,6 +237,8 @@
       window.location.href = 'index.html';
       return;
     }
+
+    loadSupportConversations();
 
     const { data: rows, error } = await supa.rpc('master_list_professionals');
     $('loadingMsg').style.display = 'none';

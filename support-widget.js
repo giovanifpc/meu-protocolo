@@ -13,6 +13,7 @@
   const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';
   const STORAGE_KEY = 'mp_support_chat_v1';
+  const CONV_ID_KEY = 'mp_support_conversation_id';
 
   function escapeHtml(s) {
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -89,6 +90,7 @@
 
   let history = [];
   try { history = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '[]'); } catch { history = []; }
+  let conversationId = sessionStorage.getItem(CONV_ID_KEY) || null;
 
   function persist() {
     try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(-60))); } catch {}
@@ -158,11 +160,9 @@
       const { data: { session } } = await supa.auth.getSession();
       if (!session) throw new Error('Sessão expirada — recarregue a página e faça login de novo.');
 
-      const payloadMessages = history
-        .filter((m) => !m.error)
-        .map((m) => ({ role: m.role, content: m.content }));
-
-      const { data, error } = await supa.functions.invoke('support-chat', { body: { messages: payloadMessages } });
+      const { data, error } = await supa.functions.invoke('support-chat', {
+        body: { conversation_id: conversationId, message: text },
+      });
 
       setTyping(false);
 
@@ -173,6 +173,10 @@
         }
         history.push({ role: 'assistant', content: 'Não consegui responder agora (' + motivo + '). Tenta de novo em instantes ou me manda um e-mail em suporte@meuprotocolo.app.', error: true });
       } else {
+        if (data.conversation_id && data.conversation_id !== conversationId) {
+          conversationId = data.conversation_id;
+          try { sessionStorage.setItem(CONV_ID_KEY, conversationId); } catch {}
+        }
         history.push({ role: 'assistant', content: data.reply });
       }
     } catch (err) {

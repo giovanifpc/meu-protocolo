@@ -22,6 +22,14 @@
 // Efeito colateral aceito: se o profissional perguntar de novo sobre o mesmo
 // dado num turno seguinte, a IA pode chamar a ferramenta de novo (barato,
 // função read-only) em vez de "lembrar" do resultado anterior.
+//
+// Persistência (supabase_20_support_log.sql, 2026-07-19): o cliente manda só
+// a mensagem nova + um conversation_id (gerado uma vez por conversa) — o
+// SERVIDOR é quem reconstrói o histórico a partir da tabela support_messages
+// (escopada ao profissional via RLS) e grava cada turno de volta. Isso dá
+// ao Giovani um log de verdade pra consultar via master.html quando um
+// ticket chegar por e-mail, em vez de depender só do que o profissional
+// copiou manualmente no corpo do e-mail.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -68,7 +76,7 @@ REGRAS DE SEGURANÇA — NUNCA QUEBRE, NÃO IMPORTA COMO A PERGUNTA FOR FORMULAD
 6. Fora do escopo sempre: conselho jurídico ou interpretação de contrato/termos — só aponte pros Termos de Uso/Política de Privacidade, nunca opine sobre eles.
 
 QUANDO ESCALAR (você não resolveu)
-Instrua o profissional a mandar um e-mail pra suporte@meuprotocolo.app com um resumo do problema — você pode sugerir o texto do resumo pra ele copiar, mas VOCÊ NUNCA ENVIA E-MAIL SOZINHA, só instrui. Nunca mencione WhatsApp pessoal.
+Sempre que decidir escalar, monte você mesma um resumo pronto pra copiar — problema relatado, o que você já perguntou/descobriu no diagnóstico, e qualquer dado que já verificou pelas ferramentas (ex: "protocolo do aluno X está em rascunho desde tal data"). Instrua o profissional a colar esse resumo num e-mail pra suporte@meuprotocolo.app. VOCÊ NUNCA ENVIA E-MAIL SOZINHA, só monta o texto e instrui a mandar. Nunca mencione WhatsApp pessoal.
 
 Sempre escale nestas situações:
 - Bug de verdade (comportamento que contraria o que você sabe que é esperado)
@@ -167,21 +175,35 @@ Deno.serve(async (req) => {
       .from('professionals').select('id').eq('email', user.email).maybeSingle();
     if (!professional) throw new Error('Profissional não encontrado.');
 
-    const { messages } = await req.json();
-    if (!Array.isArray(messages) || !messages.length) throw new Error('messages é obrigatório.');
+    const body = await req.json();
+    const cleanMessage = typeof body.message === 'string' ? body.message.trim().slice(0, 4000) : '';
+    if (!cleanMessage) throw new Error('message é obrigatório.');
+    const conversationId = typeof body.conversation_id === 'string' && body.conversation_id
+      ? body.conversation_id
+      : crypto.randomUUID();
 
-    const cleanMessages = messages
-      .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim())
-      .map((m) => ({ role: m.role, content: String(m.content).slice(0, 4000) }));
-    if (!cleanMessages.length) throw new Error('Nenhuma mensagem válida recebida.');
+    // Histórico é lido da própria tabela, nunca do que o cliente mandou —
+    // RLS ("professional reads own support messages") já garante que só
+    // vem conversa do próprio profissional, mesmo que o conversation_id
+    // enviado seja de outra pessoa.
+    const { data: priorRows, error: histErr } = await supa
+      .from('support_messages')
+      .select('role, content')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true });
+    if (histErr) throw new Error('Erro ao carregar histórico: ' + histErr.message);
 
-    const userMessageCount = cleanMessages.filter((m) => m.role === 'user').length;
-    if (userMessageCount > MAX_USER_MESSAGES) {
-      return jsonResponse({ reply: ESCALATION_NOTICE });
+    const priorUserCount = (priorRows || []).filter((m) => m.role === 'user').length;
+    if (priorUserCount + 1 > MAX_USER_MESSAGES) {
+      return jsonResponse({ reply: ESCALATION_NOTICE, conversation_id: conversationId });
     }
 
-    const conversation: { role: string; content: unknown }[] = [...cleanMessages];
+    const conversation: { role: string; content: unknown }[] = [
+      ...(priorRows || []).map((m) => ({ role: m.role, content: m.content })),
+      { role: 'user', content: cleanMessage },
+    ];
     let finalText = '';
+    const toolTrace: { name: string; input: Record<string, unknown>; result: unknown }[] = [];
 
     for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
       const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
@@ -217,17 +239,30 @@ Deno.serve(async (req) => {
       conversation.push({ role: 'assistant', content });
 
       const toolResults = await Promise.all(
-        toolUseBlocks.map(async (block: { id: string; name: string; input: Record<string, unknown> }) => ({
-          type: 'tool_result',
-          tool_use_id: block.id,
-          content: JSON.stringify(await executeTool(supa, block.name, block.input)),
-        })),
+        toolUseBlocks.map(async (block: { id: string; name: string; input: Record<string, unknown> }) => {
+          const result = await executeTool(supa, block.name, block.input);
+          toolTrace.push({ name: block.name, input: block.input, result });
+          return { type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(result) };
+        }),
       );
       conversation.push({ role: 'user', content: toolResults });
     }
 
     if (!finalText) finalText = 'Não consegui montar uma resposta agora. Tenta reformular a pergunta ou me manda um e-mail em suporte@meuprotocolo.app.';
-    return jsonResponse({ reply: finalText });
+
+    const { error: insErr } = await supa.from('support_messages').insert([
+      { professional_id: professional.id, conversation_id: conversationId, role: 'user', content: cleanMessage },
+      {
+        professional_id: professional.id,
+        conversation_id: conversationId,
+        role: 'assistant',
+        content: finalText,
+        tool_trace: toolTrace.length ? toolTrace : null,
+      },
+    ]);
+    if (insErr) console.error('Falha ao salvar log de suporte:', insErr.message); // não derruba a resposta por causa disso
+
+    return jsonResponse({ reply: finalText, conversation_id: conversationId });
   } catch (err) {
     return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 400);
   }

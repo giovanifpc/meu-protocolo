@@ -7,7 +7,7 @@ SaaS B2B2C de gestão para **personal trainers autônomos brasileiros**. O profi
 Produto **totalmente separado da marca Fox Performance** — projetos distintos, sem mistura de dados, marca ou branding.
 
 - **Documento master (planejamento de negócio):** `C:\Users\Giovani\Documents\Meu Ciclo\MEU-PROTOCOLO-MASTER.md` — ler antes de qualquer sessão de desenvolvimento. Decisões estratégicas ali são definições fechadas, não sugestões.
-- **Roadmap pós-desenvolvimento (`roadmap-pos-dev.md`, salvo 2026-07-19, execução ainda não iniciada):** plano de validação com usuários reais (Cliente 0 → Programa Founder → padrões em 3+ relatos → só então evoluir). **Regra que já vale a partir de agora, não só "depois"**: uma vez que o usuário confirmar que o MVP está fechado, o modo de trabalho muda pra congelamento (Fase 1) — só bug/UX, nunca funcionalidade nova por iniciativa própria, mesmo que pareça uma boa ideia. Ver seção própria em "Status atual" pras pendências abertas antes de iniciar.
+- **Roadmap pós-desenvolvimento (`roadmap-pos-dev.md`, salvo 2026-07-19, execução ainda não iniciada):** plano de validação com usuários reais (Cliente 0 → Programa Founder → padrões em 3+ relatos → só então evoluir). **Importante (esclarecido pelo usuário em 2026-07-19): esse roadmap só começa depois que o dev estiver de fato completo — ainda faltam itens de desenvolvimento normal antes disso** (ver "Status atual" pra lista atualizada). Não confundir "salvar no contexto" com "já estamos no modo congelamento" — continuar desenvolvendo normalmente até o usuário sinalizar que o MVP fechou.
 - **Repositório:** https://github.com/giovanifpc/meu-protocolo
 - **Backend:** Supabase (`https://yumqmramxbahkfxsthtt.supabase.co`)
 - **Stack:** HTML + CSS + JS puro (sem framework), Supabase Auth + DB (RLS multi-tenant), Mercado Pago (webhook), Claude API (suporte IA), GitHub Pages
@@ -96,11 +96,12 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 Documento completo em `roadmap-pos-dev.md` — plano de validação com usuários reais (Cliente 0 → Programa Founder de 5-10 profissionais a R$50/mês vitalício → entrevistas → só agir em padrão de 3+ relatos → validar retenção → só então prospecção manual/escala). Usuário pediu explicitamente pra só guardar no contexto agora, começar depois.
 
-**Duas perguntas feitas ao usuário nesta sessão, ainda sem resposta registrada — resolver antes de iniciar a Fase 1 (congelamento) de verdade**:
-1. Os dois módulos construídos nesta mesma sessão (chatbot de suporte + assistente proativo) fecham o MVP planejado, ou falta algo do roadmap técnico?
-2. O item 11 do roadmap técnico (onboarding visual pro aluno) é parte do MVP a terminar antes de congelar, ou já vira backlog sujeito à regra de "3+ clientes pedindo" do novo roadmap?
+**Respondido pelo usuário (2026-07-19): o MVP não está fechado ainda** — o roadmap pós-dev só começa depois que o desenvolvimento normal terminar. Duas coisas concretas ficaram definidas nessa resposta, atualizando o roadmap técnico:
 
-**Ponto já confirmado, sem precisar de mudança de código**: a Fase 4 (Programa Founder) é executável com o `master.html` atual — `master_update_professional` já permite setar `plano`/`valor_customizado` por profissional manualmente, exatamente o mecanismo que o roadmap pede (criar conta Founder sem mexer no fluxo de cobrança).
+1. **Item 11 redefinido**: onboarding do aluno **não é mais** "3-4 telas na primeira abertura" — o usuário teve experiência ruim com esse padrão num app concorrente (Pano Bianco: balões "clique aqui" com texto enorme que ninguém lê). Vira o **mesmo padrão de dica contextual em toast** já usado no assistente proativo do profissional (`assistant-hints.js`) — o aluno abre o app e vai sendo guiado aos poucos, gatilho por gatilho, texto curto, sem parede de texto nem tela de tutorial separada. Ainda não implementado — ver "Próximos passos" abaixo.
+2. **Item novo — guia de instalação do PWA**: hoje `aluno.html` registra o service worker e o manifest, mas não tem nenhum prompt de "instalar o app" — Android já tem um comportamento nativo razoável (evento `beforeinstallprompt`, ainda não interceptado no código pra virar um botão próprio), mas **iOS Safari nunca dispara esse evento** — não existe prompt nativo nenhum lá, precisa de instrução visual própria ("toque em Compartilhar → Adicionar à Tela de Início"). Ainda não implementado.
+
+Ambos ficam como próximo trabalho de desenvolvimento normal (não é o roadmap pós-dev ainda).
 
 ### Assistente proativo (dicas contextuais) implementado (2026-07-19)
 
@@ -443,14 +444,15 @@ Nota: o master doc completo (`MEU-PROTOCOLO-MASTER.md`) só existe no PC do usu�
 8. ~~MD de contexto da IA de suporte~~ — **feito e aprovado (2026-07-18)**: documento final em `contexto-ia-suporte.md`, todas as pendências fechadas. Ver seção própria em "Status atual" abaixo.
 9. ~~Chatbot de suporte via IA pro profissional~~ — **feito e testado em produção (2026-07-19)**: widget flutuante nas 7 telas do painel, Edge Function `support-chat` com tool-calling escopado por tenant. Ver seção "Chatbot de suporte via IA implementado" em "Status atual" acima pro detalhamento.
 10. ~~Onboarding guiado por IA pro profissional~~ — **MVP feito e testado (2026-07-19)**: assistente proativo de dicas contextuais (6 gatilhos determinísticos, zero custo de IA). Ver seção "Assistente proativo (dicas contextuais) implementado" em "Status atual" acima. **Ainda falta**: os gatilhos extras do documento original (descoberta de funcionalidade nunca usada — Sono/Hidratação/Check-ins etc. — muitos nem existem no produto ainda) e a parte de aprendizado adaptativo, deliberadamente adiados até haver uso real. Meta de "<30min sem ajuda" ainda não validada com usuário de verdade.
-11. Onboarding visual pro aluno, 3-4 telas na primeira abertura (item 3) — não confundir com o item 10: esse é pro app do ALUNO (`aluno.html`), o assistente proativo implementado é só pro painel do PROFISSIONAL. Ainda não iniciado.
+11. **Redefinido (2026-07-19): não é mais "3-4 telas"** — o usuário rejeitou esse padrão por experiência ruim com um concorrente (balões de texto enorme que ninguém lê). Vira dica em toast contextual pro aluno, mesmo padrão do assistente proativo do profissional (`assistant-hints.js`) — guiado aos poucos, texto curto, sem tela de tutorial separada. Não confundir com o item 10: esse é pro app do ALUNO (`aluno.html`), o assistente já implementado é só pro painel do PROFISSIONAL. Ainda não iniciado.
+12. **Item novo (2026-07-19): guia de instalação do PWA.** Android já tem `beforeinstallprompt` disponível no navegador mas o código não intercepta esse evento pra virar um botão próprio ainda. iOS Safari não dispara esse evento — precisa de instrução visual dedicada (passo a passo "Compartilhar → Adicionar à Tela de Início"). Ainda não iniciado.
 
 **Fase D — Crescimento (pode esperar mais)**
-12. Upload de vídeo próprio de execução de exercício, além dos GIFs da biblioteca (item 10)
-13. Ranking entre alunos — por profissional, critérios fixos (frequência + medalhas + carga), profissional ativa pra todos os alunos dele (item 11)
-14. Programa de indicação — link rastreável, 1 mês de desconto ou crédito (item 16)
-15. 2FA + plano de contingência de acesso no painel master (item 14)
-16. Mensageria dentro do próprio app entre profissional e aluno (adiada deliberadamente em sessão anterior — hoje usa WhatsApp/push)
+13. Upload de vídeo próprio de execução de exercício, além dos GIFs da biblioteca (item 10)
+14. Ranking entre alunos — por profissional, critérios fixos (frequência + medalhas + carga), profissional ativa pra todos os alunos dele (item 11)
+15. Programa de indicação — link rastreável, 1 mês de desconto ou crédito (item 16)
+16. 2FA + plano de contingência de acesso no painel master (item 14)
+17. Mensageria dentro do próprio app entre profissional e aluno (adiada deliberadamente em sessão anterior — hoje usa WhatsApp/push)
 
 **Não-técnico (do usuário, não do Code)**: estrutura de recebimento (MEI), registro da marca no INPI, pesquisa a fundo do concorrente Athlo (athloapp.eu), alinhar termos com o cliente 0.
 

@@ -7,6 +7,7 @@ SaaS B2B2C de gestão para **personal trainers autônomos brasileiros**. O profi
 Produto **totalmente separado da marca Fox Performance** — projetos distintos, sem mistura de dados, marca ou branding.
 
 - **Documento master (planejamento de negócio):** `C:\Users\Giovani\Documents\Meu Ciclo\MEU-PROTOCOLO-MASTER.md` — ler antes de qualquer sessão de desenvolvimento. Decisões estratégicas ali são definições fechadas, não sugestões.
+- **Roadmap pós-desenvolvimento (`roadmap-pos-dev.md`, salvo 2026-07-19, execução ainda não iniciada):** plano de validação com usuários reais (Cliente 0 → Programa Founder → padrões em 3+ relatos → só então evoluir). **Regra que já vale a partir de agora, não só "depois"**: uma vez que o usuário confirmar que o MVP está fechado, o modo de trabalho muda pra congelamento (Fase 1) — só bug/UX, nunca funcionalidade nova por iniciativa própria, mesmo que pareça uma boa ideia. Ver seção própria em "Status atual" pras pendências abertas antes de iniciar.
 - **Repositório:** https://github.com/giovanifpc/meu-protocolo
 - **Backend:** Supabase (`https://yumqmramxbahkfxsthtt.supabase.co`)
 - **Stack:** HTML + CSS + JS puro (sem framework), Supabase Auth + DB (RLS multi-tenant), Mercado Pago (webhook), Claude API (suporte IA), GitHub Pages
@@ -89,7 +90,17 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
-Última atualização: 2026-07-19 (PC, sessão local — implementou e testou ponta a ponta o chatbot de suporte via IA, o log de conversas visível no master, e o assistente proativo de dicas contextuais (itens 9/10/11 da Fase C). Ver as duas seções logo abaixo pro detalhamento).
+Última atualização: 2026-07-19 (PC, sessão local — implementou e testou ponta a ponta o chatbot de suporte via IA, o log de conversas visível no master, o assistente proativo de dicas contextuais (itens 9/10/11 da Fase C), e salvou o roadmap pós-desenvolvimento enviado pelo usuário. Ver as três seções logo abaixo pro detalhamento).
+
+### Roadmap pós-desenvolvimento salvo, execução ainda não iniciada (2026-07-19)
+
+Documento completo em `roadmap-pos-dev.md` — plano de validação com usuários reais (Cliente 0 → Programa Founder de 5-10 profissionais a R$50/mês vitalício → entrevistas → só agir em padrão de 3+ relatos → validar retenção → só então prospecção manual/escala). Usuário pediu explicitamente pra só guardar no contexto agora, começar depois.
+
+**Duas perguntas feitas ao usuário nesta sessão, ainda sem resposta registrada — resolver antes de iniciar a Fase 1 (congelamento) de verdade**:
+1. Os dois módulos construídos nesta mesma sessão (chatbot de suporte + assistente proativo) fecham o MVP planejado, ou falta algo do roadmap técnico?
+2. O item 11 do roadmap técnico (onboarding visual pro aluno) é parte do MVP a terminar antes de congelar, ou já vira backlog sujeito à regra de "3+ clientes pedindo" do novo roadmap?
+
+**Ponto já confirmado, sem precisar de mudança de código**: a Fase 4 (Programa Founder) é executável com o `master.html` atual — `master_update_professional` já permite setar `plano`/`valor_customizado` por profissional manualmente, exatamente o mecanismo que o roadmap pede (criar conta Founder sem mexer no fluxo de cobrança).
 
 ### Assistente proativo (dicas contextuais) implementado (2026-07-19)
 

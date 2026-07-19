@@ -59,6 +59,8 @@
   .exercise-row .ex-meta { color:var(--muted); font-size:12px; }
   .exercise-row-edit { flex-wrap:wrap; }
   .ex-name-col { font-weight:600; flex:1 1 100%; margin-bottom:4px; }
+  .video-link-btn { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; margin-left:6px; padding:0; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--faint); cursor:pointer; vertical-align:-6px; }
+  .video-link-btn.linked { background:#E7F7F1; border-color:var(--accent); color:var(--accent-dim); }
   .tecnica-chip { display:inline-block; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.3px; color:var(--primary); background:rgba(45,107,228,.1); padding:2px 8px; border-radius:6px; margin-bottom:4px; }
   .ex-note { font-size:11.5px; color:var(--muted); flex:1 1 100%; margin:-2px 0 4px; }
   .ex-fields { display:flex; align-items:center; gap:4px; }
@@ -355,6 +357,23 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="videoModalOverlay">
+    <div class="modal-card">
+      <h3>Vídeo de execução</h3>
+      <p>Cole o link do YouTube com você executando <strong id="videoModalExName"></strong>. Vale pra todos os seus alunos que tiverem esse exercício em algum treino — substitui o GIF da biblioteca só pra eles.</p>
+      <div class="field">
+        <label>Link do YouTube</label>
+        <input type="url" id="videoUrlInput" placeholder="https://www.youtube.com/watch?v=...">
+      </div>
+      <div id="videoModalMsg" class="msg" style="display:none;font-size:12px;color:var(--danger);margin:-8px 0 12px;"></div>
+      <div class="modal-actions">
+        <button class="btn" id="videoModalSaveBtn" type="button">Salvar</button>
+        <button class="btn danger" id="videoModalRemoveBtn" type="button" style="display:none;">Remover vínculo</button>
+        <button class="btn secondary" id="videoModalCancelBtn" type="button">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
 <script>
   const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';
@@ -511,6 +530,7 @@
     await loadMuscleGroups();
     await loadProtocolsByStudent();
     await loadTemplates();
+    await loadExerciseVideos();
 
     const params = new URLSearchParams(window.location.search);
     const preselect = params.get('student_id');
@@ -523,6 +543,14 @@
 
   let studentsById = {};
   let latestProtocolByStudent = {};
+  let exerciseVideos = {};
+
+  async function loadExerciseVideos() {
+    const { data, error } = await supa.from('professional_exercise_videos').select('exercise_id, youtube_url').eq('professional_id', professional.id);
+    if (error || !data) return;
+    exerciseVideos = {};
+    data.forEach(v => { exerciseVideos[v.exercise_id] = v.youtube_url; });
+  }
 
   async function loadStudents() {
     const { data, error } = await supa.from('students').select('*').eq('professional_id', professional.id).order('nome');
@@ -1004,6 +1032,67 @@
     $('cardioModalOverlay').classList.remove('show');
   });
 
+  let pendingVideoExerciseId = null;
+
+  function extractYoutubeId(url) {
+    const m = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/);
+    return m ? m[1] : null;
+  }
+
+  function openVideoModal(exerciseId, exerciseNome) {
+    pendingVideoExerciseId = exerciseId;
+    $('videoModalExName').textContent = exerciseNome;
+    $('videoUrlInput').value = exerciseVideos[exerciseId] || '';
+    $('videoModalMsg').style.display = 'none';
+    $('videoModalRemoveBtn').style.display = exerciseVideos[exerciseId] ? 'block' : 'none';
+    $('videoModalOverlay').classList.add('show');
+  }
+
+  $('videoModalCancelBtn').addEventListener('click', () => {
+    pendingVideoExerciseId = null;
+    $('videoModalOverlay').classList.remove('show');
+  });
+
+  $('videoModalSaveBtn').addEventListener('click', async () => {
+    const url = $('videoUrlInput').value.trim();
+    if (!extractYoutubeId(url)) {
+      $('videoModalMsg').textContent = 'Link do YouTube inválido — cole a URL completa do vídeo.';
+      $('videoModalMsg').style.display = 'block';
+      return;
+    }
+    const { error } = await supa.from('professional_exercise_videos').upsert({
+      professional_id: professional.id,
+      exercise_id: pendingVideoExerciseId,
+      youtube_url: url,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'professional_id,exercise_id' });
+    if (error) {
+      $('videoModalMsg').textContent = 'Erro ao salvar: ' + error.message;
+      $('videoModalMsg').style.display = 'block';
+      return;
+    }
+    exerciseVideos[pendingVideoExerciseId] = url;
+    pendingVideoExerciseId = null;
+    $('videoModalOverlay').classList.remove('show');
+    renderWorkouts();
+    toast('Vídeo vinculado.');
+  });
+
+  $('videoModalRemoveBtn').addEventListener('click', async () => {
+    const { error } = await supa.from('professional_exercise_videos').delete()
+      .eq('professional_id', professional.id).eq('exercise_id', pendingVideoExerciseId);
+    if (error) {
+      $('videoModalMsg').textContent = 'Erro ao remover: ' + error.message;
+      $('videoModalMsg').style.display = 'block';
+      return;
+    }
+    delete exerciseVideos[pendingVideoExerciseId];
+    pendingVideoExerciseId = null;
+    $('videoModalOverlay').classList.remove('show');
+    renderWorkouts();
+    toast('Vínculo removido.');
+  });
+
   $('cardioModalConfirmBtn').addEventListener('click', () => {
     const w = currentProtocol.workouts.find((x) => x._uid === pendingCardioWorkoutId);
     $('cardioModalOverlay').classList.remove('show');
@@ -1105,6 +1194,13 @@
     return chip + note;
   }
 
+  function renderVideoIconBtn(ex) {
+    if (!ex.exercise_id) return '';
+    const linked = !!exerciseVideos[ex.exercise_id];
+    const title = linked ? 'Vídeo do YouTube vinculado — editar' : 'Vincular vídeo do YouTube';
+    return `<button type="button" class="video-link-btn ${linked ? 'linked' : ''}" data-role="video-link" data-exercise-id="${ex.exercise_id}" data-exercise-nome="${escapeHtml(ex.nome)}" title="${title}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></button>`;
+  }
+
   function renderCardioExerciseRow(w, ex, i) {
     const tipsHtml = (ex.tips && ex.tips.length) ? `<div class="ex-note">${ex.tips.map((t) => escapeHtml(t)).join(' · ')}</div>` : '';
     const noteHtml = ex.note ? `<div class="ex-note">${escapeHtml(ex.note)}</div>` : '';
@@ -1126,7 +1222,7 @@
       const wk = weeks[0];
       return `
         <div class="exercise-row exercise-row-edit">
-          <div class="ex-name-col">${renderTecnicaAndNote(ex)}${escapeHtml(ex.nome)}</div>
+          <div class="ex-name-col">${renderTecnicaAndNote(ex)}${escapeHtml(ex.nome)}${renderVideoIconBtn(ex)}</div>
           <div class="ex-fields">
             <input type="number" min="1" class="ex-field-input" value="${escapeHtml(wk.sets)}" data-role="wk-sets" data-workout-id="${w._uid}" data-idx="${i}" data-week="0" title="Séries">
             <span class="ex-field-x">×</span>
@@ -1140,7 +1236,7 @@
     return `
       <div class="exercise-row-multi">
         <div class="ex-name-row">
-          <div class="ex-name-col">${renderTecnicaAndNote(ex)}${escapeHtml(ex.nome)}</div>
+          <div class="ex-name-col">${renderTecnicaAndNote(ex)}${escapeHtml(ex.nome)}${renderVideoIconBtn(ex)}</div>
           <button class="btn danger small" data-role="remove-exercise" data-workout-id="${w._uid}" data-idx="${i}">×</button>
         </div>
         <div class="week-grid">
@@ -1219,6 +1315,9 @@
     });
     container.querySelectorAll('[data-role="add-cardio"]').forEach(btn => {
       btn.addEventListener('click', () => openCardioModal(btn.dataset.workoutId));
+    });
+    container.querySelectorAll('[data-role="video-link"]').forEach(btn => {
+      btn.addEventListener('click', () => openVideoModal(Number(btn.dataset.exerciseId), btn.dataset.exerciseNome));
     });
     container.querySelectorAll('[data-role="remove-exercise"]').forEach(btn => {
       btn.addEventListener('click', (e) => {

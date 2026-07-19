@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://drive.google.com https://*.supabase.co; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co https://o4511757250199552.ingest.us.sentry.io; object-src 'none'; base-uri 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://drive.google.com https://img.youtube.com https://*.supabase.co; frame-src https://www.youtube-nocookie.com; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co https://o4511757250199552.ingest.us.sentry.io; object-src 'none'; base-uri 'self';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#F8F9FA">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -670,6 +670,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   let student = null;
   let protocol = null;
   let history = [];
+  let exerciseVideos = {};
   let nutritionGuidance = null;
   let assessments = [];
   let anamnese = null;
@@ -806,6 +807,13 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         .order('completed_at', { ascending: false });
       history = hist || [];
     }
+
+    const { data: videos } = await supa
+      .from('professional_exercise_videos')
+      .select('exercise_id, youtube_url')
+      .eq('professional_id', student.professional_id);
+    exerciseVideos = {};
+    (videos || []).forEach(v => { exerciseVideos[v.exercise_id] = v.youtube_url; });
 
     const { data: guidance } = await supa
       .from('nutrition_guidance')
@@ -1543,6 +1551,17 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     });
   }
 
+  /* ---- Vídeo próprio do profissional (YouTube), quando vinculado ao exercício ---- */
+  function youtubeIdFor(ex) {
+    const url = ex.exercise_id ? exerciseVideos[ex.exercise_id] : null;
+    if (!url) return null;
+    const m = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/);
+    return m ? m[1] : null;
+  }
+  function youtubeEmbedMarkup(videoId) {
+    return `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}" title="Vídeo de execução" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%;height:100%;border:0;"></iframe>`;
+  }
+
   /* ---- MÍDIA DE EXERCÍCIO (fallback entre variações do link do Drive) ---- */
   function driveFileId(url) {
     const text = String(url || '');
@@ -1617,6 +1636,8 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   }
   function mediaThumb(ex) {
     if (isCardioExercise(ex)) return `<span class="ph">${ICONS.activity}</span>`;
+    const ytId = youtubeIdFor(ex);
+    if (ytId) return mediaImgMarkup(`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`, '', `<span class="ph">${ICONS.dumbbell}</span>`);
     if (ex.media) return mediaImgMarkup(ex.media, '', `<span class="ph">${ICONS.dumbbell}</span>`);
     return `<span class="ph">${ICONS.dumbbell}</span>`;
   }
@@ -1679,9 +1700,12 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 
     const cfg = exerciseWeekConfig(ex);
 
-    const media = ex.media
-      ? mediaImgMarkup(ex.media, ex.nome, `<div class="media-ph"><span class="ph-ico">${ICONS.dumbbell}</span>Vídeo indisponível.</div>`)
-      : `<div class="media-ph"><span class="ph-ico">${ICONS.dumbbell}</span>Vídeo em breve.</div>`;
+    const ytId = youtubeIdFor(ex);
+    const media = ytId
+      ? youtubeEmbedMarkup(ytId)
+      : ex.media
+        ? mediaImgMarkup(ex.media, ex.nome, `<div class="media-ph"><span class="ph-ico">${ICONS.dumbbell}</span>Vídeo indisponível.</div>`)
+        : `<div class="media-ph"><span class="ph-ico">${ICONS.dumbbell}</span>Vídeo em breve.</div>`;
 
     const setsHtml = sd.sets.map((set,si) => `
       <div class="set-row ${set.done?'done':''}" id="setRow${si}">

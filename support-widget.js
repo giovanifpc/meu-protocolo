@@ -19,6 +19,8 @@
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
   const style = document.createElement('style');
   style.textContent = `
     #supportFab { position:fixed; right:16px; bottom:20px; width:52px; height:52px; border-radius:50%; background:var(--primary,#2D6BE4); color:#fff; border:none; box-shadow:0 8px 20px -6px rgba(20,30,45,.4); display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:500; transition:transform .15s ease; }
@@ -156,7 +158,6 @@
     setTyping(true);
 
     try {
-      const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       const { data: { session } } = await supa.auth.getSession();
       if (!session) throw new Error('Sessão expirada — recarregue a página e faça login de novo.');
 

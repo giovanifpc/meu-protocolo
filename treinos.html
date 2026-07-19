@@ -11,6 +11,7 @@
 <script src="https://js.sentry-cdn.com/dd3ca3ee7a720284b2a9bf8240b29158.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="support-widget.js" defer></script>
+<script src="assistant-hints.js" defer></script>
 <style>
   :root {
     --bg:#F8F9FA; --primary:#2D6BE4; --accent:#1E8C64; --accent-dim:#146B4D; --text:#1E2A3A;
@@ -362,6 +363,7 @@
   let viewMode = 'none'; // 'none' | 'edit' | 'wizard'
   let creationMode = null; // null | 'manual' | 'ia' — qual botão de criação está aberto (dropdown)
   let creationConfirmed = false; // já resolveu o modal "o que fazer com o treino atual" nesta sessão de criação?
+  let lastCreationSource = null; // 'manual' | 'ia' — setado só no momento em que o CONTEÚDO entra (geração da IA bem-sucedida, ou modo manual/template/duplicação), usado pra decidir a coluna `origem` só no insert de um protocolo novo
   let stashedProtocol = null; // snapshot do que estava sendo mostrado antes de abrir a criação, pra restaurar se fechar sem salvar
   let stashedViewMode = 'none';
   let pendingCommitAction = null; // função a rodar depois que o modal "o que fazer com o treino atual" for resolvido
@@ -563,6 +565,7 @@
     const t = templates.find(x => x.id === $('templateSelect').value);
     if (!t) return;
     if (currentProtocol.workouts.length && !confirm('Isso substitui os treinos que você já montou aqui (ainda não salvos). Continuar?')) return;
+    lastCreationSource = 'manual';
     currentProtocol.titulo = t.titulo;
     currentProtocol.periodizacao = t.periodizacao || 'manual';
     currentProtocol.duracao_semanas = t.duracao_semanas || null;
@@ -625,6 +628,7 @@
     if (!source) return;
     if (currentProtocol.workouts.length && !confirm('Isso substitui os treinos que você já montou aqui (ainda não salvos). Continuar?')) return;
 
+    lastCreationSource = 'manual';
     currentProtocol.titulo = source.titulo + ' (cópia)';
     currentProtocol.periodizacao = source.periodizacao || 'manual';
     currentProtocol.duracao_semanas = source.duracao_semanas || null;
@@ -715,6 +719,7 @@
       workouts.push({ _uid: uid(), id: w.id || String.fromCharCode(65 + workouts.length), name: w.name, exercises: sortCardioLast(exercises) });
     }
 
+    lastCreationSource = 'ia';
     currentProtocol.titulo = data.titulo || currentProtocol.titulo;
     currentProtocol.periodizacao = periodizacao;
     currentProtocol.duracao_semanas = duracaoSemanas;
@@ -912,6 +917,7 @@
       viewMode = 'wizard';
       await loadWizardAnamnese(currentProtocol.student_id);
     } else {
+      lastCreationSource = 'manual';
       viewMode = 'edit';
       renderProtocol();
     }
@@ -1320,6 +1326,9 @@
     if (currentProtocol.id) {
       result = await supa.from('training_protocols').update(payload).eq('id', currentProtocol.id).select().single();
     } else {
+      // origem só entra no insert — nunca sobrescrever a origem original
+      // de um protocolo já existente numa edição posterior.
+      payload.origem = lastCreationSource === 'ia' ? 'ia' : 'manual';
       result = await supa.from('training_protocols').insert(payload).select().single();
     }
 
@@ -1339,6 +1348,7 @@
     }
     renderProtocol();
     toast(status === 'publicado' ? 'Protocolo publicado para o aluno.' : 'Rascunho salvo.');
+    window.__checkAssistantHint && window.__checkAssistantHint();
   }
 
   $('saveDraftBtn').addEventListener('click', () => commitCreation(() => saveProtocol('rascunho')));

@@ -75,6 +75,22 @@
         <button class="btn secondary small" id="downloadBtn">Baixar .txt</button>
       </div>
     </div>
+
+    <div class="card" id="aiCard" style="display:none;">
+      <h2>Interpretação com IA</h2>
+      <div id="aiLock" class="msg" style="display:none;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;">Interpretação automática dos dados do aluno é exclusiva do plano Elite. Faça upgrade pra liberar essa análise.</div>
+      <div id="aiIdle">
+        <p style="font-size:13px;color:var(--muted);margin:0 0 12px;">Gera uma leitura em linguagem natural cruzando adesão, evolução física/carga e sinais de água/sono do aluno.</p>
+        <button class="btn" id="interpretBtn">Interpretar com IA</button>
+      </div>
+      <div id="aiResultWrap" style="display:none;">
+        <div id="aiResult" style="white-space:pre-wrap;font-size:13.5px;line-height:1.6;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:14px;"></div>
+        <div class="actions-row">
+          <button class="btn secondary small" id="aiCopyBtn">Copiar</button>
+          <button class="btn secondary small" id="interpretAgainBtn">Gerar de novo</button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <nav class="bottom-nav">
@@ -124,6 +140,10 @@
   $('studentSelect').addEventListener('change', (e) => {
     $('generateBtn').disabled = !e.target.value;
     $('outputCard').style.display = 'none';
+    $('aiCard').style.display = e.target.value ? 'block' : 'none';
+    $('aiResultWrap').style.display = 'none';
+    $('aiIdle').style.display = professional.plan === 'elite' ? 'block' : 'none';
+    $('aiLock').style.display = professional.plan === 'elite' ? 'none' : 'block';
   });
 
   function fmtDate(d) {
@@ -243,6 +263,49 @@
     a.download = `relatorio-${studentName.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().slice(0,10)}.txt`;
     a.click();
     URL.revokeObjectURL(url);
+  });
+
+  async function runInterpretation() {
+    const studentId = $('studentSelect').value;
+    if (!studentId) return;
+    $('interpretBtn').disabled = true;
+    $('interpretBtn').textContent = 'Interpretando...';
+    $('interpretAgainBtn').disabled = true;
+    $('interpretAgainBtn').textContent = 'Gerando...';
+
+    const { data, error } = await supa.functions.invoke('interpret-report', {
+      body: { student_id: studentId },
+    });
+
+    $('interpretBtn').disabled = false;
+    $('interpretBtn').textContent = 'Interpretar com IA';
+    $('interpretAgainBtn').disabled = false;
+    $('interpretAgainBtn').textContent = 'Gerar de novo';
+
+    if (error || !data || data.error) {
+      let motivo = data?.error || error?.message || 'erro desconhecido';
+      if (error?.context?.json) {
+        try { const body = await error.context.json(); if (body?.error) motivo = body.error; } catch {}
+      }
+      toast('Erro ao interpretar: ' + motivo);
+      return;
+    }
+
+    $('aiResult').textContent = data.interpretation;
+    $('aiIdle').style.display = 'none';
+    $('aiResultWrap').style.display = 'block';
+  }
+
+  $('interpretBtn').addEventListener('click', runInterpretation);
+  $('interpretAgainBtn').addEventListener('click', runInterpretation);
+
+  $('aiCopyBtn').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText($('aiResult').textContent);
+      toast('Copiado.');
+    } catch (e) {
+      toast('Não foi possível copiar.');
+    }
   });
 
   boot();

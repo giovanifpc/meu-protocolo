@@ -276,6 +276,32 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .nutri-card{background:var(--card-grad);border:1px solid rgba(20,30,45,.04);box-shadow:var(--shadow-card);border-radius:var(--radius);padding:18px;margin-bottom:16px}
 .nutri-text{font-size:14px;line-height:1.6;color:var(--text);white-space:pre-wrap}
 
+/* CHECK-IN DIÁRIO (água + sono) */
+.water-strip{cursor:pointer}
+.water-strip .ws-row{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700;color:var(--text)}
+.water-strip .ws-left{display:flex;align-items:center;gap:8px}
+.water-strip .ws-left svg{width:18px;height:18px;color:var(--primary)}
+.water-strip .ws-val{color:var(--primary)}
+.water-strip .ws-val small{color:var(--muted);font-weight:600}
+.water-bar{height:6px;background:var(--elev);border-radius:6px;overflow:hidden;margin-top:10px}
+.water-fill{height:100%;background:linear-gradient(90deg,var(--primary-dim),var(--primary));border-radius:6px;transition:.5s}
+
+.checkin-overlay{position:fixed;inset:0;z-index:550;background:rgba(15,20,28,.6);display:none;align-items:center;justify-content:center;padding:24px}
+.checkin-overlay.show{display:flex}
+.checkin-card{width:100%;max-width:360px;background:var(--card);border-radius:var(--radius-lg);padding:24px 22px;box-shadow:var(--shadow-pop)}
+.checkin-card h3{font-size:18px;font-weight:800;text-align:center;margin-bottom:4px}
+.checkin-card .ci-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:16px}
+.checkin-card .ci-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px}
+.ci-choice-row{display:flex;gap:8px}
+.ci-choice{flex:1;padding:12px 4px;border-radius:12px;border:2px solid var(--line);background:var(--card-2);color:var(--text);font-size:22px;cursor:pointer;font-family:var(--font)}
+.ci-choice.selected{border-color:var(--primary);background:rgba(45,107,228,.06)}
+.ci-choice small{display:block;font-size:10.5px;margin-top:4px;color:var(--muted);font-weight:600}
+.ci-input-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.ci-input-row input{flex:1;background:var(--card-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:15px;color:var(--text);font-family:var(--font);text-align:center}
+.ci-input-row span{font-size:13px;color:var(--muted);font-weight:700}
+.ci-quick-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.ci-quick-btn{flex:1;min-width:64px;padding:8px 4px;border-radius:9px;border:1px solid var(--line);background:var(--card-2);color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)}
+
 /* CONSENTIMENTO LGPD (primeiro acesso) */
 .consent-gate{position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
 .consent-card{width:100%;max-width:400px;background:var(--card-grad);border:1px solid rgba(20,30,45,.05);box-shadow:var(--shadow-pop);border-radius:var(--radius-lg);padding:28px 24px}
@@ -561,6 +587,51 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   </div>
 </div>
 
+<!-- ===== ÁGUA DO DIA ===== -->
+<div class="checkin-overlay" id="waterOverlay">
+  <div class="checkin-card">
+    <h3>Água do dia</h3>
+    <p class="ci-sub" id="waterRecText">—</p>
+    <div class="ci-input-row">
+      <input type="number" id="waterInput" placeholder="0" inputmode="numeric">
+      <span>ml</span>
+    </div>
+    <div class="ci-quick-row">
+      <button type="button" class="ci-quick-btn" onclick="addWater(200)">+200ml</button>
+      <button type="button" class="ci-quick-btn" onclick="addWater(300)">+300ml</button>
+      <button type="button" class="ci-quick-btn" onclick="addWater(500)">+500ml</button>
+      <button type="button" class="ci-quick-btn" onclick="addWater(750)">+750ml</button>
+    </div>
+    <div class="crop-actions">
+      <button class="btn btn-ghost" type="button" onclick="closeWaterModal()">Cancelar</button>
+      <button class="btn btn-primary" type="button" onclick="saveWater()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CHECK-IN DE SONO (ao abrir o app) ===== -->
+<div class="checkin-overlay" id="sleepOverlay">
+  <div class="checkin-card">
+    <h3>Bom dia!</h3>
+    <p class="ci-sub">Antes de começar, conta como foi seu sono.</p>
+    <div class="ci-label">Hoje dormi</div>
+    <div class="ci-choice-row" id="sleepQualityChoices">
+      <button type="button" class="ci-choice" onclick="selectSleepQuality(this,'bem')">🙂<small>Bem</small></button>
+      <button type="button" class="ci-choice" onclick="selectSleepQuality(this,'mal')">😟<small>Mal</small></button>
+    </div>
+    <div class="ci-label">Duração do sono</div>
+    <div class="ci-choice-row" id="sleepDurationChoices">
+      <button type="button" class="ci-choice" onclick="selectSleepDuration(this,'menos6')">😴<small>- 6h</small></button>
+      <button type="button" class="ci-choice" onclick="selectSleepDuration(this,'6a8')">🙂<small>6-8h</small></button>
+      <button type="button" class="ci-choice" onclick="selectSleepDuration(this,'mais8')">🔥<small>+ 8h</small></button>
+    </div>
+    <div class="crop-actions" style="margin-top:18px">
+      <button class="btn btn-ghost" type="button" onclick="skipSleepCheckin()">Agora não</button>
+      <button class="btn btn-primary" id="sleepConfirmBtn" type="button" onclick="saveSleepCheckin()" disabled>Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -593,6 +664,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     spiral: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`,
     trophy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 4H4.5a2.5 2.5 0 0 0 0 5H7"/><path d="M17 4h2.5a2.5 2.5 0 0 1 0 5H17"/></svg>`,
     activity: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
+    droplet: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`,
   };
 
   let student = null;
@@ -602,6 +674,9 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   let assessments = [];
   let anamnese = null;
   let notifications = [];
+  let todayCheckin = null; // linha de student_checkins de hoje, ou null se ainda não existe
+  let sleepQualitySel = null;
+  let sleepDurationSel = null;
   let state = { workoutIndex:0, currentExercise:0, sessionData:[], startTime:null, restInterval:null, restRemaining:0, restTotal:0, rating:null };
 
   function toast(msg, isHtml) {
@@ -762,8 +837,11 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     notifications = notifs || [];
     updateNotifBadge();
 
+    await loadTodayCheckin();
+
     goTab('home');
     armBackGuard();
+    maybeShowSleepModal();
   }
 
   function updateNotifBadge() {
@@ -1265,14 +1343,114 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     toast('Anamnese salva.');
   });
 
+  /* ---- CHECK-IN DIÁRIO (água + sono) ----
+     Coleta de dados do aluno — pré-requisito pra interpretação de relatório
+     por IA (Elite). Uma linha por dia em student_checkins, upsert. */
+  function todayKey() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  function waterGoalMl() {
+    const last = assessments.length ? assessments[assessments.length - 1] : null;
+    return last && last.peso_kg ? Math.round(last.peso_kg * 35) : 2000;
+  }
+
+  const SLEEP_DURATION_LABEL = { menos6: '- 6h', '6a8': '6-8h', mais8: '+ 8h' };
+  function waterSummaryText() {
+    const ml = todayCheckin?.water_ml || 0;
+    return ml >= 1000 ? (ml / 1000).toFixed(1).replace('.0', '') + 'L' : `${ml}ml`;
+  }
+  function sleepSummaryText() {
+    return todayCheckin?.sleep_duration ? SLEEP_DURATION_LABEL[todayCheckin.sleep_duration] : '—';
+  }
+
+  async function loadTodayCheckin() {
+    const { data } = await supa.from('student_checkins').select('*').eq('student_id', student.id).eq('date_key', todayKey()).maybeSingle();
+    todayCheckin = data || null;
+  }
+
+  async function upsertCheckin(fields) {
+    const payload = { student_id: student.id, date_key: todayKey(), ...fields };
+    const { data, error } = await supa.from('student_checkins').upsert(payload, { onConflict: 'student_id,date_key' }).select().single();
+    if (error) { toast('Erro ao salvar: ' + error.message); return null; }
+    todayCheckin = data;
+    return data;
+  }
+
+  function refreshCheckinViews() {
+    if ($('home').classList.contains('active')) buildHome();
+    if ($('nutri').classList.contains('active')) buildNutri();
+  }
+
+  function openWaterModal() {
+    $('waterInput').value = todayCheckin?.water_ml || '';
+    $('waterRecText').textContent = `Meta recomendada pra você: ${waterGoalMl()}ml`;
+    $('waterOverlay').classList.add('show');
+  }
+  function closeWaterModal() { $('waterOverlay').classList.remove('show'); }
+  function addWater(ml) {
+    const inp = $('waterInput');
+    inp.value = (parseInt(inp.value) || 0) + ml;
+  }
+  async function saveWater() {
+    const ml = parseInt($('waterInput').value) || 0;
+    await upsertCheckin({ water_ml: ml });
+    closeWaterModal();
+    toast('Água registrada.');
+    refreshCheckinViews();
+  }
+
+  function selectSleepQuality(btn, val) {
+    sleepQualitySel = val;
+    document.querySelectorAll('#sleepQualityChoices .ci-choice').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    $('sleepConfirmBtn').disabled = !(sleepQualitySel && sleepDurationSel);
+  }
+  function selectSleepDuration(btn, val) {
+    sleepDurationSel = val;
+    document.querySelectorAll('#sleepDurationChoices .ci-choice').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    $('sleepConfirmBtn').disabled = !(sleepQualitySel && sleepDurationSel);
+  }
+  async function saveSleepCheckin() {
+    if (!(sleepQualitySel && sleepDurationSel)) return;
+    await upsertCheckin({ sleep_quality: sleepQualitySel, sleep_duration: sleepDurationSel });
+    $('sleepOverlay').classList.remove('show');
+    toast('Sono registrado.');
+    refreshCheckinViews();
+  }
+  function skipSleepCheckin() {
+    try { sessionStorage.setItem('mp_sleep_skip_' + todayKey(), '1'); } catch {}
+    $('sleepOverlay').classList.remove('show');
+  }
+  function maybeShowSleepModal() {
+    if (todayCheckin && todayCheckin.sleep_quality) return;
+    try { if (sessionStorage.getItem('mp_sleep_skip_' + todayKey())) return; } catch {}
+    sleepQualitySel = null;
+    sleepDurationSel = null;
+    $('sleepConfirmBtn').disabled = true;
+    document.querySelectorAll('#sleepOverlay .ci-choice').forEach(b => b.classList.remove('selected'));
+    $('sleepOverlay').classList.add('show');
+  }
+
   /* ---- NUTRI ---- */
   function buildNutri() {
     const area = $('nutriContent');
+    const waterHtml = `
+      <div class="nutri-card water-strip" onclick="openWaterModal()">
+        <div class="ws-row">
+          <div class="ws-left">${ICONS.droplet}<span>Água do dia</span></div>
+          <div class="ws-val">${waterSummaryText()} <small>/ ${waterGoalMl()}ml</small></div>
+        </div>
+        <div class="water-bar"><div class="water-fill" style="width:${Math.min(100, Math.round((todayCheckin?.water_ml || 0) / waterGoalMl() * 100))}%"></div></div>
+      </div>
+    `;
     if (!nutritionGuidance || (!nutritionGuidance.orientacao && !nutritionGuidance.pdf_path)) {
-      area.innerHTML = `<div class="empty-state"><div class="es-ico">${ICONS.leaf}</div><div class="es-txt">Sua orientação nutricional ainda não foi configurada.<br>Assim que seu personal disponibilizar, ela aparecerá aqui.</div></div>`;
+      area.innerHTML = waterHtml + `<div class="empty-state"><div class="es-ico">${ICONS.leaf}</div><div class="es-txt">Sua orientação nutricional ainda não foi configurada.<br>Assim que seu personal disponibilizar, ela aparecerá aqui.</div></div>`;
       return;
     }
-    area.innerHTML = `
+    area.innerHTML = waterHtml + `
       <div class="nutri-card">
         <div class="section-label" style="margin-top:0">Orientação atual</div>
         <div class="nutri-text">${nutritionGuidance.orientacao ? escapeHtml(nutritionGuidance.orientacao) : 'Sem orientação em texto — veja o PDF abaixo.'}</div>
@@ -1293,9 +1471,24 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   function todayWeekdayKey() { return WEEKDAY_KEYS[new Date().getDay()]; }
 
   /* ---- HOME ---- */
+  function checkinRowHtml() {
+    return `
+      <div class="stat-row" style="margin-top:10px">
+        <div class="stat-card" onclick="openWaterModal()" style="cursor:pointer">
+          <div class="sc-num" style="font-size:20px">${waterSummaryText()}</div>
+          <div class="sc-lbl">água hoje</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-num" style="font-size:20px">${sleepSummaryText()}</div>
+          <div class="sc-lbl">sono</div>
+        </div>
+      </div>
+    `;
+  }
+
   function buildHome() {
     if (!protocol) {
-      $('homeContent').innerHTML = `<div class="empty-state"><div class="es-ico">${ICONS.calendar}</div><div class="es-txt">Olá, ${escapeHtml(student.nome)}! Seu protocolo de treino ainda não foi publicado.<br>Assim que seu personal configurar, ele aparecerá aqui.</div></div>`;
+      $('homeContent').innerHTML = `<div class="empty-state"><div class="es-ico">${ICONS.calendar}</div><div class="es-txt">Olá, ${escapeHtml(student.nome)}! Seu protocolo de treino ainda não foi publicado.<br>Assim que seu personal configurar, ele aparecerá aqui.</div></div>` + checkinRowHtml();
       return;
     }
     const nextIdx = nextWorkoutIndex();
@@ -1325,6 +1518,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         <div class="stat-card"><div class="sc-num">${weekStreak()}</div><div class="sc-lbl">semanas seguidas</div></div>
         <div class="stat-card"><div class="sc-num">${completedCount()}</div><div class="sc-lbl">treinos concluídos</div></div>
       </div>
+      ${checkinRowHtml()}
       <div class="section-label">Todos os treinos</div>
       <div id="workoutsList"></div>
     `;

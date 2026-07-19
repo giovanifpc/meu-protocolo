@@ -1,10 +1,8 @@
 # Roadmap Estratégico Pós-Desenvolvimento — Meu Protocolo
 
-> **Status: salvo em 2026-07-19, execução ainda não iniciada** (usuário pediu explicitamente pra guardar no contexto e começar depois). Este documento é um plano de execução operacional — diz o que fazer em cada fase e, principalmente, **o que não fazer**. Regra central: não desenvolver porque parece boa ideia — desenvolver porque vários clientes reais demonstraram a mesma necessidade (nunca com base na opinião de um único usuário).
+> **Status: salvo em 2026-07-19, execução ainda não iniciada.** Este documento é um plano de execução operacional — diz o que fazer em cada fase e, principalmente, **o que não fazer**. Regra central: não desenvolver porque parece boa ideia — desenvolver porque vários clientes reais demonstraram a mesma necessidade (nunca com base na opinião de um único usuário).
 >
-> **Pendências em aberto antes de iniciar a Fase 1** (perguntadas ao usuário em 2026-07-19, ainda sem resposta registrada):
-> 1. Os dois módulos construídos nesta sessão (chatbot de suporte, assistente proativo) fecham o MVP planejado, ou falta algo?
-> 2. O item 11 do roadmap técnico (onboarding visual pro aluno, 3-4 telas) é parte do MVP a terminar antes de congelar, ou já vira backlog sujeito à regra de "3+ clientes pedindo"?
+> **Esclarecido pelo usuário no mesmo dia: o MVP ainda não está fechado, o desenvolvimento normal continua.** Este roadmap só entra em vigor (Fase 1 — congelamento) depois que o usuário confirmar explicitamente que o dev terminou. Não tratar "documento salvo" como "já podemos parar de construir". Ver `CLAUDE.md`, seção "Status atual", pro estado mais recente do que ainda falta implementar.
 
 ---
 

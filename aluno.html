@@ -48,7 +48,17 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .topbar h2{font-size:17px;font-weight:700;flex:1}
 .topbar .sub{font-size:12px;color:var(--muted);font-weight:600}
 .topbar .brand{font-size:17px;font-weight:800;flex:1}
-.pro-logo{height:28px;width:auto;max-width:120px;object-fit:contain;border-radius:6px;margin-right:8px}
+.pro-banner{border-radius:var(--radius-lg);padding:24px 18px;margin-bottom:18px;background:linear-gradient(135deg,var(--primary),var(--primary-dim));color:#fff;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;box-shadow:var(--shadow-pop)}
+.pro-banner-logo{width:56px;height:56px;border-radius:14px;object-fit:contain;background:rgba(255,255,255,.16);padding:6px}
+.pro-banner-name{font-size:17px;font-weight:800}
+.pro-banner-wa{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.18);color:#fff;padding:9px 16px;border-radius:999px;font-size:13px;font-weight:700;text-decoration:none;border:1px solid rgba(255,255,255,.32)}
+.pro-banner-wa svg{width:16px;height:16px}
+.week-cal{display:flex;gap:6px;margin-bottom:16px}
+.wc-day{flex:1;aspect-ratio:1/1;border-radius:10px;background:var(--elev);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--faint);border:1px solid var(--card-border)}
+.wc-day .wc-lbl{font-size:9px;font-weight:700;text-transform:uppercase}
+.wc-day .wc-num{font-size:13px;font-weight:800}
+.wc-day.trained{background:linear-gradient(135deg,var(--accent),var(--accent-dim));color:#fff;border-color:transparent;box-shadow:0 4px 12px -4px rgba(20,107,77,.5)}
+.wc-day.today:not(.trained){border-color:var(--primary);color:var(--primary)}
 .notif-bell{position:relative;background:none;border:none;color:var(--text);padding:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .notif-bell svg{width:21px;height:21px}
 .notif-dot{position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:var(--danger);border:2px solid var(--bg);display:none}
@@ -383,8 +393,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 <!-- ===== HOME ===== -->
 <section class="screen active" id="home">
   <div class="topbar">
-    <img class="pro-logo" id="proLogo" style="display:none;" alt="">
-    <span class="brand" id="proName">Meu Protocolo</span>
+    <span class="brand">Início</span>
     <button class="notif-bell" onclick="openNotifications()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
       <span class="notif-dot"></span>
@@ -399,7 +408,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 <!-- ===== HISTORY ===== -->
 <section class="screen" id="history">
   <div class="topbar">
-    <span class="brand">Histórico</span>
+    <span class="brand">Treino</span>
     <button class="notif-bell" onclick="openNotifications()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
       <span class="notif-dot"></span>
@@ -525,7 +534,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg></span><span class="nav-lbl">Início</span>
   </button>
   <button class="nav-btn" id="navHistory" onclick="goTab('history')">
-    <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="20" x2="5" y2="14"/><line x1="12" y1="20" x2="12" y2="7"/><line x1="19" y1="20" x2="19" y2="11"/></svg></span><span class="nav-lbl">Histórico</span>
+    <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6.5" y1="6.5" x2="6.5" y2="17.5"/><line x1="17.5" y1="6.5" x2="17.5" y2="17.5"/><line x1="3" y1="9" x2="3" y2="15"/><line x1="21" y1="9" x2="21" y2="15"/><line x1="6.5" y1="12" x2="17.5" y2="12"/></svg></span><span class="nav-lbl">Treino</span>
   </button>
   <button class="nav-btn" id="navNutri" onclick="goTab('nutri')">
     <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v6a2 2 0 0 0 4 0V3"/><path d="M8 3v18"/><path d="M16 3c-1.5 0-2.5 1.5-2.5 4s1 4 2.5 4v11"/></svg></span><span class="nav-lbl">Nutri</span>
@@ -640,7 +649,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   </div>
   <div class="drawer-nav">
     <button class="drawer-item" data-tab="home"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg></span>Início</button>
-    <button class="drawer-item" data-tab="history"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="20" x2="5" y2="14"/><line x1="12" y1="20" x2="12" y2="7"/><line x1="19" y1="20" x2="19" y2="11"/></svg></span>Histórico</button>
+    <button class="drawer-item" data-tab="history"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6.5" y1="6.5" x2="6.5" y2="17.5"/><line x1="17.5" y1="6.5" x2="17.5" y2="17.5"/><line x1="3" y1="9" x2="3" y2="15"/><line x1="21" y1="9" x2="21" y2="15"/><line x1="6.5" y1="12" x2="17.5" y2="12"/></svg></span>Treino</button>
     <button class="drawer-item" data-tab="nutri"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v6a2 2 0 0 0 4 0V3"/><path d="M8 3v18"/><path d="M16 3c-1.5 0-2.5 1.5-2.5 4s1 4 2.5 4v11"/></svg></span>Nutri</button>
     <button class="drawer-item" data-tab="profile"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></span>Perfil</button>
     <button class="drawer-item" id="drawerNotifBtn"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>Notificações</button>
@@ -749,6 +758,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     trophy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 4H4.5a2.5 2.5 0 0 0 0 5H7"/><path d="M17 4h2.5a2.5 2.5 0 0 1 0 5H17"/></svg>`,
     activity: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
     droplet: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`,
+    whatsapp: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.16-.17.2-.35.22-.65.08-.3-.15-1.26-.46-2.4-1.48-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.21-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.87 1.21 3.07c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.62.71.23 1.36.2 1.87.12.57-.08 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35z"/><path d="M12 2C6.48 2 2 6.48 2 12c0 1.79.48 3.47 1.3 4.92L2 22l5.21-1.26A9.96 9.96 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18.03a8 8 0 0 1-4.08-1.12l-.29-.17-3.03.74.75-2.97-.19-.3A8 8 0 1 1 12 20.03z"/></svg>`,
   };
 
   // Cor de marca (plano Pro/Elite) e modo claro/escuro são eixos
@@ -847,6 +857,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   let protocol = null;
   let history = [];
   let exerciseVideos = {};
+  let logoUrl = null;
   let nutritionGuidance = null;
   let assessments = [];
   let anamnese = null;
@@ -879,10 +890,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     $('navHistory').classList.toggle('active', tab === 'history');
     $('navNutri').classList.toggle('active', tab === 'nutri');
     $('navProfile').classList.toggle('active', tab === 'profile');
-    if (tab === 'history') buildHistory();
+    if (tab === 'history') buildWorkoutHub();
     else if (tab === 'nutri') buildNutri();
     else if (tab === 'profile') buildProfile();
-    else buildHome();
+    else buildHomeDashboard();
     showScreen(tab);
   }
   function goHome() { goTab('home'); }
@@ -956,7 +967,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 
     const { data: st, error } = await supa
       .from('students')
-      .select('*, professionals(display_name, color_preset, ranking_enabled)')
+      .select('*, professionals(display_name, color_preset, ranking_enabled, whatsapp)')
       .eq('email', session.user.email)
       .maybeSingle();
 
@@ -964,17 +975,13 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     if (!st) { renderHomeError('Não encontramos seu cadastro. Fale com seu personal trainer.'); return; }
     student = st;
 
-    if (student.professionals?.display_name) $('proName').textContent = student.professionals.display_name;
     currentColorPreset = COLOR_PRESETS[student.professionals?.color_preset] ? student.professionals.color_preset : 'azul';
     applyTheme(currentColorPreset, getEffectiveThemeMode());
 
     const { data: logoSigned } = await supa.storage
       .from('professional-logos')
       .createSignedUrl(`${student.professional_id}/logo.png`, 300);
-    if (logoSigned?.signedUrl) {
-      $('proLogo').src = logoSigned.signedUrl;
-      $('proLogo').style.display = 'inline-block';
-    }
+    if (logoSigned?.signedUrl) logoUrl = logoSigned.signedUrl;
 
     const { data: consent } = await supa
       .from('student_consent')
@@ -1177,15 +1184,37 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   /* ---- HISTÓRICO ---- */
   let historySubTab = 'carga';
 
-  function buildHistory() {
-    const container = $('historyContent');
+  // Banner do profissional (logo + nome + WhatsApp) — topo da nova Início.
+  // logoUrl é resolvida uma vez no boot() (signed URL do bucket
+  // professional-logos) e reaplicada aqui toda vez que o dashboard
+  // re-renderiza, já que o <img> é recriado via innerHTML.
+  function applyBannerLogo() {
+    const img = $('bannerLogo');
+    if (!img) return;
+    if (logoUrl) { img.src = logoUrl; img.style.display = 'block'; }
+    else { img.style.display = 'none'; img.removeAttribute('src'); }
+  }
+
+  function buildHomeDashboard() {
+    const container = $('homeContent');
+    const proName = student.professionals?.display_name || 'Meu Protocolo';
+    const wa = (student.professionals?.whatsapp || '').replace(/\D/g, '');
+    const waHtml = wa
+      ? `<a class="pro-banner-wa" href="https://wa.me/${wa}?text=${encodeURIComponent('Oi, ' + proName + '!')}" target="_blank" rel="noopener">${ICONS.whatsapp} Enviar mensagem</a>`
+      : '';
     container.innerHTML = `
+      <div class="pro-banner">
+        <img class="pro-banner-logo" id="bannerLogo" style="display:none;" alt="">
+        <div class="pro-banner-name">${escapeHtml(proName)}</div>
+        ${waHtml}
+      </div>
       <div class="seg-control" id="historySeg">
         <button class="seg-btn ${historySubTab === 'carga' ? 'active' : ''}" data-tab="carga">Evolução de carga</button>
         <button class="seg-btn ${historySubTab === 'avaliacao' ? 'active' : ''}" data-tab="avaliacao">Avaliação física</button>
       </div>
       <div id="historySubContent"></div>
     `;
+    applyBannerLogo();
     $('historySeg').querySelectorAll('.seg-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         if (btn.dataset.tab === historySubTab) return;
@@ -1621,7 +1650,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   }
 
   function refreshCheckinViews() {
-    if ($('home').classList.contains('active')) buildHome();
+    if ($('history').classList.contains('active')) buildWorkoutHub();
     if ($('nutri').classList.contains('active')) buildNutri();
   }
 
@@ -1728,9 +1757,33 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     `;
   }
 
-  function buildHome() {
+  // Semana (Segunda a Domingo) do calendário mini da aba Treino — cada dia
+  // marcado como "treinado" se houver qualquer sessão (completa ou
+  // incompleta) registrada naquela data, só pra dar um sinal visual rápido
+  // de presença/consistência, não é métrica de adesão de verdade.
+  function weekCalCells() {
+    const now = new Date();
+    const dow = now.getDay();
+    const diffToMonday = dow === 0 ? -6 : 1 - dow;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + diffToMonday);
+    monday.setHours(0, 0, 0, 0);
+    const trainedDates = new Set(history.map((h) => new Date(h.completed_at).toDateString()));
+    const labels = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return { label: labels[i], num: d.getDate(), trained: trainedDates.has(d.toDateString()), isToday: d.toDateString() === now.toDateString() };
+    });
+  }
+  function weekCalHtml() {
+    const cells = weekCalCells();
+    return `<div class="week-cal">${cells.map((c) => `<div class="wc-day ${c.trained ? 'trained' : ''} ${c.isToday ? 'today' : ''}"><span class="wc-lbl">${c.label}</span><span class="wc-num">${c.num}</span></div>`).join('')}</div>`;
+  }
+
+  function buildWorkoutHub() {
     if (!protocol) {
-      $('homeContent').innerHTML = `<div class="empty-state"><div class="es-ico">${ICONS.calendar}</div><div class="es-txt">Olá, ${escapeHtml(student.nome)}! Seu protocolo de treino ainda não foi publicado.<br>Assim que seu personal configurar, ele aparecerá aqui.</div></div>` + checkinRowHtml();
+      $('historyContent').innerHTML = weekCalHtml() + `<div class="empty-state"><div class="es-ico">${ICONS.calendar}</div><div class="es-txt">Olá, ${escapeHtml(student.nome)}! Seu protocolo de treino ainda não foi publicado.<br>Assim que seu personal configurar, ele aparecerá aqui.</div></div>` + checkinRowHtml();
       return;
     }
     const nextIdx = nextWorkoutIndex();
@@ -1747,6 +1800,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       : '';
 
     let html = `
+      ${weekCalHtml()}
       ${cycleBadge}
       <div class="section-label" ${cycleBadge ? 'style="margin-top:0"' : ''}>Próximo treino</div>
       <div class="next-workout" onclick="openOverview(${nextIdx})">
@@ -1764,7 +1818,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       <div class="section-label">Todos os treinos</div>
       <div id="workoutsList"></div>
     `;
-    $('homeContent').innerHTML = html;
+    $('historyContent').innerHTML = html;
 
     const list = $('workoutsList');
     protocol.workouts.forEach((wo, idx) => {

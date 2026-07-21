@@ -77,6 +77,22 @@
   .app-preview .ap-card-title { font-weight:700; font-size:13px; margin-bottom:3px; }
   .app-preview .ap-card-sub { font-size:11px; color:var(--ap-muted); }
   .app-preview .ap-btn { display:block; width:100%; border:none; border-radius:10px; padding:11px; font-weight:700; font-size:13px; color:#fff; background:var(--ap-primary); font-family:var(--font); }
+  .crop-overlay { position:fixed; inset:0; z-index:600; background:rgba(15,20,28,.6); display:none; align-items:center; justify-content:center; padding:24px; }
+  .crop-overlay.show { display:flex; }
+  .crop-card { width:100%; max-width:340px; background:var(--card); border-radius:var(--radius-lg); padding:22px; box-shadow:var(--shadow-card); }
+  .crop-card h3 { font-size:16px; font-weight:800; margin:0 0 4px; text-align:center; }
+  .crop-hint { font-size:12px; color:var(--muted); text-align:center; margin-bottom:14px; }
+  .shape-toggle { display:flex; gap:6px; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:4px; margin-bottom:14px; }
+  .shape-btn { flex:1; border:none; background:none; padding:7px; border-radius:7px; font-size:12px; font-weight:700; font-family:var(--font); color:var(--muted); cursor:pointer; }
+  .shape-btn.active { background:var(--primary); color:#fff; }
+  .crop-stage { width:240px; height:240px; margin:0 auto; position:relative; overflow:hidden; border-radius:12px; background:#0f141c; touch-action:none; cursor:grab; }
+  .crop-stage:active { cursor:grabbing; }
+  .crop-stage img { position:absolute; top:0; left:0; transform-origin:0 0; user-select:none; -webkit-user-drag:none; pointer-events:none; }
+  .crop-mask { position:absolute; inset:0; border-radius:50%; box-shadow:0 0 0 999px rgba(15,20,28,.62); pointer-events:none; }
+  .crop-zoom-row { margin-top:16px; }
+  .crop-zoom-row input[type=range] { width:100%; accent-color:var(--primary); }
+  .crop-actions { display:flex; gap:10px; margin-top:16px; }
+  .crop-actions .btn { flex:1; }
   .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:#23263a; color:#fff; padding:10px 18px; border-radius:10px; font-size:13px; z-index:999; }
   .bottom-nav { position:fixed; bottom:0; left:0; right:0; max-width:720px; margin:0 auto; height:64px; background:var(--card); border-top:1px solid var(--line); display:flex; z-index:60; }
   .nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; color:var(--faint); text-decoration:none; font-family:var(--font); padding-top:6px; }
@@ -102,6 +118,10 @@
       <div class="field">
         <label>Nome exibido</label>
         <input type="text" id="displayNameInput" placeholder="Ex: João Personal Trainer">
+      </div>
+      <div class="field">
+        <label>WhatsApp (opcional)</label>
+        <input type="text" id="whatsappInput" placeholder="Ex: 5511999999999 (DDI+DDD+número)">
       </div>
       <div id="whiteLabelLock" class="msg" style="display:none;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;">Cor e logo personalizados são exclusivos dos planos Pro e Elite. Faça upgrade pra personalizar sua marca.</div>
       <div id="whiteLabelFields">
@@ -185,6 +205,28 @@
       <button class="btn danger" id="logoutBtn">Sair da conta</button>
     </div>
   </main>
+
+  <div class="crop-overlay" id="logoCropOverlay">
+    <div class="crop-card">
+      <h3>Ajustar logo</h3>
+      <div class="crop-hint">Arraste pra posicionar e use o zoom pra enquadrar</div>
+      <div class="shape-toggle" id="cropShapeToggle">
+        <button class="shape-btn active" data-shape="square" type="button">Quadrado</button>
+        <button class="shape-btn" data-shape="circle" type="button">Círculo</button>
+      </div>
+      <div class="crop-stage" id="logoCropStage">
+        <img id="logoCropImg" alt="">
+        <div class="crop-mask" id="logoCropMask" style="display:none;"></div>
+      </div>
+      <div class="crop-zoom-row">
+        <input type="range" id="logoCropZoomInput" min="100" max="300" value="100">
+      </div>
+      <div class="crop-actions">
+        <button class="btn secondary" id="logoCropCancelBtn" type="button">Cancelar</button>
+        <button class="btn" id="logoCropConfirmBtn" type="button">Usar imagem</button>
+      </div>
+    </div>
+  </div>
 
   <nav class="bottom-nav">
     <a class="nav-btn" href="index.html"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg></span><span class="nav-lbl">Início</span></a>
@@ -297,25 +339,105 @@
     }
   }
 
-  function downscaleImageToPngBlob(file, maxDim) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      const objectUrl = URL.createObjectURL(file);
-      img.onload = () => {
-        let { width, height } = img;
-        const scale = Math.min(1, maxDim / Math.max(width, height));
-        width = Math.max(1, Math.round(width * scale));
-        height = Math.max(1, Math.round(height * scale));
-        const canvas = document.createElement('canvas');
-        canvas.width = width; canvas.height = height;
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-        URL.revokeObjectURL(objectUrl);
-        canvas.toBlob((blob) => resolve(blob), 'image/png');
-      };
-      img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Não foi possível ler a imagem.')); };
-      img.src = objectUrl;
-    });
+  // Crop de logo — mesma mecânica de arrastar/zoom já usada no crop de
+  // avatar do aluno (aluno.html), com um toggle a mais: o profissional
+  // escolhe se o enquadramento final é quadrado ou circular (logo varia de
+  // formato, diferente do avatar que é sempre um rosto/circular).
+  const cropState = { natW: 0, natH: 0, baseScale: 1, scale: 1, offsetX: 0, offsetY: 0, dragging: false, pointerId: null, lastX: 0, lastY: 0, objectUrl: null, shape: 'square' };
+  const CROP_STAGE = 240;
+
+  function openLogoCrop(file) {
+    if (cropState.objectUrl) URL.revokeObjectURL(cropState.objectUrl);
+    cropState.objectUrl = URL.createObjectURL(file);
+    const img = $('logoCropImg');
+    img.onload = () => {
+      cropState.natW = img.naturalWidth;
+      cropState.natH = img.naturalHeight;
+      cropState.baseScale = CROP_STAGE / Math.min(cropState.natW, cropState.natH);
+      cropState.scale = cropState.baseScale;
+      cropState.offsetX = (CROP_STAGE - cropState.natW * cropState.scale) / 2;
+      cropState.offsetY = (CROP_STAGE - cropState.natH * cropState.scale) / 2;
+      $('logoCropZoomInput').value = 100;
+      renderCropTransform();
+      $('logoCropOverlay').classList.add('show');
+    };
+    img.src = cropState.objectUrl;
   }
+  function clampCropOffsets() {
+    const w = cropState.natW * cropState.scale, h = cropState.natH * cropState.scale;
+    cropState.offsetX = Math.min(0, Math.max(CROP_STAGE - w, cropState.offsetX));
+    cropState.offsetY = Math.min(0, Math.max(CROP_STAGE - h, cropState.offsetY));
+  }
+  function renderCropTransform() {
+    clampCropOffsets();
+    const img = $('logoCropImg');
+    img.style.width = (cropState.natW * cropState.scale) + 'px';
+    img.style.height = (cropState.natH * cropState.scale) + 'px';
+    img.style.transform = `translate(${cropState.offsetX}px,${cropState.offsetY}px)`;
+  }
+  const logoCropStageEl = $('logoCropStage');
+  logoCropStageEl.addEventListener('pointerdown', (e) => {
+    cropState.dragging = true;
+    cropState.pointerId = e.pointerId;
+    cropState.lastX = e.clientX;
+    cropState.lastY = e.clientY;
+    logoCropStageEl.setPointerCapture(e.pointerId);
+  });
+  logoCropStageEl.addEventListener('pointermove', (e) => {
+    if (!cropState.dragging || e.pointerId !== cropState.pointerId) return;
+    cropState.offsetX += e.clientX - cropState.lastX;
+    cropState.offsetY += e.clientY - cropState.lastY;
+    cropState.lastX = e.clientX;
+    cropState.lastY = e.clientY;
+    renderCropTransform();
+  });
+  ['pointerup', 'pointercancel'].forEach((ev) => logoCropStageEl.addEventListener(ev, () => { cropState.dragging = false; }));
+  $('logoCropZoomInput').addEventListener('input', (e) => {
+    const oldScale = cropState.scale;
+    const newScale = cropState.baseScale * (Number(e.target.value) / 100);
+    const cx = (CROP_STAGE / 2 - cropState.offsetX) / oldScale;
+    const cy = (CROP_STAGE / 2 - cropState.offsetY) / oldScale;
+    cropState.scale = newScale;
+    cropState.offsetX = CROP_STAGE / 2 - cx * newScale;
+    cropState.offsetY = CROP_STAGE / 2 - cy * newScale;
+    renderCropTransform();
+  });
+  $('cropShapeToggle').querySelectorAll('.shape-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      cropState.shape = btn.dataset.shape;
+      $('cropShapeToggle').querySelectorAll('.shape-btn').forEach((b) => b.classList.toggle('active', b === btn));
+      $('logoCropMask').style.display = cropState.shape === 'circle' ? 'block' : 'none';
+    });
+  });
+  function closeLogoCrop() {
+    $('logoCropOverlay').classList.remove('show');
+    if (cropState.objectUrl) { URL.revokeObjectURL(cropState.objectUrl); cropState.objectUrl = null; }
+  }
+  $('logoCropCancelBtn').addEventListener('click', closeLogoCrop);
+  $('logoCropConfirmBtn').addEventListener('click', () => {
+    const OUT = 400;
+    const canvas = document.createElement('canvas');
+    canvas.width = OUT; canvas.height = OUT;
+    const ctx = canvas.getContext('2d');
+    if (cropState.shape === 'circle') {
+      ctx.beginPath();
+      ctx.arc(OUT / 2, OUT / 2, OUT / 2, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+    }
+    const sx = -cropState.offsetX / cropState.scale;
+    const sy = -cropState.offsetY / cropState.scale;
+    const sSize = CROP_STAGE / cropState.scale;
+    ctx.drawImage($('logoCropImg'), sx, sy, sSize, sSize, 0, 0, OUT, OUT);
+    canvas.toBlob((blob) => {
+      pendingLogoBlob = blob;
+      removeLogoRequested = false;
+      if (pendingLogoPreviewUrl) URL.revokeObjectURL(pendingLogoPreviewUrl);
+      pendingLogoPreviewUrl = URL.createObjectURL(blob);
+      setLogoPreview(pendingLogoPreviewUrl);
+      closeLogoCrop();
+    }, 'image/png');
+  });
 
   async function boot() {
     const { data: { session } } = await supa.auth.getSession();
@@ -328,6 +450,7 @@
     professional = pro;
     $('planInfo').textContent = `${PLAN_LABELS[pro.plan] || pro.plan} · ${pro.status}`;
     $('displayNameInput').value = pro.display_name || '';
+    $('whatsappInput').value = pro.whatsapp || '';
     $('rankingToggle').checked = !!pro.ranking_enabled;
 
     selectedPreset = PRESET_ORDER.includes(pro.color_preset) ? pro.color_preset : 'azul';
@@ -363,19 +486,11 @@
 
   $('chooseLogoBtn').addEventListener('click', () => $('logoFileInput').click());
 
-  $('logoFileInput').addEventListener('change', async (e) => {
+  $('logoFileInput').addEventListener('change', (e) => {
     const file = e.target.files[0];
     e.target.value = '';
     if (!file) return;
-    try {
-      pendingLogoBlob = await downscaleImageToPngBlob(file, 400);
-      removeLogoRequested = false;
-      if (pendingLogoPreviewUrl) URL.revokeObjectURL(pendingLogoPreviewUrl);
-      pendingLogoPreviewUrl = URL.createObjectURL(pendingLogoBlob);
-      setLogoPreview(pendingLogoPreviewUrl);
-    } catch (err) {
-      toast('Erro ao ler a imagem: ' + err.message);
-    }
+    openLogoCrop(file);
   });
 
   $('removeLogoBtn').addEventListener('click', () => {
@@ -390,7 +505,10 @@
     $('saveMsg').textContent = '';
     $('saveMsg').className = 'msg';
 
-    const payload = { display_name: $('displayNameInput').value.trim() || professional.display_name };
+    const payload = {
+      display_name: $('displayNameInput').value.trim() || professional.display_name,
+      whatsapp: $('whatsappInput').value.replace(/\D/g, '') || null,
+    };
     if (professional.plan !== 'starter') {
       payload.color_preset = selectedPreset;
     }

@@ -48,17 +48,22 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .topbar h2{font-size:17px;font-weight:700;flex:1}
 .topbar .sub{font-size:12px;color:var(--muted);font-weight:600}
 .topbar .brand{font-size:17px;font-weight:800;flex:1}
-.pro-hero{margin-bottom:18px}
-.pro-banner{position:relative;border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--primary),var(--primary-dim));box-shadow:var(--shadow-pop);overflow:visible}
-.pro-banner-solo{padding:26px 18px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px}
-.pro-hero.has-logo .pro-banner{height:170px}
-.pro-banner-logo{position:absolute;left:50%;bottom:0;transform:translate(-50%,50%);width:232px;height:232px;border-radius:34px;object-fit:contain;filter:drop-shadow(0 10px 22px rgba(20,30,45,.4));z-index:2}
-.pro-banner-info{text-align:center;padding-top:132px;display:flex;flex-direction:column;align-items:center;gap:10px}
-.pro-banner-name{font-size:17px;font-weight:800;color:#fff}
-.pro-banner-name-dark{color:var(--text)}
-.pro-banner-wa{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.18);color:#fff;padding:9px 16px;border-radius:999px;font-size:13px;font-weight:700;text-decoration:none;border:1px solid rgba(255,255,255,.32)}
-.pro-banner-wa-solid{background:var(--primary);border-color:transparent}
-.pro-banner-wa svg{width:16px;height:16px}
+.pro-hero{margin-bottom:14px}
+/* Faixa colorida do preset, ocupando a largura cheia da tela (bleed via
+   margin negativo cancelando o padding de .content) — substitui o topbar
+   plano só na Início; as outras telas continuam com o topbar de sempre. */
+.pro-topband{margin:-4px -18px 0;padding:calc(env(safe-area-inset-top) + 14px) 18px 48px;background:linear-gradient(135deg,var(--primary),var(--primary-dim));display:flex;justify-content:flex-end;gap:10px}
+.ptb-icon{position:relative;width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(255,255,255,.4);background:rgba(255,255,255,.08);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0}
+.ptb-icon svg{width:18px;height:18px}
+.ptb-icon .notif-dot{position:absolute;top:5px;right:6px}
+.pro-row{display:flex;align-items:flex-end;gap:12px;margin:-48px 0 2px}
+.pro-avatar{width:128px;height:128px;border-radius:50%;background:var(--primary);color:#fff;font-size:44px;font-weight:800;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border:4px solid var(--bg);box-shadow:0 8px 20px -8px rgba(20,30,45,.35)}
+.pro-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.pro-row-text{flex:1;min-width:0;padding-bottom:6px}
+.pro-row-name{font-size:19px;font-weight:800;color:var(--text);line-height:1.15}
+.pro-row-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.pro-row-wa{flex-shrink:0;align-self:flex-end;margin-bottom:6px;display:flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--card-border);color:var(--text);padding:9px 12px;border-radius:14px;font-size:11.5px;font-weight:700;text-decoration:none;box-shadow:var(--shadow-card);line-height:1.25}
+.pro-row-wa svg{width:16px;height:16px;color:var(--accent-dim);flex-shrink:0}
 .week-cal{display:flex;gap:6px;margin-bottom:16px}
 .wc-day{flex:1;aspect-ratio:1/1;border-radius:10px;background:var(--elev);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--faint);border:1px solid var(--card-border)}
 .wc-day .wc-lbl{font-size:9px;font-weight:700;text-transform:uppercase}
@@ -111,17 +116,6 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .stat4-bar-fill{height:100%;border-radius:4px}
 .stat4-cap{font-size:8px;color:var(--faint);font-weight:600}
 
-/* ---- Dashboard Início: hero "Treino de hoje" ---- */
-.today-hero{position:relative;border-radius:var(--radius-lg);padding:20px;margin-bottom:14px;background:linear-gradient(135deg,var(--primary),var(--primary-dim));color:#fff;box-shadow:var(--shadow-pop);cursor:pointer}
-.th-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.18);padding:5px 10px;border-radius:999px;font-size:11px;font-weight:700;margin-bottom:12px}
-.th-chip svg{width:14px;height:14px}
-.th-name{font-size:21px;font-weight:800;margin-bottom:10px;line-height:1.2}
-.th-progress{height:6px;background:rgba(255,255,255,.25);border-radius:6px;overflow:hidden;margin-bottom:4px}
-.th-progress-fill{height:100%;background:#fff;border-radius:6px}
-.th-progress-lbl{font-size:11px;font-weight:600;opacity:.85;margin-bottom:10px}
-.th-meta{display:flex;align-items:center;gap:6px;font-size:12px;opacity:.9;margin-bottom:16px}
-.th-meta svg{width:14px;height:14px}
-.th-cta{display:inline-flex;align-items:center;gap:8px;background:#fff;color:var(--primary-dim);border:none;padding:11px 20px;border-radius:999px;font-size:14px;font-weight:800;cursor:pointer}
 
 /* ---- Dashboard Início: cards de resumo (evolução/avaliação/nutri) ---- */
 .dash-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
@@ -440,7 +434,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 
 <!-- ===== HOME ===== -->
 <section class="screen active" id="home">
-  <div class="topbar">
+  <div class="topbar" id="homeTopbar" style="display:none">
     <span class="brand">Início</span>
     <button class="notif-bell" onclick="openNotifications()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -1233,41 +1227,36 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   /* ---- HISTÓRICO ---- */
   let historySubTab = 'carga';
 
-  // Banner do profissional (logo + nome + WhatsApp) — topo da nova Início.
-  // logoUrl é resolvida uma vez no boot() (signed URL do bucket
-  // professional-logos) e reaplicada aqui toda vez que o dashboard
-  // re-renderiza, já que o <img> é recriado via innerHTML.
-  function applyBannerLogo() {
-    const img = $('bannerLogo');
-    if (!img) return;
-    if (logoUrl) { img.src = logoUrl; img.style.display = 'block'; }
-    else { img.style.display = 'none'; img.removeAttribute('src'); }
-  }
-
   function buildHomeDashboard() {
     const container = $('homeContent');
     const proName = student.professionals?.display_name || 'Meu Protocolo';
     const wa = (student.professionals?.whatsapp || '').replace(/\D/g, '');
-    const waInner = `${ICONS.whatsapp} Enviar mensagem`;
     const waHref = wa ? `https://wa.me/${wa}?text=${encodeURIComponent('Oi, ' + proName + '!')}` : null;
-    // Com logo: banner vira uma faixa colorida compacta com a logo (grande,
-    // em destaque) flutuando por cima, metade dentro/metade fora da borda
-    // inferior — nome e WhatsApp ficam abaixo dela, fora da faixa, pra não
-    // ficar coberto pelo tamanho da logo. Sem logo: mantém o banner simples
-    // de antes (nome + WhatsApp centralizados dentro da própria faixa).
-    const heroHtml = logoUrl ? `
-      <div class="pro-hero has-logo">
-        <div class="pro-banner"><img class="pro-banner-logo" id="bannerLogo" style="display:none;" alt=""></div>
-        <div class="pro-banner-info">
-          <div class="pro-banner-name pro-banner-name-dark">${escapeHtml(proName)}</div>
-          ${waHref ? `<a class="pro-banner-wa pro-banner-wa-solid" href="${waHref}" target="_blank" rel="noopener">${waInner}</a>` : ''}
-        </div>
-      </div>
-    ` : `
+    // Cabeçalho estilo capa+avatar: faixa colorida do preset (com os
+    // ícones de notificação/menu, que substituem o topbar plano só nesta
+    // tela) + avatar à esquerda sobrepondo a borda inferior da faixa,
+    // nome/subtítulo ao lado e botão de WhatsApp à direita — mesma
+    // distribuição do mockup de referência do usuário, sem o
+    // logo+wordmark de marca que aparecia acima do avatar lá (não pedido
+    // aqui). Avatar sem logo cadastrada cai no mesmo padrão já usado no
+    // avatar do Perfil: círculo com a inicial do nome.
+    const heroHtml = `
       <div class="pro-hero">
-        <div class="pro-banner pro-banner-solo">
-          <div class="pro-banner-name">${escapeHtml(proName)}</div>
-          ${waHref ? `<a class="pro-banner-wa" href="${waHref}" target="_blank" rel="noopener">${waInner}</a>` : ''}
+        <div class="pro-topband">
+          <button class="ptb-icon" onclick="openNotifications()" aria-label="Notificações">
+            ${ICONS.bell}<span class="notif-dot"></span>
+          </button>
+          <button class="ptb-icon" onclick="openDrawer()" aria-label="Menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+          </button>
+        </div>
+        <div class="pro-row">
+          <div class="pro-avatar">${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="">` : escapeHtml((proName || 'M').trim().charAt(0).toUpperCase())}</div>
+          <div class="pro-row-text">
+            <div class="pro-row-name">${escapeHtml(proName)}</div>
+            <div class="pro-row-sub">Sua evolução começa hoje.</div>
+          </div>
+          ${waHref ? `<a class="pro-row-wa" href="${waHref}" target="_blank" rel="noopener">${ICONS.whatsapp}<span>Falar com<br>seu treinador</span></a>` : ''}
         </div>
       </div>
     `;
@@ -1288,7 +1277,6 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       </div>
       <div id="historySubContent"></div>
     `;
-    applyBannerLogo();
     $('historySeg').querySelectorAll('.seg-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         if (btn.dataset.tab === historySubTab) return;
@@ -1361,22 +1349,20 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   // forte (decisão do usuário: aparecer nos dois lugares). Progresso da
   // barra é a semana real do ciclo (currentCycleWeek/duracao_semanas),
   // nunca um número inventado.
+  // Card simples (reaproveita o mesmo estilo .next-workout/.nw-* já usado
+  // na aba Treino — decisão do usuário de simplificar depois de ver a
+  // primeira versão, mais "grossa", com chip/barra de progresso/CTA).
   function todayWorkoutHeroHtml() {
     if (!protocol) return '';
     const nextIdx = nextWorkoutIndex();
     const w = protocol.workouts[nextIdx];
     const totalSets = w.exercises.reduce((a, ex) => a + Number(exerciseWeekConfig(ex).sets || 0), 0);
-    const progressHtml = protocol.duracao_semanas
-      ? `<div class="th-progress"><div class="th-progress-fill" style="width:${Math.round(((currentCycleWeek()+1)/protocol.duracao_semanas)*100)}%"></div></div>
-         <div class="th-progress-lbl">${cycleEnded() ? 'Ciclo concluído — fale com seu personal' : `Semana ${currentCycleWeek()+1} de ${protocol.duracao_semanas}`}</div>`
-      : '';
     return `
-      <div class="today-hero" onclick="openOverview(${nextIdx})">
-        <div class="th-chip">${ICONS.dumbbell} Treino de hoje</div>
-        <div class="th-name">${escapeHtml(w.name)}</div>
-        ${progressHtml}
-        <div class="th-meta">${ICONS.hourglass} ${w.exercises.length} exercícios · ${totalSets} séries</div>
-        <button class="th-cta" onclick="event.stopPropagation();openOverview(${nextIdx})">Iniciar treino →</button>
+      <div class="next-workout" onclick="openOverview(${nextIdx})">
+        <div class="nw-tag">Treino de hoje</div>
+        <div class="nw-name">${escapeHtml(w.name)}</div>
+        <div class="nw-meta">${w.exercises.length} exercícios · ${totalSets} séries</div>
+        <div class="nw-go">▶</div>
       </div>
     `;
   }

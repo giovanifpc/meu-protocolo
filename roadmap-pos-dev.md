@@ -46,6 +46,8 @@ Ao final de alguns dias, conversa com estas perguntas:
 
 **Não perguntar apenas se gostou.**
 
+**Cliente 0 registrada (2026-07-21): `Jujuelilicaanimacoes@hotmail.com`** — e-mail guardado aqui só de referência pra quando essa fase for iniciada de verdade; nenhuma conta foi criada ainda, execução desta fase segue não iniciada (ver nota no topo do documento).
+
 ---
 
 ## FASE 3 — Ajustes rápidos

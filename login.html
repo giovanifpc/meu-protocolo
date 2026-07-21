@@ -147,12 +147,15 @@
       // (2) trial exige cartão cadastrado desde o cadastro — se o profissional
       // ainda não completou essa etapa (fechou o navegador no meio do
       // onboarding), manda de volta pro onboarding em vez do painel.
-      const { data: prof } = await supa.from('professionals').select('status, mp_preapproval_id').eq('email', email).maybeSingle();
+      const { data: prof } = await supa.from('professionals').select('status, mp_preapproval_id, billing_exempt').eq('email', email).maybeSingle();
       if (prof?.status === 'inativo') {
         showMsg('Sua assinatura está cancelada. Seus dados ficam retidos por um tempo — entre em contato pra reativar: contato@meuprotocolo.app', 'error');
         return;
       }
-      window.location.href = prof?.mp_preapproval_id ? 'index.html' : 'onboarding.html';
+      // billing_exempt: contas isentas de cobrança (teste interno, programa
+      // Founder) nunca vão ter mp_preapproval_id de verdade — sem essa
+      // checagem, ficariam presas num loop de volta pro onboarding pra sempre.
+      window.location.href = (prof?.mp_preapproval_id || prof?.billing_exempt) ? 'index.html' : 'onboarding.html';
       return;
     }
     const { data: isStudent, error: stuErr } = await supa.rpc('is_student_email', { check_email: email });

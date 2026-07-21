@@ -81,6 +81,7 @@
             <th>Plano</th>
             <th>Status</th>
             <th>Preço customizado</th>
+            <th>Isento de cobrança</th>
             <th>Alunos</th>
             <th>Criado em</th>
             <th></th>
@@ -136,6 +137,7 @@
       <td><select class="planSelect">${planOptions}</select></td>
       <td><select class="statusSelect">${statusOptions}</select></td>
       <td><input type="number" class="valorInput" step="0.01" placeholder="tabela" value="${row.valor_customizado ?? ''}"></td>
+      <td style="text-align:center;"><input type="checkbox" class="billingExemptCheckbox" ${row.billing_exempt ? 'checked' : ''} title="Conta isenta de cobrança (teste interno / programa Founder) — pula a exigência de cartão no login"></td>
       <td>${row.alunos_count ?? 0}</td>
       <td>${dataCriado}</td>
       <td>
@@ -151,12 +153,14 @@
       const newPlan = tr.querySelector('.planSelect').value;
       const newStatus = tr.querySelector('.statusSelect').value;
       const valorRaw = tr.querySelector('.valorInput').value.trim();
+      const newBillingExempt = tr.querySelector('.billingExemptCheckbox').checked;
       const args = {
         prof_id: row.id,
         new_plan: newPlan,
         new_status: newStatus,
         new_valor_customizado: valorRaw === '' ? null : Number(valorRaw),
         clear_valor_customizado: valorRaw === '',
+        new_billing_exempt: newBillingExempt,
       };
       const { error } = await supa.rpc('master_update_professional', args);
       btn.disabled = false;

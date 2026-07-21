@@ -213,12 +213,13 @@
   // claro/escuro é o aluno, no próprio celular. A prévia abaixo deixa o
   // profissional espiar como a cor fica nos dois modos antes de salvar.
   const COLOR_PRESETS = {
-    azul:    { nome: 'Azul Clássico',     light: { primary:'#2D6BE4' }, dark: { primary:'#2D6BE4' } },
-    grafite: { nome: 'Grafite Executivo', light: { primary:'#2B2F3A' }, dark: { primary:'#5C6470' } },
-    vinho:   { nome: 'Vinho Intenso',     light: { primary:'#9C2B4E' }, dark: { primary:'#9C2B4E' } },
-    roxo:    { nome: 'Roxo Profundo',     light: { primary:'#5B3A9E' }, dark: { primary:'#5B3A9E' } },
+    azul:  { nome: 'Azul Clássico', light: { primary:'#2D6BE4' }, dark: { primary:'#2D6BE4' } },
+    vinho: { nome: 'Vinho Intenso', light: { primary:'#9C2B4E' }, dark: { primary:'#9C2B4E' } },
+    roxo:  { nome: 'Roxo Profundo', light: { primary:'#5B3A9E' }, dark: { primary:'#5B3A9E' } },
+    verde: { nome: 'Verde Vibrante', light: { primary:'#17812F' }, dark: { primary:'#17812F' } },
+    rosa:  { nome: 'Rosa Suave',    light: { primary:'#C94277' }, dark: { primary:'#C94277' } },
   };
-  const PRESET_ORDER = ['azul', 'grafite', 'vinho', 'roxo'];
+  const PRESET_ORDER = ['azul', 'vinho', 'roxo', 'verde', 'rosa'];
   const LOGO_BUCKET = 'professional-logos';
   const DARK_MOCKUP = { bg:'#14161C', card:'#1E212B', border:'rgba(255,255,255,.07)', text:'#ECEEF2', muted:'#9AA3B2' };
   let previewMode = 'light';

@@ -698,18 +698,21 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 
   // Cor de marca (plano Pro/Elite) e modo claro/escuro são eixos
   // independentes (decisão do usuário, 2026-07-21): o profissional escolhe
-  // a cor (azul/grafite/vinho/roxo), o ALUNO decide claro/escuro no
+  // a cor (azul/vinho/roxo/verde/rosa), o ALUNO decide claro/escuro no
   // próprio celular — segue o tema nativo por padrão (prefers-color-scheme),
   // com opção de sobrepor manualmente em Perfil. Cada cor tem uma variante
-  // "dark" própria só quando a variante clara não teria contraste/destaque
-  // suficiente contra fundo escuro (ex: Grafite é quase preto — sumiria no
-  // escuro — ganhou um tom mais claro só nesse modo; Azul/Vinho/Roxo já
-  // funcionam bem nos dois, reaproveitam o mesmo valor).
+  // "dark" própria pro caso de a variante clara não ter contraste/destaque
+  // suficiente contra fundo escuro (o "Grafite Executivo" original, quase
+  // preto, sumia no escuro — foi removido da paleta por esse motivo e por
+  // ler como "elemento desabilitado" em vez de cor de marca; as 5 cores
+  // atuais já têm luminância calibrada o bastante pra funcionar nos dois
+  // modos com o mesmo valor).
   const COLOR_PRESETS = {
-    azul:    { nome: 'Azul Clássico',     light: { primary:'#2D6BE4', dim:'#1E4FB0', rgb:'45,107,228' },  dark: { primary:'#2D6BE4', dim:'#1E4FB0', rgb:'45,107,228' } },
-    grafite: { nome: 'Grafite Executivo', light: { primary:'#2B2F3A', dim:'#14171F', rgb:'43,47,58' },    dark: { primary:'#5C6470', dim:'#3D4450', rgb:'92,100,112' } },
-    vinho:   { nome: 'Vinho Intenso',     light: { primary:'#9C2B4E', dim:'#6E1F38', rgb:'156,43,78' },   dark: { primary:'#9C2B4E', dim:'#6E1F38', rgb:'156,43,78' } },
-    roxo:    { nome: 'Roxo Profundo',     light: { primary:'#5B3A9E', dim:'#3F2A70', rgb:'91,58,158' },   dark: { primary:'#5B3A9E', dim:'#3F2A70', rgb:'91,58,158' } },
+    azul:  { nome: 'Azul Clássico', light: { primary:'#2D6BE4', dim:'#1E4FB0', rgb:'45,107,228' },  dark: { primary:'#2D6BE4', dim:'#1E4FB0', rgb:'45,107,228' } },
+    vinho: { nome: 'Vinho Intenso', light: { primary:'#9C2B4E', dim:'#6E1F38', rgb:'156,43,78' },   dark: { primary:'#9C2B4E', dim:'#6E1F38', rgb:'156,43,78' } },
+    roxo:  { nome: 'Roxo Profundo', light: { primary:'#5B3A9E', dim:'#3F2A70', rgb:'91,58,158' },   dark: { primary:'#5B3A9E', dim:'#3F2A70', rgb:'91,58,158' } },
+    verde: { nome: 'Verde Vibrante', light: { primary:'#17812F', dim:'#0E5C22', rgb:'23,129,47' },  dark: { primary:'#17812F', dim:'#0E5C22', rgb:'23,129,47' } },
+    rosa:  { nome: 'Rosa Suave',    light: { primary:'#C94277', dim:'#9C3059', rgb:'201,66,119' },  dark: { primary:'#C94277', dim:'#9C3059', rgb:'201,66,119' } },
   };
 
   // Valores estruturais do modo escuro (fundo/card/texto/sombra/avisos) —

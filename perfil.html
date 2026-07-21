@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://drive.google.com https://*.supabase.co; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co https://o4511757250199552.ingest.us.sentry.io; object-src 'none'; base-uri 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://drive.google.com https://*.supabase.co; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co https://o4511757250199552.ingest.us.sentry.io; object-src 'none'; base-uri 'self';">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" href="icons/favicon-32.png">
 <link rel="manifest" href="manifest-painel.json">
@@ -36,10 +36,6 @@
   .field label { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
   .field input { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; color:var(--text); font-family:var(--font); }
   .field input:focus { outline:none; border-color:var(--primary); }
-  .field input[type=color] { padding:4px; height:42px; cursor:pointer; }
-  .color-row { display:flex; align-items:center; gap:10px; }
-  .color-row input[type=color] { width:52px; flex-shrink:0; }
-  .color-row input[type=text] { flex:1; }
   .btn { padding:10px 16px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; border:none; background:var(--primary); color:#fff; font-family:var(--font); transition:transform .15s ease; }
   .btn:active { transform:scale(.97); }
   .btn.secondary { background:var(--bg); color:var(--text); border:1px solid var(--line); }
@@ -58,6 +54,26 @@
   .switch .slider::before { content:''; position:absolute; width:20px; height:20px; left:3px; top:3px; background:#fff; border-radius:50%; transition:transform .15s ease; box-shadow:0 1px 2px rgba(0,0,0,.2); }
   .switch input:checked + .slider { background:var(--primary); }
   .switch input:checked + .slider::before { transform:translateX(18px); }
+  .logo-row { display:flex; align-items:center; gap:12px; }
+  .logo-preview { width:64px; height:64px; border-radius:12px; border:1px dashed var(--line); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; background:var(--bg); }
+  .logo-preview img { max-width:100%; max-height:100%; object-fit:contain; }
+  .logo-preview span { font-size:9px; color:var(--faint); text-align:center; padding:4px; line-height:1.3; }
+  .logo-actions { display:flex; flex-direction:column; gap:6px; }
+  .btn.small { padding:7px 12px; font-size:12px; }
+  .preset-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); gap:10px; }
+  .preset-swatch { border:2px solid var(--line); border-radius:12px; padding:9px 6px; cursor:pointer; text-align:center; background:var(--card); transition:border-color .15s ease; }
+  .preset-swatch.selected { border-color:var(--primary); }
+  .preset-swatch .ps-dot { width:30px; height:30px; border-radius:50%; margin:0 auto 6px; }
+  .preset-swatch .ps-name { font-size:10.5px; font-weight:700; color:var(--text); line-height:1.2; }
+  .app-preview-frame { border-radius:16px; padding:14px; background:#E4E7EC; }
+  .app-preview { border-radius:14px; padding:16px; max-width:260px; margin:0 auto; font-family:var(--font); background:var(--ap-bg); color:var(--ap-text); }
+  .app-preview .ap-topbar { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+  .app-preview .ap-topbar img { height:22px; width:auto; max-width:70px; object-fit:contain; border-radius:5px; }
+  .app-preview .ap-topbar span { font-weight:800; font-size:14px; flex:1; }
+  .app-preview .ap-card { border-radius:12px; padding:14px; margin-bottom:12px; background:var(--ap-card); border:1px solid var(--ap-border); }
+  .app-preview .ap-card-title { font-weight:700; font-size:13px; margin-bottom:3px; }
+  .app-preview .ap-card-sub { font-size:11px; color:var(--ap-muted); }
+  .app-preview .ap-btn { display:block; width:100%; border:none; border-radius:10px; padding:11px; font-weight:700; font-size:13px; color:#fff; background:var(--ap-primary); font-family:var(--font); }
   .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:#23263a; color:#fff; padding:10px 18px; border-radius:10px; font-size:13px; z-index:999; }
   .bottom-nav { position:fixed; bottom:0; left:0; right:0; max-width:720px; margin:0 auto; height:64px; background:var(--card); border-top:1px solid var(--line); display:flex; z-index:60; }
   .nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; color:var(--faint); text-decoration:none; font-family:var(--font); padding-top:6px; }
@@ -79,22 +95,47 @@
     </div>
 
     <div class="card">
-      <h2>Branding (planos Pro/Elite)</h2>
+      <h2>Marca do app do aluno (planos Pro/Elite)</h2>
       <div class="field">
         <label>Nome exibido</label>
         <input type="text" id="displayNameInput" placeholder="Ex: João Personal Trainer">
       </div>
       <div id="whiteLabelLock" class="msg" style="display:none;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;">Cor e logo personalizados são exclusivos dos planos Pro e Elite. Faça upgrade pra personalizar sua marca.</div>
-      <div class="field">
-        <label>Cor principal</label>
-        <div class="color-row">
-          <input type="color" id="primaryColorPicker" value="#2D6BE4">
-          <input type="text" id="primaryColorText" placeholder="#2D6BE4">
+      <div id="whiteLabelFields">
+        <div class="field">
+          <label>Logo (opcional)</label>
+          <div class="logo-row">
+            <div class="logo-preview" id="logoPreviewWrap">
+              <img id="logoPreviewImg" style="display:none;" alt="">
+              <span id="logoPreviewPh">Sem logo</span>
+            </div>
+            <div class="logo-actions">
+              <button class="btn secondary small" id="chooseLogoBtn" type="button">Escolher arquivo</button>
+              <button class="btn danger small" id="removeLogoBtn" type="button" style="display:none;">Remover</button>
+            </div>
+            <input type="file" id="logoFileInput" accept="image/png,image/jpeg" style="display:none;">
+          </div>
         </div>
-      </div>
-      <div class="field">
-        <label>URL do logo (opcional)</label>
-        <input type="text" id="logoUrlInput" placeholder="https://...">
+        <div class="field">
+          <label>Cor do app do aluno</label>
+          <div class="preset-grid" id="presetGrid"></div>
+        </div>
+        <div class="field">
+          <label>Prévia — como o aluno vai ver</label>
+          <div class="app-preview-frame">
+            <div class="app-preview" id="appPreview">
+              <div class="ap-topbar">
+                <img id="apLogo" style="display:none;" alt="">
+                <span id="apName">Meu Protocolo</span>
+              </div>
+              <div class="ap-card">
+                <div class="ap-card-title">Próximo treino</div>
+                <div class="ap-card-sub">Treino A · 6 exercícios</div>
+              </div>
+              <button class="ap-btn" type="button" tabindex="-1">Iniciar treino</button>
+            </div>
+          </div>
+        </div>
       </div>
       <button class="btn" id="saveBtn">Salvar</button>
       <div class="msg" id="saveMsg"></div>
@@ -151,6 +192,25 @@
   const $ = (id) => document.getElementById(id);
 
   let professional = null;
+  let selectedPreset = 'azul';
+  let pendingLogoBlob = null;
+  let pendingLogoPreviewUrl = null;
+  let removeLogoRequested = false;
+  let hasExistingLogo = false;
+
+  // Mesma tabela de presets de aluno.html — duplicada de propósito (mesmo
+  // padrão já usado no projeto pra config pequena sem bundler). Cor livre
+  // foi trocada por presets pra nunca quebrar contraste/gradientes do app
+  // do aluno (ver auditoria registrada no CLAUDE.md).
+  const BRAND_PRESETS = {
+    azul:    { nome: 'Azul Clássico',    dark:false, primary:'#2D6BE4' },
+    grafite: { nome: 'Grafite Executivo', dark:false, primary:'#2B2F3A' },
+    vinho:   { nome: 'Vinho Intenso',     dark:false, primary:'#9C2B4E' },
+    roxo:    { nome: 'Roxo Profundo',     dark:false, primary:'#5B3A9E' },
+    escuro:  { nome: 'Escuro', dark:true, primary:'#2D6BE4', bg:'#14161C', card:'#1E212B', border:'rgba(255,255,255,.07)', text:'#ECEEF2', muted:'#9AA3B2' },
+  };
+  const PRESET_ORDER = ['azul', 'grafite', 'vinho', 'roxo', 'escuro'];
+  const LOGO_BUCKET = 'professional-logos';
 
   function toast(msg) {
     const t = document.createElement('div');
@@ -161,6 +221,76 @@
   }
 
   const PLAN_LABELS = { starter: 'Starter', pro: 'Pro', elite: 'Elite' };
+
+  function updateMockup(presetId) {
+    const p = BRAND_PRESETS[presetId] || BRAND_PRESETS.azul;
+    const el = $('appPreview');
+    el.style.setProperty('--ap-bg', p.dark ? p.bg : '#F8F9FA');
+    el.style.setProperty('--ap-card', p.dark ? p.card : '#FFFFFF');
+    el.style.setProperty('--ap-border', p.dark ? p.border : 'rgba(20,30,45,.08)');
+    el.style.setProperty('--ap-text', p.dark ? p.text : '#1E2A3A');
+    el.style.setProperty('--ap-muted', p.dark ? p.muted : '#63707F');
+    el.style.setProperty('--ap-primary', p.primary);
+  }
+
+  function renderPresetGrid() {
+    $('presetGrid').innerHTML = PRESET_ORDER.map((id) => {
+      const p = BRAND_PRESETS[id];
+      const dotStyle = p.dark
+        ? `background:${p.primary};box-shadow:inset 0 0 0 9px #14161C`
+        : `background:${p.primary}`;
+      return `<div class="preset-swatch ${id === selectedPreset ? 'selected' : ''}" data-preset="${id}">
+        <div class="ps-dot" style="${dotStyle}"></div>
+        <div class="ps-name">${p.nome}</div>
+      </div>`;
+    }).join('');
+    $('presetGrid').querySelectorAll('.preset-swatch').forEach((el) => {
+      el.addEventListener('click', () => {
+        if (professional.plan === 'starter') return;
+        selectedPreset = el.dataset.preset;
+        $('presetGrid').querySelectorAll('.preset-swatch').forEach((x) => x.classList.remove('selected'));
+        el.classList.add('selected');
+        updateMockup(selectedPreset);
+      });
+    });
+  }
+
+  function setLogoPreview(url) {
+    if (url) {
+      $('logoPreviewImg').src = url;
+      $('logoPreviewImg').style.display = 'block';
+      $('logoPreviewPh').style.display = 'none';
+      $('apLogo').src = url;
+      $('apLogo').style.display = 'inline-block';
+      $('removeLogoBtn').style.display = 'inline-block';
+    } else {
+      $('logoPreviewImg').style.display = 'none';
+      $('logoPreviewPh').style.display = 'block';
+      $('apLogo').style.display = 'none';
+      $('apLogo').removeAttribute('src');
+      $('removeLogoBtn').style.display = 'none';
+    }
+  }
+
+  function downscaleImageToPngBlob(file, maxDim) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        let { width, height } = img;
+        const scale = Math.min(1, maxDim / Math.max(width, height));
+        width = Math.max(1, Math.round(width * scale));
+        height = Math.max(1, Math.round(height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        URL.revokeObjectURL(objectUrl);
+        canvas.toBlob((blob) => resolve(blob), 'image/png');
+      };
+      img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Não foi possível ler a imagem.')); };
+      img.src = objectUrl;
+    });
+  }
 
   async function boot() {
     const { data: { session } } = await supa.auth.getSession();
@@ -173,17 +303,22 @@
     professional = pro;
     $('planInfo').textContent = `${PLAN_LABELS[pro.plan] || pro.plan} · ${pro.status}`;
     $('displayNameInput').value = pro.display_name || '';
-    const color = pro.primary_color || '#2D6BE4';
-    $('primaryColorPicker').value = color;
-    $('primaryColorText').value = color;
-    $('logoUrlInput').value = pro.logo_url || '';
     $('rankingToggle').checked = !!pro.ranking_enabled;
+
+    selectedPreset = PRESET_ORDER.includes(pro.color_preset) ? pro.color_preset : 'azul';
+    renderPresetGrid();
+    updateMockup(selectedPreset);
+
+    const { data: logoSigned } = await supa.storage.from(LOGO_BUCKET).createSignedUrl(`${professional.id}/logo.png`, 300);
+    if (logoSigned?.signedUrl) {
+      hasExistingLogo = true;
+      setLogoPreview(logoSigned.signedUrl);
+    }
 
     if (pro.plan === 'starter') {
       $('whiteLabelLock').style.display = 'block';
-      $('primaryColorPicker').disabled = true;
-      $('primaryColorText').disabled = true;
-      $('logoUrlInput').disabled = true;
+      $('whiteLabelFields').style.opacity = '.5';
+      $('whiteLabelFields').style.pointerEvents = 'none';
     }
   }
 
@@ -201,9 +336,28 @@
     toast(enabled ? 'Ranking ativado pros seus alunos.' : 'Ranking desativado.');
   });
 
-  $('primaryColorPicker').addEventListener('input', (e) => { $('primaryColorText').value = e.target.value; });
-  $('primaryColorText').addEventListener('input', (e) => {
-    if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) $('primaryColorPicker').value = e.target.value;
+  $('chooseLogoBtn').addEventListener('click', () => $('logoFileInput').click());
+
+  $('logoFileInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      pendingLogoBlob = await downscaleImageToPngBlob(file, 400);
+      removeLogoRequested = false;
+      if (pendingLogoPreviewUrl) URL.revokeObjectURL(pendingLogoPreviewUrl);
+      pendingLogoPreviewUrl = URL.createObjectURL(pendingLogoBlob);
+      setLogoPreview(pendingLogoPreviewUrl);
+    } catch (err) {
+      toast('Erro ao ler a imagem: ' + err.message);
+    }
+  });
+
+  $('removeLogoBtn').addEventListener('click', () => {
+    pendingLogoBlob = null;
+    if (pendingLogoPreviewUrl) { URL.revokeObjectURL(pendingLogoPreviewUrl); pendingLogoPreviewUrl = null; }
+    removeLogoRequested = true;
+    setLogoPreview(null);
   });
 
   $('saveBtn').addEventListener('click', async () => {
@@ -213,8 +367,29 @@
 
     const payload = { display_name: $('displayNameInput').value.trim() || professional.display_name };
     if (professional.plan !== 'starter') {
-      payload.primary_color = $('primaryColorText').value.trim() || null;
-      payload.logo_url = $('logoUrlInput').value.trim() || null;
+      payload.color_preset = selectedPreset;
+    }
+
+    if (professional.plan !== 'starter' && pendingLogoBlob) {
+      const { error: uploadErr } = await supa.storage
+        .from(LOGO_BUCKET)
+        .upload(`${professional.id}/logo.png`, pendingLogoBlob, { contentType: 'image/png', upsert: true });
+      if (uploadErr) {
+        $('saveBtn').disabled = false;
+        $('saveMsg').textContent = 'Erro ao subir o logo: ' + uploadErr.message;
+        $('saveMsg').className = 'msg error';
+        return;
+      }
+      hasExistingLogo = true;
+    } else if (professional.plan !== 'starter' && removeLogoRequested && hasExistingLogo) {
+      const { error: removeErr } = await supa.storage.from(LOGO_BUCKET).remove([`${professional.id}/logo.png`]);
+      if (removeErr) {
+        $('saveBtn').disabled = false;
+        $('saveMsg').textContent = 'Erro ao remover o logo: ' + removeErr.message;
+        $('saveMsg').className = 'msg error';
+        return;
+      }
+      hasExistingLogo = false;
     }
 
     const { error } = await supa.from('professionals').update(payload).eq('id', professional.id);
@@ -225,6 +400,8 @@
       return;
     }
     Object.assign(professional, payload);
+    pendingLogoBlob = null;
+    removeLogoRequested = false;
     toast('Salvo com sucesso.');
   });
 

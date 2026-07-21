@@ -281,7 +281,7 @@
     }
     const limite = PLAN_STUDENT_LIMITS[professional.plan] ?? PLAN_STUDENT_LIMITS.starter;
     if (currentStudentCount >= limite) {
-      $('addStudentMsg').textContent = `Seu plano (${professional.plan}) permite até ${limite} alunos. Faça upgrade pra cadastrar mais.`;
+      $('addStudentMsg').innerHTML = `Seu plano (${escapeHtml(professional.plan)}) permite até ${limite} alunos. <a href="perfil.html#planCard" style="color:var(--primary);font-weight:700;">Fazer upgrade</a>`;
       return;
     }
     $('addStudentBtn').disabled = true;

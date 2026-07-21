@@ -44,6 +44,13 @@
   .msg { font-size:13px; margin-top:8px; }
   .msg.error { color:var(--danger); }
   .plan-tag { font-size:11px; font-weight:700; padding:2px 10px; border-radius:8px; background:#E7F7F1; color:var(--accent-dim); text-transform:uppercase; display:inline-block; }
+  .plan-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px; }
+  .plan-option { border:1px solid var(--line); border-radius:12px; padding:12px 8px; text-align:center; background:var(--bg); }
+  .plan-option.current { border-color:var(--primary); background:#EEF3FE; }
+  .plan-option .po-name { font-size:12.5px; font-weight:800; }
+  .plan-option .po-price { font-size:15px; font-weight:800; margin-top:4px; }
+  .plan-option .po-price small { font-size:10px; font-weight:600; color:var(--muted); }
+  .plan-option button { width:100%; margin-top:8px; padding:7px 4px; font-size:11.5px; border-radius:8px; }
   .toggle-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
   .toggle-row .tr-text { flex:1; }
   .toggle-row .tr-label { font-size:14px; font-weight:600; }
@@ -108,9 +115,19 @@
   </header>
 
   <main>
-    <div class="card">
-      <h2>Sua conta</h2>
+    <div class="card" id="planCard">
+      <h2>Seu plano</h2>
       <div id="planInfo" class="plan-tag">—</div>
+      <div id="planCustomNote" class="msg" style="display:none;margin-top:8px;"></div>
+      <div class="plan-grid" id="planGrid"></div>
+      <div id="planConfirm" style="display:none;margin-top:14px;">
+        <p id="planConfirmText" style="font-size:13px;line-height:1.6;margin:0 0 12px;"></p>
+        <div style="display:flex;gap:10px;">
+          <button class="btn secondary" id="planCancelBtn" style="flex:1;" type="button">Cancelar</button>
+          <button class="btn" id="planConfirmBtn" style="flex:1;" type="button">Confirmar troca</button>
+        </div>
+        <div class="msg" id="planMsg"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -123,7 +140,7 @@
         <label>WhatsApp (opcional)</label>
         <input type="text" id="whatsappInput" placeholder="Ex: 5511999999999 (DDI+DDD+número)">
       </div>
-      <div id="whiteLabelLock" class="msg" style="display:none;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;">Cor e logo personalizados são exclusivos dos planos Pro e Elite. Faça upgrade pra personalizar sua marca.</div>
+      <div id="whiteLabelLock" class="msg" style="display:none;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;">Cor e logo personalizados são exclusivos dos planos Pro e Elite. <a href="#planCard" onclick="document.getElementById('planCard').scrollIntoView({behavior:'smooth',block:'start'})" style="color:var(--primary);font-weight:700;">Ver planos</a></div>
       <div id="whiteLabelFields">
         <div class="field">
           <label>Logo (opcional)</label>
@@ -276,6 +293,89 @@
   }
 
   const PLAN_LABELS = { starter: 'Starter', pro: 'Pro', elite: 'Elite' };
+  const PLAN_PRICES = { starter: 79, pro: 139, elite: 249 };
+  const PLAN_ORDER = ['starter', 'pro', 'elite'];
+  let pendingPlan = null;
+
+  // Preço de cada plano na grade — se o profissional tem valor_customizado
+  // (combinado manualmente pelo master), esse valor prevalece em qualquer
+  // plano escolhido (mesma regra já usada em mercadopago-create-preapproval),
+  // então a grade mostra o mesmo preço nos 3 cards nesse caso.
+  function planPriceFor(planId) {
+    return professional.valor_customizado ?? PLAN_PRICES[planId];
+  }
+
+  function renderPlanGrid() {
+    const hasCustom = professional.valor_customizado != null;
+    $('planCustomNote').style.display = hasCustom ? 'block' : 'none';
+    if (hasCustom) $('planCustomNote').textContent = `Você tem um valor combinado (R$${professional.valor_customizado}/mês) — ele se mantém em qualquer plano escolhido.`;
+    $('planGrid').innerHTML = PLAN_ORDER.map((id) => {
+      const isCurrent = professional.plan === id;
+      return `
+        <div class="plan-option ${isCurrent ? 'current' : ''}">
+          <div class="po-name">${PLAN_LABELS[id]}</div>
+          <div class="po-price">R$${planPriceFor(id)}<small>/mês</small></div>
+          <button class="btn ${isCurrent ? 'secondary' : ''}" data-plan="${id}" ${isCurrent ? 'disabled' : ''} type="button">${isCurrent ? 'Atual' : 'Escolher'}</button>
+        </div>
+      `;
+    }).join('');
+    $('planGrid').style.display = 'grid';
+    $('planGrid').querySelectorAll('button[data-plan]').forEach((btn) => {
+      btn.addEventListener('click', () => openPlanConfirm(btn.dataset.plan));
+    });
+  }
+
+  function openPlanConfirm(planId) {
+    pendingPlan = planId;
+    const isDowngrade = PLAN_ORDER.indexOf(planId) < PLAN_ORDER.indexOf(professional.plan);
+    $('planConfirmText').textContent = isDowngrade
+      ? `Trocar pro plano ${PLAN_LABELS[planId]} (R$${planPriceFor(planId)}/mês). Recursos exclusivos do plano atual deixam de estar disponíveis.`
+      : `Trocar pro plano ${PLAN_LABELS[planId]} (R$${planPriceFor(planId)}/mês). A cobrança da sua assinatura é ajustada automaticamente a partir da próxima renovação.`;
+    $('planMsg').textContent = '';
+    $('planMsg').className = 'msg';
+    $('planConfirm').style.display = 'block';
+    $('planGrid').style.display = 'none';
+  }
+
+  $('planCancelBtn').addEventListener('click', () => {
+    pendingPlan = null;
+    $('planConfirm').style.display = 'none';
+    $('planGrid').style.display = 'grid';
+  });
+
+  $('planConfirmBtn').addEventListener('click', async () => {
+    if (!pendingPlan) return;
+    $('planConfirmBtn').disabled = true;
+    $('planCancelBtn').disabled = true;
+    $('planMsg').textContent = 'Atualizando plano...';
+    $('planMsg').className = 'msg';
+
+    const { data, error } = await supa.functions.invoke('mercadopago-update-preapproval', { body: { plan: pendingPlan } });
+    $('planConfirmBtn').disabled = false;
+    $('planCancelBtn').disabled = false;
+
+    if (error || !data || data.error) {
+      $('planMsg').textContent = data?.error || error?.message || 'Erro ao trocar de plano.';
+      $('planMsg').className = 'msg error';
+      return;
+    }
+
+    professional.plan = data.plan;
+    pendingPlan = null;
+    $('planInfo').textContent = `${PLAN_LABELS[professional.plan] || professional.plan} · ${professional.status}`;
+    $('planConfirm').style.display = 'none';
+    renderPlanGrid();
+    if (professional.plan === 'starter') {
+      $('whiteLabelLock').style.display = 'block';
+      $('whiteLabelFields').style.opacity = '.5';
+      $('whiteLabelFields').style.pointerEvents = 'none';
+    } else {
+      $('whiteLabelLock').style.display = 'none';
+      $('whiteLabelFields').style.opacity = '';
+      $('whiteLabelFields').style.pointerEvents = '';
+    }
+    toast(`Plano alterado pra ${PLAN_LABELS[professional.plan]}.`);
+  });
 
   function updateMockup(presetId) {
     const preset = COLOR_PRESETS[presetId] || COLOR_PRESETS.azul;
@@ -449,6 +549,10 @@
 
     professional = pro;
     $('planInfo').textContent = `${PLAN_LABELS[pro.plan] || pro.plan} · ${pro.status}`;
+    renderPlanGrid();
+    if (location.hash === '#planCard') {
+      requestAnimationFrame(() => $('planCard').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    }
     $('displayNameInput').value = pro.display_name || '';
     $('whatsappInput').value = pro.whatsapp || '';
     $('rankingToggle').checked = !!pro.ranking_enabled;

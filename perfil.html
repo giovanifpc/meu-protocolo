@@ -131,6 +131,16 @@
     </div>
 
     <div class="card">
+      <h2>Indique um amigo</h2>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 12px;">Compartilhe seu link — quando a pessoa assinar de verdade (depois do trial), você ganha 1 mês grátis, estornado automaticamente na sua cobrança seguinte.</p>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="referralLinkInput" readonly style="flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--text);font-family:var(--font);">
+        <button class="btn secondary" id="copyReferralBtn" type="button">Copiar</button>
+      </div>
+      <div id="referralCreditInfo" class="msg"></div>
+    </div>
+
+    <div class="card">
       <h2>Marca do app do aluno (planos Pro/Elite)</h2>
       <div class="field">
         <label>Nome exibido</label>
@@ -557,6 +567,12 @@
     $('whatsappInput').value = pro.whatsapp || '';
     $('rankingToggle').checked = !!pro.ranking_enabled;
 
+    $('referralLinkInput').value = pro.referral_code ? `https://meuprotocolo.app/onboarding.html?ref=${pro.referral_code}` : '';
+    const referralCredit = pro.referral_credit_months || 0;
+    $('referralCreditInfo').textContent = referralCredit > 0
+      ? `Você tem ${referralCredit} mês(es) grátis pendente(s) — aplicado(s) automaticamente nas próximas cobranças.`
+      : 'Nenhum mês grátis pendente no momento.';
+
     selectedPreset = PRESET_ORDER.includes(pro.color_preset) ? pro.color_preset : 'azul';
     renderPresetGrid();
     updateMockup(selectedPreset);
@@ -655,6 +671,18 @@
   $('logoutBtn').addEventListener('click', async () => {
     await supa.auth.signOut();
     window.location.href = 'login.html';
+  });
+
+  $('copyReferralBtn').addEventListener('click', async () => {
+    const link = $('referralLinkInput').value;
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link);
+      toast('Link copiado.');
+    } catch {
+      $('referralLinkInput').select();
+      toast('Selecione e copie o link manualmente.');
+    }
   });
 
   $('openCancelBtn').addEventListener('click', () => {

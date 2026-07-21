@@ -106,6 +106,14 @@
   function showMsg(text) { msgBox.textContent = text; }
   function showMsg2(text) { msgBox2.textContent = text; }
 
+  // Programa de indicação (item 16): link é onboarding.html?ref=CODIGO.
+  // Guardado em sessionStorage (não só na variável) pra sobreviver a um
+  // reload no meio do fluxo de 2 passos. O código em si nunca é resolvido
+  // no client — só é mandado pra claim_referral() depois que a conta existe,
+  // que decide server-side se é válido.
+  const refCodeFromUrl = new URLSearchParams(location.search).get('ref');
+  if (refCodeFromUrl) sessionStorage.setItem('mp_ref_code', refCodeFromUrl);
+
   (async () => {
     const { data: { session } } = await supa.auth.getSession();
     if (!session) { window.location.href = 'login.html'; return; }
@@ -160,6 +168,16 @@
       console.error('Falha ao criar/atualizar conta:', error.message);
       showMsg('Erro ao criar conta: ' + error.message);
       return;
+    }
+
+    // Vincula a indicação, se veio de um link (?ref=). Não bloqueia o
+    // cadastro se falhar — rastreio de indicação nunca deve impedir alguém
+    // de criar a conta.
+    const pendingRefCode = sessionStorage.getItem('mp_ref_code');
+    if (pendingRefCode) {
+      const { error: refErr } = await supa.rpc('claim_referral', { p_code: pendingRefCode });
+      if (refErr) console.error('Falha ao registrar indicação:', refErr.message);
+      sessionStorage.removeItem('mp_ref_code');
     }
 
     $('step1').style.display = 'none';

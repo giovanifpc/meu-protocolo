@@ -107,12 +107,59 @@ Deno.serve(async (req) => {
       const payment = await mpFetch(`/v1/payments/${dataId}`);
       const professionalId = payment.external_reference;
       if (professionalId) {
+        // Lido ANTES de atualizar ultima_cobranca_em — é o jeito de saber se
+        // essa é a 1ª cobrança aprovada desse profissional (dispara a
+        // recompensa de indicação) sem precisar de uma coluna extra só pra
+        // isso.
+        const { data: proBefore } = await supaAdmin
+          .from('professionals')
+          .select('ultima_cobranca_em, referral_credit_months')
+          .eq('id', professionalId)
+          .maybeSingle();
+        const eraPrimeiraCobranca = !!proBefore && !proBefore.ultima_cobranca_em;
+
         await supaAdmin.from('professionals').update({
           ultima_cobranca_status: payment.status,
           ultima_cobranca_em: new Date().toISOString(),
           ...(payment.status === 'approved' ? { status: 'ativo' } : {}),
         }).eq('id', professionalId);
         await supaAdmin.from('billing_events').update({ professional_id: professionalId }).eq('mp_id', dataId).eq('mp_type', tipo);
+
+        if (payment.status === 'approved') {
+          // Programa de indicação (item 16) — só quem indica é recompensado.
+          // 1) Se esse profissional foi indicado por alguém e essa é a
+          //    primeira cobrança aprovada dele de verdade (não só cadastro),
+          //    credita 1 mês grátis pra quem indicou.
+          if (eraPrimeiraCobranca) {
+            const { data: referral } = await supaAdmin
+              .from('referrals')
+              .select('id, referrer_id')
+              .eq('referred_id', professionalId)
+              .is('rewarded_at', null)
+              .maybeSingle();
+            if (referral) {
+              await supaAdmin.rpc('increment_referral_credit', { p_professional_id: referral.referrer_id });
+              await supaAdmin.from('referrals').update({ rewarded_at: new Date().toISOString() }).eq('id', referral.id);
+            }
+          }
+
+          // 2) Se ESSE profissional (quem acabou de pagar) tem crédito de
+          //    indicação pendente, estorna a cobrança que acabou de ser
+          //    aprovada e consome 1 crédito — é assim que "1 mês grátis" é
+          //    aplicado de fato, sem precisar prever data de cobrança nem
+          //    zerar/reverter o valor da assinatura.
+          if (proBefore && (proBefore.referral_credit_months ?? 0) > 0) {
+            const refundRes = await fetch(`https://api.mercadopago.com/v1/payments/${dataId}/refunds`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${MERCADOPAGO_ACCESS_TOKEN}`, 'content-type': 'application/json' },
+            });
+            if (refundRes.ok) {
+              await supaAdmin.rpc('decrement_referral_credit', { p_professional_id: professionalId });
+            } else {
+              console.error('Falha ao estornar cobrança de indicação:', await refundRes.text());
+            }
+          }
+        }
       }
     }
 

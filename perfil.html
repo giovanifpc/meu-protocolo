@@ -65,6 +65,9 @@
   .preset-swatch.selected { border-color:var(--primary); }
   .preset-swatch .ps-dot { width:30px; height:30px; border-radius:50%; margin:0 auto 6px; }
   .preset-swatch .ps-name { font-size:10.5px; font-weight:700; color:var(--text); line-height:1.2; }
+  .preview-mode-toggle { display:inline-flex; gap:4px; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:4px; margin-bottom:10px; }
+  .preview-mode-toggle .pm-btn { border:none; background:none; padding:6px 14px; border-radius:7px; font-size:12px; font-weight:700; font-family:var(--font); color:var(--muted); cursor:pointer; }
+  .preview-mode-toggle .pm-btn.active { background:var(--card); color:var(--primary); box-shadow:0 1px 3px rgba(0,0,0,.08); }
   .app-preview-frame { border-radius:16px; padding:14px; background:#E4E7EC; }
   .app-preview { border-radius:14px; padding:16px; max-width:260px; margin:0 auto; font-family:var(--font); background:var(--ap-bg); color:var(--ap-text); }
   .app-preview .ap-topbar { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
@@ -122,6 +125,11 @@
         </div>
         <div class="field">
           <label>Prévia — como o aluno vai ver</label>
+          <p style="font-size:12px;color:var(--muted);margin:0 0 8px;">Quem decide entre claro e escuro é o aluno, no próprio celular — aqui é só pra você conferir os dois.</p>
+          <div class="preview-mode-toggle" id="previewModeToggle">
+            <button class="pm-btn active" data-mode="light" type="button">Claro</button>
+            <button class="pm-btn" data-mode="dark" type="button">Escuro</button>
+          </div>
           <div class="app-preview-frame">
             <div class="app-preview" id="appPreview">
               <div class="ap-topbar">
@@ -198,19 +206,22 @@
   let removeLogoRequested = false;
   let hasExistingLogo = false;
 
-  // Mesma tabela de presets de aluno.html — duplicada de propósito (mesmo
-  // padrão já usado no projeto pra config pequena sem bundler). Cor livre
-  // foi trocada por presets pra nunca quebrar contraste/gradientes do app
-  // do aluno (ver auditoria registrada no CLAUDE.md).
-  const BRAND_PRESETS = {
-    azul:    { nome: 'Azul Clássico',    dark:false, primary:'#2D6BE4' },
-    grafite: { nome: 'Grafite Executivo', dark:false, primary:'#2B2F3A' },
-    vinho:   { nome: 'Vinho Intenso',     dark:false, primary:'#9C2B4E' },
-    roxo:    { nome: 'Roxo Profundo',     dark:false, primary:'#5B3A9E' },
-    escuro:  { nome: 'Escuro', dark:true, primary:'#2D6BE4', bg:'#14161C', card:'#1E212B', border:'rgba(255,255,255,.07)', text:'#ECEEF2', muted:'#9AA3B2' },
+  // Mesma tabela de cores de aluno.html — duplicada de propósito (mesmo
+  // padrão já usado no projeto pra config pequena sem bundler). Cor de
+  // marca e modo claro/escuro são eixos independentes (decisão do usuário,
+  // 2026-07-21): o profissional só escolhe a cor aqui; quem decide
+  // claro/escuro é o aluno, no próprio celular. A prévia abaixo deixa o
+  // profissional espiar como a cor fica nos dois modos antes de salvar.
+  const COLOR_PRESETS = {
+    azul:    { nome: 'Azul Clássico',     light: { primary:'#2D6BE4' }, dark: { primary:'#2D6BE4' } },
+    grafite: { nome: 'Grafite Executivo', light: { primary:'#2B2F3A' }, dark: { primary:'#5C6470' } },
+    vinho:   { nome: 'Vinho Intenso',     light: { primary:'#9C2B4E' }, dark: { primary:'#9C2B4E' } },
+    roxo:    { nome: 'Roxo Profundo',     light: { primary:'#5B3A9E' }, dark: { primary:'#5B3A9E' } },
   };
-  const PRESET_ORDER = ['azul', 'grafite', 'vinho', 'roxo', 'escuro'];
+  const PRESET_ORDER = ['azul', 'grafite', 'vinho', 'roxo'];
   const LOGO_BUCKET = 'professional-logos';
+  const DARK_MOCKUP = { bg:'#14161C', card:'#1E212B', border:'rgba(255,255,255,.07)', text:'#ECEEF2', muted:'#9AA3B2' };
+  let previewMode = 'light';
 
   function toast(msg) {
     const t = document.createElement('div');
@@ -223,24 +234,22 @@
   const PLAN_LABELS = { starter: 'Starter', pro: 'Pro', elite: 'Elite' };
 
   function updateMockup(presetId) {
-    const p = BRAND_PRESETS[presetId] || BRAND_PRESETS.azul;
+    const preset = COLOR_PRESETS[presetId] || COLOR_PRESETS.azul;
+    const dark = previewMode === 'dark';
     const el = $('appPreview');
-    el.style.setProperty('--ap-bg', p.dark ? p.bg : '#F8F9FA');
-    el.style.setProperty('--ap-card', p.dark ? p.card : '#FFFFFF');
-    el.style.setProperty('--ap-border', p.dark ? p.border : 'rgba(20,30,45,.08)');
-    el.style.setProperty('--ap-text', p.dark ? p.text : '#1E2A3A');
-    el.style.setProperty('--ap-muted', p.dark ? p.muted : '#63707F');
-    el.style.setProperty('--ap-primary', p.primary);
+    el.style.setProperty('--ap-bg', dark ? DARK_MOCKUP.bg : '#F8F9FA');
+    el.style.setProperty('--ap-card', dark ? DARK_MOCKUP.card : '#FFFFFF');
+    el.style.setProperty('--ap-border', dark ? DARK_MOCKUP.border : 'rgba(20,30,45,.08)');
+    el.style.setProperty('--ap-text', dark ? DARK_MOCKUP.text : '#1E2A3A');
+    el.style.setProperty('--ap-muted', dark ? DARK_MOCKUP.muted : '#63707F');
+    el.style.setProperty('--ap-primary', (dark ? preset.dark : preset.light).primary);
   }
 
   function renderPresetGrid() {
     $('presetGrid').innerHTML = PRESET_ORDER.map((id) => {
-      const p = BRAND_PRESETS[id];
-      const dotStyle = p.dark
-        ? `background:${p.primary};box-shadow:inset 0 0 0 9px #14161C`
-        : `background:${p.primary}`;
+      const p = COLOR_PRESETS[id];
       return `<div class="preset-swatch ${id === selectedPreset ? 'selected' : ''}" data-preset="${id}">
-        <div class="ps-dot" style="${dotStyle}"></div>
+        <div class="ps-dot" style="background:${p.light.primary}"></div>
         <div class="ps-name">${p.nome}</div>
       </div>`;
     }).join('');
@@ -254,6 +263,20 @@
       });
     });
   }
+
+  function renderPreviewModeToggle() {
+    $('previewModeToggle').querySelectorAll('.pm-btn').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.mode === previewMode);
+    });
+  }
+
+  $('previewModeToggle').querySelectorAll('.pm-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      previewMode = btn.dataset.mode;
+      renderPreviewModeToggle();
+      updateMockup(selectedPreset);
+    });
+  });
 
   function setLogoPreview(url) {
     if (url) {

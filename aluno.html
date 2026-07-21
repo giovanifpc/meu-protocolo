@@ -420,6 +420,13 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       <div class="profile-name" id="profileName">Aluno</div>
       <div class="profile-sub" id="profileSub">—</div>
     </div>
+    <div class="section-label">Aparência</div>
+    <div class="seg-control" id="themeModeControl">
+      <button class="seg-btn" data-mode="auto">Automático</button>
+      <button class="seg-btn" data-mode="light">Claro</button>
+      <button class="seg-btn" data-mode="dark">Escuro</button>
+    </div>
+
     <div class="ach-summary" id="achSummary"></div>
     <div class="section-label">Conquistas</div>
     <div class="badge-grid" id="badgeGrid"></div>
@@ -689,60 +696,93 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     droplet: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`,
   };
 
-  // Presets de marca (plano Pro/Elite) — cor livre foi trocada por presets
-  // fixos porque quebrava a UI: --primary-dim e vários "tints" de card
-  // (rgba do azul chumbado) nunca acompanhavam uma cor customizada, e uma
-  // cor clara deixava texto branco de botão ilegível. "escuro" é o único
-  // que também inverte fundo/texto/sombra — é tema, não só cor.
-  const BRAND_PRESETS = {
-    azul:    { nome: 'Azul Clássico',    dark:false, primary:'#2D6BE4', primaryDim:'#1E4FB0', primaryRgb:'45,107,228' },
-    grafite: { nome: 'Grafite Executivo', dark:false, primary:'#2B2F3A', primaryDim:'#14171F', primaryRgb:'43,47,58' },
-    vinho:   { nome: 'Vinho Intenso',     dark:false, primary:'#9C2B4E', primaryDim:'#6E1F38', primaryRgb:'156,43,78' },
-    roxo:    { nome: 'Roxo Profundo',     dark:false, primary:'#5B3A9E', primaryDim:'#3F2A70', primaryRgb:'91,58,158' },
-    escuro:  {
-      nome: 'Escuro', dark:true, primary:'#2D6BE4', primaryDim:'#1E4FB0', primaryRgb:'45,107,228',
-      bg:'#14161C', card:'#1E212B', card2:'#262A35', elev:'#2A2E3A',
-      text:'#ECEEF2', muted:'#9AA3B2', faint:'#6B7280', line:'#2A2E3A',
-      cardGrad:'linear-gradient(165deg,#1C2029 0%,#1A2320 55%,#191C26 100%)',
-      cardBorder:'rgba(255,255,255,.07)',
-      shadowSm:'0 1px 2px rgba(0,0,0,.3)',
-      shadowCard:'0 1px 2px rgba(0,0,0,.3), 0 10px 24px -14px rgba(0,0,0,.5)',
-      shadowPop:'0 14px 34px -12px rgba(0,0,0,.6)',
-      danger:'#FF6B62', dangerBg:'rgba(255,107,98,.14)', dangerBorder:'rgba(255,107,98,.4)',
-      warnBg:'rgba(227,176,75,.16)', warnBorder:'rgba(227,176,75,.4)', warnText:'#E3B04B',
-    },
+  // Cor de marca (plano Pro/Elite) e modo claro/escuro são eixos
+  // independentes (decisão do usuário, 2026-07-21): o profissional escolhe
+  // a cor (azul/grafite/vinho/roxo), o ALUNO decide claro/escuro no
+  // próprio celular — segue o tema nativo por padrão (prefers-color-scheme),
+  // com opção de sobrepor manualmente em Perfil. Cada cor tem uma variante
+  // "dark" própria só quando a variante clara não teria contraste/destaque
+  // suficiente contra fundo escuro (ex: Grafite é quase preto — sumiria no
+  // escuro — ganhou um tom mais claro só nesse modo; Azul/Vinho/Roxo já
+  // funcionam bem nos dois, reaproveitam o mesmo valor).
+  const COLOR_PRESETS = {
+    azul:    { nome: 'Azul Clássico',     light: { primary:'#2D6BE4', dim:'#1E4FB0', rgb:'45,107,228' },  dark: { primary:'#2D6BE4', dim:'#1E4FB0', rgb:'45,107,228' } },
+    grafite: { nome: 'Grafite Executivo', light: { primary:'#2B2F3A', dim:'#14171F', rgb:'43,47,58' },    dark: { primary:'#5C6470', dim:'#3D4450', rgb:'92,100,112' } },
+    vinho:   { nome: 'Vinho Intenso',     light: { primary:'#9C2B4E', dim:'#6E1F38', rgb:'156,43,78' },   dark: { primary:'#9C2B4E', dim:'#6E1F38', rgb:'156,43,78' } },
+    roxo:    { nome: 'Roxo Profundo',     light: { primary:'#5B3A9E', dim:'#3F2A70', rgb:'91,58,158' },   dark: { primary:'#5B3A9E', dim:'#3F2A70', rgb:'91,58,158' } },
   };
 
-  function applyBrandPreset(presetId) {
-    const p = BRAND_PRESETS[presetId] || BRAND_PRESETS.azul;
-    const root = document.documentElement.style;
-    root.setProperty('--primary', p.primary);
-    root.setProperty('--primary-dim', p.primaryDim);
-    root.setProperty('--primary-rgb', p.primaryRgb);
-    if (p.dark) {
-      root.setProperty('--bg', p.bg);
-      root.setProperty('--card', p.card);
-      root.setProperty('--card-2', p.card2);
-      root.setProperty('--elev', p.elev);
-      root.setProperty('--text', p.text);
-      root.setProperty('--muted', p.muted);
-      root.setProperty('--faint', p.faint);
-      root.setProperty('--line', p.line);
-      root.setProperty('--card-grad', p.cardGrad);
-      root.setProperty('--card-border', p.cardBorder);
-      root.setProperty('--shadow-sm', p.shadowSm);
-      root.setProperty('--shadow-card', p.shadowCard);
-      root.setProperty('--shadow-pop', p.shadowPop);
-      root.setProperty('--danger', p.danger);
-      root.setProperty('--danger-bg', p.dangerBg);
-      root.setProperty('--danger-border', p.dangerBorder);
-      root.setProperty('--warn-bg', p.warnBg);
-      root.setProperty('--warn-border', p.warnBorder);
-      root.setProperty('--warn-text', p.warnText);
-      const tc = document.querySelector('meta[name="theme-color"]');
-      if (tc) tc.setAttribute('content', p.bg);
-    }
+  // Valores estruturais do modo escuro (fundo/card/texto/sombra/avisos) —
+  // independentes da cor escolhida. No modo claro, essas variáveis não são
+  // setadas via JS: caem no :root estático da página (removeProperty limpa
+  // qualquer override anterior, deixando o CSS padrão assumir de novo).
+  const DARK_THEME = {
+    '--bg': '#14161C', '--card': '#1E212B', '--card-2': '#262A35', '--elev': '#2A2E3A',
+    '--text': '#ECEEF2', '--muted': '#9AA3B2', '--faint': '#6B7280', '--line': '#2A2E3A',
+    '--card-grad': 'linear-gradient(165deg,#1C2029 0%,#1A2320 55%,#191C26 100%)',
+    '--card-border': 'rgba(255,255,255,.07)',
+    '--shadow-sm': '0 1px 2px rgba(0,0,0,.3)',
+    '--shadow-card': '0 1px 2px rgba(0,0,0,.3), 0 10px 24px -14px rgba(0,0,0,.5)',
+    '--shadow-pop': '0 14px 34px -12px rgba(0,0,0,.6)',
+    '--danger': '#FF6B62', '--danger-bg': 'rgba(255,107,98,.14)', '--danger-border': 'rgba(255,107,98,.4)',
+    '--warn-bg': 'rgba(227,176,75,.16)', '--warn-border': 'rgba(227,176,75,.4)', '--warn-text': '#E3B04B',
+  };
+
+  const THEME_MODE_KEY = 'mp_theme_mode'; // localStorage: 'light' | 'dark' — ausente = seguir o sistema
+  let currentColorPreset = 'azul';
+
+  function getEffectiveThemeMode() {
+    const stored = localStorage.getItem(THEME_MODE_KEY);
+    if (stored === 'light' || stored === 'dark') return stored;
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
   }
+
+  function applyTheme(colorPresetId, mode) {
+    const preset = COLOR_PRESETS[colorPresetId] || COLOR_PRESETS.azul;
+    const c = mode === 'dark' ? preset.dark : preset.light;
+    const root = document.documentElement.style;
+    root.setProperty('--primary', c.primary);
+    root.setProperty('--primary-dim', c.dim);
+    root.setProperty('--primary-rgb', c.rgb);
+    if (mode === 'dark') {
+      Object.entries(DARK_THEME).forEach(([k, v]) => root.setProperty(k, v));
+    } else {
+      Object.keys(DARK_THEME).forEach((k) => root.removeProperty(k));
+    }
+    const tc = document.querySelector('meta[name="theme-color"]');
+    if (tc) tc.setAttribute('content', mode === 'dark' ? DARK_THEME['--bg'] : '#F8F9FA');
+  }
+
+  function setThemeMode(mode) {
+    if (mode === 'auto') localStorage.removeItem(THEME_MODE_KEY);
+    else localStorage.setItem(THEME_MODE_KEY, mode);
+    applyTheme(currentColorPreset, getEffectiveThemeMode());
+    updateThemeModeControl();
+  }
+
+  function updateThemeModeControl() {
+    const stored = localStorage.getItem(THEME_MODE_KEY);
+    const active = stored === 'light' || stored === 'dark' ? stored : 'auto';
+    document.querySelectorAll('#themeModeControl .seg-btn').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.mode === active);
+    });
+  }
+
+  if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+      if (!localStorage.getItem(THEME_MODE_KEY)) applyTheme(currentColorPreset, getEffectiveThemeMode());
+    });
+  }
+
+  document.querySelectorAll('#themeModeControl .seg-btn').forEach((btn) => {
+    btn.addEventListener('click', () => setThemeMode(btn.dataset.mode));
+  });
+
+  // Aplica o modo (claro/escuro) na hora, antes do boot() terminar de
+  // carregar o profissional — evita flash de tema claro pra quem prefere
+  // escuro. A cor (azul aqui) é só um palpite inicial; boot() reaplica com
+  // a cor real assim que os dados do profissional chegam.
+  applyTheme('azul', getEffectiveThemeMode());
 
   let student = null;
   let protocol = null;
@@ -831,7 +871,8 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     student = st;
 
     if (student.professionals?.display_name) $('proName').textContent = student.professionals.display_name;
-    applyBrandPreset(student.professionals?.color_preset || 'azul');
+    currentColorPreset = COLOR_PRESETS[student.professionals?.color_preset] ? student.professionals.color_preset : 'azul';
+    applyTheme(currentColorPreset, getEffectiveThemeMode());
 
     const { data: logoSigned } = await supa.storage
       .from('professional-logos')
@@ -1298,6 +1339,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     $('profileName').textContent = student.nome;
     $('profileSub').textContent = student.professionals?.display_name ? `Aluno(a) de ${student.professionals.display_name}` : student.email || '';
     $('profileFoot').innerHTML = `Meu Protocolo<br>${completedCount()} treino(s) concluído(s) · ${earnedBadgeIds().length}/${BADGES.length} conquistas`;
+    updateThemeModeControl();
     buildAchievements();
     loadRanking();
     updatePushButtonState();

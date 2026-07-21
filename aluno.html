@@ -48,10 +48,16 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .topbar h2{font-size:17px;font-weight:700;flex:1}
 .topbar .sub{font-size:12px;color:var(--muted);font-weight:600}
 .topbar .brand{font-size:17px;font-weight:800;flex:1}
-.pro-banner{border-radius:var(--radius-lg);padding:24px 18px;margin-bottom:18px;background:linear-gradient(135deg,var(--primary),var(--primary-dim));color:#fff;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;box-shadow:var(--shadow-pop)}
-.pro-banner-logo{width:56px;height:56px;border-radius:14px;object-fit:contain;background:rgba(255,255,255,.16);padding:6px}
-.pro-banner-name{font-size:17px;font-weight:800}
+.pro-hero{margin-bottom:18px}
+.pro-banner{position:relative;border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--primary),var(--primary-dim));box-shadow:var(--shadow-pop);overflow:visible}
+.pro-banner-solo{padding:26px 18px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px}
+.pro-hero.has-logo .pro-banner{height:120px}
+.pro-banner-logo{position:absolute;left:50%;bottom:0;transform:translate(-50%,50%);width:232px;height:232px;border-radius:34px;object-fit:contain;background:#fff;padding:14px;box-shadow:0 16px 32px -10px rgba(20,30,45,.42);border:4px solid #fff;z-index:2}
+.pro-banner-info{text-align:center;padding-top:132px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.pro-banner-name{font-size:17px;font-weight:800;color:#fff}
+.pro-banner-name-dark{color:var(--text)}
 .pro-banner-wa{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.18);color:#fff;padding:9px 16px;border-radius:999px;font-size:13px;font-weight:700;text-decoration:none;border:1px solid rgba(255,255,255,.32)}
+.pro-banner-wa-solid{background:var(--primary);border-color:transparent}
 .pro-banner-wa svg{width:16px;height:16px}
 .week-cal{display:flex;gap:6px;margin-bottom:16px}
 .wc-day{flex:1;aspect-ratio:1/1;border-radius:10px;background:var(--elev);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--faint);border:1px solid var(--card-border)}
@@ -1199,15 +1205,32 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     const container = $('homeContent');
     const proName = student.professionals?.display_name || 'Meu Protocolo';
     const wa = (student.professionals?.whatsapp || '').replace(/\D/g, '');
-    const waHtml = wa
-      ? `<a class="pro-banner-wa" href="https://wa.me/${wa}?text=${encodeURIComponent('Oi, ' + proName + '!')}" target="_blank" rel="noopener">${ICONS.whatsapp} Enviar mensagem</a>`
-      : '';
-    container.innerHTML = `
-      <div class="pro-banner">
-        <img class="pro-banner-logo" id="bannerLogo" style="display:none;" alt="">
-        <div class="pro-banner-name">${escapeHtml(proName)}</div>
-        ${waHtml}
+    const waInner = `${ICONS.whatsapp} Enviar mensagem`;
+    const waHref = wa ? `https://wa.me/${wa}?text=${encodeURIComponent('Oi, ' + proName + '!')}` : null;
+    // Com logo: banner vira uma faixa colorida compacta com a logo (grande,
+    // em destaque) flutuando por cima, metade dentro/metade fora da borda
+    // inferior — nome e WhatsApp ficam abaixo dela, fora da faixa, pra não
+    // ficar coberto pelo tamanho da logo. Sem logo: mantém o banner simples
+    // de antes (nome + WhatsApp centralizados dentro da própria faixa).
+    const heroHtml = logoUrl ? `
+      <div class="pro-hero has-logo">
+        <div class="pro-banner"><img class="pro-banner-logo" id="bannerLogo" style="display:none;" alt=""></div>
+        <div class="pro-banner-info">
+          <div class="pro-banner-name pro-banner-name-dark">${escapeHtml(proName)}</div>
+          ${waHref ? `<a class="pro-banner-wa pro-banner-wa-solid" href="${waHref}" target="_blank" rel="noopener">${waInner}</a>` : ''}
+        </div>
       </div>
+    ` : `
+      <div class="pro-hero">
+        <div class="pro-banner pro-banner-solo">
+          <div class="pro-banner-name">${escapeHtml(proName)}</div>
+          ${waHref ? `<a class="pro-banner-wa" href="${waHref}" target="_blank" rel="noopener">${waInner}</a>` : ''}
+        </div>
+      </div>
+    `;
+    container.innerHTML = `
+      ${heroHtml}
+      ${checkinRowHtml()}
       <div class="seg-control" id="historySeg">
         <button class="seg-btn ${historySubTab === 'carga' ? 'active' : ''}" data-tab="carga">Evolução de carga</button>
         <button class="seg-btn ${historySubTab === 'avaliacao' ? 'active' : ''}" data-tab="avaliacao">Avaliação física</button>
@@ -1650,7 +1673,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   }
 
   function refreshCheckinViews() {
-    if ($('history').classList.contains('active')) buildWorkoutHub();
+    if ($('home').classList.contains('active')) buildHomeDashboard();
     if ($('nutri').classList.contains('active')) buildNutri();
   }
 
@@ -1783,7 +1806,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 
   function buildWorkoutHub() {
     if (!protocol) {
-      $('historyContent').innerHTML = weekCalHtml() + `<div class="empty-state"><div class="es-ico">${ICONS.calendar}</div><div class="es-txt">Olá, ${escapeHtml(student.nome)}! Seu protocolo de treino ainda não foi publicado.<br>Assim que seu personal configurar, ele aparecerá aqui.</div></div>` + checkinRowHtml();
+      $('historyContent').innerHTML = weekCalHtml() + `<div class="empty-state"><div class="es-ico">${ICONS.calendar}</div><div class="es-txt">Olá, ${escapeHtml(student.nome)}! Seu protocolo de treino ainda não foi publicado.<br>Assim que seu personal configurar, ele aparecerá aqui.</div></div>`;
       return;
     }
     const nextIdx = nextWorkoutIndex();
@@ -1814,7 +1837,6 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         <div class="stat-card"><div class="sc-num">${weekStreak()}</div><div class="sc-lbl">semanas seguidas</div></div>
         <div class="stat-card"><div class="sc-num">${completedCount()}</div><div class="sc-lbl">treinos concluídos</div></div>
       </div>
-      ${checkinRowHtml()}
       <div class="section-label">Todos os treinos</div>
       <div id="workoutsList"></div>
     `;

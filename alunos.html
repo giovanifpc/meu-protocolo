@@ -187,8 +187,15 @@
             <a class="btn secondary" style="padding:7px 12px;font-size:12px;" href="treinos.html?student_id=${s.id}">Treino</a>
             <a class="btn secondary" style="padding:7px 12px;font-size:12px;" href="avaliacoes.html?student_id=${s.id}">Avaliação</a>
             <a class="btn secondary" style="padding:7px 12px;font-size:12px;" href="nutri.html?student_id=${s.id}">Nutri</a>
+            <button class="btn secondary btn-icon" style="padding:7px 10px;" data-role="toggle-msg" data-student-id="${s.id}" title="Enviar mensagem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
             <button class="btn secondary btn-icon" style="padding:7px 10px;" data-role="toggle-notes" data-student-id="${s.id}" title="Nota privada e status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
           </div>
+        </div>
+        <div class="notes-panel" id="msgPanel-${s.id}">
+          <div class="notes-sub-label">Enviar mensagem</div>
+          <textarea data-role="msg-text" data-student-id="${s.id}" placeholder="Escreva uma mensagem para ${escapeHtml(s.nome)}..."></textarea>
+          <button class="btn small" style="padding:7px 12px;font-size:12px;" data-role="send-msg" data-student-id="${s.id}">Enviar</button>
+          <div class="msg" id="msgSendStatus-${s.id}"></div>
         </div>
         <div class="notes-panel" id="notesPanel-${s.id}">
           <div class="avatar-preview" id="avatarPreview-${s.id}">${escapeHtml((s.nome || '?').trim().charAt(0).toUpperCase())}</div>
@@ -213,6 +220,14 @@
     `; }).join('');
 
     const avatarLoaded = {};
+    list.querySelectorAll('[data-role="toggle-msg"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        $('msgPanel-' + btn.dataset.studentId).classList.toggle('open');
+      });
+    });
+    list.querySelectorAll('[data-role="send-msg"]').forEach(btn => {
+      btn.addEventListener('click', () => sendMessageToStudent(btn.dataset.studentId));
+    });
     list.querySelectorAll('[data-role="toggle-notes"]').forEach(btn => {
       btn.addEventListener('click', () => {
         const studentId = btn.dataset.studentId;
@@ -234,6 +249,29 @@
     list.querySelectorAll('[data-role="mark-paid"]').forEach(btn => {
       btn.addEventListener('click', () => markPaid(btn.dataset.studentId));
     });
+  }
+
+  async function sendMessageToStudent(studentId) {
+    const textarea = document.querySelector(`[data-role="msg-text"][data-student-id="${studentId}"]`);
+    const body = textarea.value.trim();
+    const statusEl = $('msgSendStatus-' + studentId);
+    if (!body) return;
+
+    const btn = document.querySelector(`[data-role="send-msg"][data-student-id="${studentId}"]`);
+    btn.disabled = true;
+    statusEl.textContent = '';
+    statusEl.className = 'msg';
+    const { error } = await supa.rpc('send_message', { p_student_id: studentId, p_body: body });
+    btn.disabled = false;
+
+    if (error) {
+      statusEl.textContent = 'Erro ao enviar: ' + error.message;
+      statusEl.className = 'msg error';
+      return;
+    }
+    textarea.value = '';
+    statusEl.textContent = 'Mensagem enviada — veja a resposta na aba Mensagens.';
+    toast('Mensagem enviada.');
   }
 
   async function saveBilling(studentId) {

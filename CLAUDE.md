@@ -90,6 +90,13 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### Profissional agora consegue enviar a primeira mensagem (2026-07-22)
+
+Gap encontrado pelo usuário: a mensageria implementada mais cedo nesta sessão só dava pro profissional **responder** — a inbox (`get_professional_conversations()`) só lista aluno com mensagem já trocada, então sem o aluno mandar primeiro, o profissional não tinha nenhum jeito de iniciar contato pelo app.
+
+- **`alunos.html`**: novo ícone (mensagem, mesmo SVG usado no resto do app) ao lado do lápis de "Nota privada e status" em cada aluno — abre um painel (reaproveita a classe `.notes-panel` já existente, mesmo padrão visual/expansível do painel de nota) com textarea + botão Enviar. Chama a RPC `send_message` que já existia (da mensageria, mais cedo nesta sessão) — nenhuma mudança de schema/backend precisou, a função já resolvia corretamente o caso "profissional manda sem nenhuma mensagem anterior existir".
+- **Testado ponta a ponta em produção local**: enviada mensagem pro aluno de teste (zero mensagens prévias confirmado antes do teste) — persistiu com `sender='professional'`, notificação "Nova mensagem de Personal Teste Sandbox" criada no sino do aluno (mesmo efeito colateral automático de `send_message`), e a conversa passou a aparecer na aba Mensagens do profissional logo em seguida (`get_professional_conversations()` já inclui o aluno agora que existe 1+ mensagem). Dado de teste removido depois.
+
 ### Cache do Cloudflare servindo ícone antigo + nome "Painel" trocado (2026-07-22)
 
 Depois do fix de resolução (seção abaixo), o usuário reinstalou o PWA no Android e ainda viu a imagem antiga. Investigado: **o arquivo novo já estava correto no GitHub** (confirmado comparando `raw.githubusercontent.com/.../icons/icon-512.png`, que bate com o arquivo novo local, contra `meuprotocolo.app/icons/icon-512.png`, que ainda respondia com o tamanho do arquivo antigo e `cf-cache-status: HIT`) — o Cloudflare (proxy na frente do domínio desde a Fase B) estava servindo uma cópia em cache de até 4 horas (`Cache-Control: max-age=14400`) do mesmo nome de arquivo. Não é bug de deploy nem de código, é cache de CDN num nome de URL reaproveitado.

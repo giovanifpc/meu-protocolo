@@ -73,6 +73,8 @@ Isso evita retrabalho no código, mantém o fluxo principal intacto, e reduz atr
 
 Benefícios Founder: plano Premium completo, valor vitalício de R$50/mês enquanto mantiver a assinatura ativa, participação na construção do sistema, canal direto para sugestões, acesso antecipado às novidades. **O programa Founder não é um desconto — é uma recompensa por participar da construção inicial do produto.**
 
+**⚠️ Pendência técnica registrada em 2026-07-22, antes de confiar 100% no billing de qualquer Founder que vier a pagar de verdade**: duas chamadas reais à API do Mercado Pago nunca foram executadas nem uma vez contra o ambiente real (nem em sandbox, nem em produção) — `PUT /preapproval/{id}` (sincroniza o valor cobrado quando o profissional troca de plano pelo `perfil.html`, `mercadopago-update-preapproval`) e `POST /v1/payments/{id}/refunds` (estorno automático do mês grátis do programa de indicação, dentro de `mercadopago-webhook`). Toda a lógica de negócio em volta delas (barreira de limite de aluno no downgrade, resolução de indicação, crédito/consumo de mês grátis) já foi validada de verdade contra o banco — só a integração com a API externa em si segue sem execução real. Risco prático: zero enquanto ninguém tiver assinatura paga de verdade (nenhum profissional tem `mp_preapproval_id`, incluindo Cliente 0 via `billing_exempt`). **Validar antes de**: o primeiro Founder que trocar de plano pelo próprio painel, ou o primeiro crédito de indicação precisar ser aplicado de verdade numa cobrança real. Ver seção "Pendências do celular aplicadas no PC (2026-07-22)" no topo do `CLAUDE.md` pro detalhamento completo do que já foi testado com segurança (RPCs/SQL) vs. o que falta.
+
 ---
 
 ## FASE 5 — Entrevistas

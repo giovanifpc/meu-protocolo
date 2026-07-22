@@ -69,6 +69,23 @@
   </header>
 
   <main>
+    <div class="card" id="createCard">
+      <h2>Cadastrar profissional manualmente</h2>
+      <p style="font-size:12px; color:var(--muted); margin:0 0 12px;">Pra criar a conta de um cliente fundador antes do primeiro login dele — informe o e-mail e o nome combinados na conversa. Depois de cadastrado, defina plano/preço/isenção direto na linha da tabela abaixo. Se a isenção de cobrança já estiver marcada quando ele logar pela primeira vez, ele cai direto no painel (nunca vê a tela de cartão nem escolhe o próprio nome — pode trocar depois em Perfil).</p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+        <div>
+          <label style="display:block; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; margin-bottom:4px;">E-mail</label>
+          <input type="email" id="newProEmail" placeholder="cliente@email.com" style="background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:13px; font-family:var(--font); color:var(--text); min-width:220px;">
+        </div>
+        <div>
+          <label style="display:block; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; margin-bottom:4px;">Nome / nome do negócio</label>
+          <input type="text" id="newProName" placeholder="Nome exibido no app" style="background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:13px; font-family:var(--font); color:var(--text); min-width:220px;">
+        </div>
+        <button class="btn" id="createProBtn">Cadastrar</button>
+      </div>
+      <div class="msg" id="createProMsg"></div>
+    </div>
+
     <div class="summary-row" id="summaryRow"></div>
     <div id="loadingMsg">Carregando...</div>
     <div id="emptyMsg" style="display:none">Nenhum profissional cadastrado ainda.</div>
@@ -82,6 +99,7 @@
             <th>Status</th>
             <th>Preço customizado</th>
             <th>Isento de cobrança</th>
+            <th>Trial até</th>
             <th>Alunos</th>
             <th>Criado em</th>
             <th></th>
@@ -130,6 +148,8 @@
 
     const planOptions = PLANS.map(p => `<option value="${p}" ${p === row.plan ? 'selected' : ''}>${p}</option>`).join('');
     const statusOptions = STATUSES.map(s => `<option value="${s}" ${s === row.status ? 'selected' : ''}>${s}</option>`).join('');
+    // input type=date trabalha em YYYY-MM-DD local — corta só a data do timestamptz
+    const trialValue = row.trial_ends_at ? new Date(row.trial_ends_at).toISOString().slice(0, 10) : '';
 
     tr.innerHTML = `
       <td>${escapeHtml(row.display_name)}</td>
@@ -138,6 +158,7 @@
       <td><select class="statusSelect">${statusOptions}</select></td>
       <td><input type="number" class="valorInput" step="0.01" placeholder="tabela" value="${row.valor_customizado ?? ''}"></td>
       <td style="text-align:center;"><input type="checkbox" class="billingExemptCheckbox" ${row.billing_exempt ? 'checked' : ''} title="Conta isenta de cobrança (teste interno / programa Founder) — pula a exigência de cartão no login"></td>
+      <td><input type="date" class="trialEndsInput" value="${trialValue}" title="Data até quando a conta fica isenta/em trial — ajuste livre, não é aplicado automaticamente em lugar nenhum"></td>
       <td>${row.alunos_count ?? 0}</td>
       <td>${dataCriado}</td>
       <td>
@@ -154,6 +175,7 @@
       const newStatus = tr.querySelector('.statusSelect').value;
       const valorRaw = tr.querySelector('.valorInput').value.trim();
       const newBillingExempt = tr.querySelector('.billingExemptCheckbox').checked;
+      const trialRaw = tr.querySelector('.trialEndsInput').value;
       const args = {
         prof_id: row.id,
         new_plan: newPlan,
@@ -161,6 +183,7 @@
         new_valor_customizado: valorRaw === '' ? null : Number(valorRaw),
         clear_valor_customizado: valorRaw === '',
         new_billing_exempt: newBillingExempt,
+        new_trial_ends_at: trialRaw === '' ? null : new Date(trialRaw + 'T23:59:59').toISOString(),
       };
       const { error } = await supa.rpc('master_update_professional', args);
       btn.disabled = false;
@@ -229,6 +252,59 @@
     });
   }
 
+  async function loadProfessionals() {
+    const { data: rows, error } = await supa.rpc('master_list_professionals');
+    $('loadingMsg').style.display = 'none';
+
+    if (error) {
+      console.error('Falha ao carregar profissionais:', error.message);
+      $('emptyMsg').textContent = 'Erro ao carregar: ' + error.message;
+      $('emptyMsg').style.display = 'block';
+      $('tableWrap').style.display = 'none';
+      return;
+    }
+    if (!rows || rows.length === 0) {
+      $('emptyMsg').style.display = 'block';
+      $('tableWrap').style.display = 'none';
+      renderSummary([]);
+      return;
+    }
+
+    $('emptyMsg').style.display = 'none';
+    renderSummary(rows);
+    const tbody = $('tbody');
+    tbody.innerHTML = '';
+    rows.forEach(row => tbody.appendChild(renderRow(row)));
+    $('tableWrap').style.display = 'block';
+  }
+
+  $('createProBtn').addEventListener('click', async () => {
+    const email = $('newProEmail').value.trim().toLowerCase();
+    const nome = $('newProName').value.trim();
+    const msgEl = $('createProMsg');
+    msgEl.className = 'msg';
+    if (!email || !email.includes('@')) { msgEl.textContent = 'Digite um e-mail válido.'; msgEl.className = 'msg error'; return; }
+    if (!nome) { msgEl.textContent = 'Digite o nome.'; msgEl.className = 'msg error'; return; }
+
+    $('createProBtn').disabled = true;
+    msgEl.textContent = 'Cadastrando...';
+    const { error } = await supa.rpc('master_create_professional', { p_email: email, p_display_name: nome });
+    $('createProBtn').disabled = false;
+
+    if (error) {
+      console.error('Falha ao cadastrar profissional:', error.message);
+      msgEl.textContent = 'Erro: ' + error.message;
+      msgEl.className = 'msg error';
+      return;
+    }
+
+    msgEl.textContent = 'Cadastrado! Já aparece na tabela abaixo — defina plano/preço/isenção e salve.';
+    msgEl.className = 'msg ok';
+    $('newProEmail').value = '';
+    $('newProName').value = '';
+    await loadProfessionals();
+  });
+
   async function boot() {
     const { data: { session } } = await supa.auth.getSession();
     if (!session) { window.location.href = 'login.html'; return; }
@@ -243,27 +319,7 @@
     }
 
     loadSupportConversations();
-
-    const { data: rows, error } = await supa.rpc('master_list_professionals');
-    $('loadingMsg').style.display = 'none';
-
-    if (error) {
-      console.error('Falha ao carregar profissionais:', error.message);
-      $('emptyMsg').textContent = 'Erro ao carregar: ' + error.message;
-      $('emptyMsg').style.display = 'block';
-      return;
-    }
-    if (!rows || rows.length === 0) {
-      $('emptyMsg').style.display = 'block';
-      renderSummary([]);
-      return;
-    }
-
-    renderSummary(rows);
-    const tbody = $('tbody');
-    tbody.innerHTML = '';
-    rows.forEach(row => tbody.appendChild(renderRow(row)));
-    $('tableWrap').style.display = 'block';
+    await loadProfessionals();
   }
 
   $('logoutBtn').addEventListener('click', async () => {

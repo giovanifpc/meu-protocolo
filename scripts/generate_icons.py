@@ -39,11 +39,11 @@ def main():
     src = square_master(Image.open(LOGO_PATH).convert('RGBA'))
     os.makedirs(ICONS_DIR, exist_ok=True)
 
-    on_bg(src, 192).save(os.path.join(ICONS_DIR, 'icon-192.png'))
-    on_bg(src, 512).save(os.path.join(ICONS_DIR, 'icon-512.png'))
-    on_bg(src, 512, scale=0.72).save(os.path.join(ICONS_DIR, 'icon-512-maskable.png'))
-    on_bg(src, 180).save(os.path.join(ICONS_DIR, 'apple-touch-icon.png'))
-    on_bg(src, 32).save(os.path.join(ICONS_DIR, 'favicon-32.png'))
+    on_bg(src, 192).save(os.path.join(ICONS_DIR, 'icon-192-v2.png'))
+    on_bg(src, 512).save(os.path.join(ICONS_DIR, 'icon-512-v2.png'))
+    on_bg(src, 512, scale=0.72).save(os.path.join(ICONS_DIR, 'icon-512-maskable-v2.png'))
+    on_bg(src, 180).save(os.path.join(ICONS_DIR, 'apple-touch-icon-v2.png'))
+    on_bg(src, 32).save(os.path.join(ICONS_DIR, 'favicon-32-v2.png'))
     print('icones gerados em', ICONS_DIR)
 
 

@@ -2,7 +2,7 @@
 // cache como fallback). Nunca intercepta chamadas ao Supabase: auth e dados do
 // aluno sempre precisam ser requisição de rede real, nunca resposta velha de cache.
 const CACHE_NAME = 'meu-protocolo-v1';
-const PRECACHE_URLS = ['/aluno.html', '/manifest.json', '/icons/icon-192.png', '/icons/icon-512.png'];
+const PRECACHE_URLS = ['/aluno.html', '/manifest.json', '/icons/icon-192-v2.png', '/icons/icon-512-v2.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -40,8 +40,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || 'Meu Protocolo', {
       body: data.body || '',
-      icon: 'icons/icon-192.png',
-      badge: 'icons/icon-192.png',
+      icon: 'icons/icon-192-v2.png',
+      badge: 'icons/icon-192-v2.png',
     })
   );
 });

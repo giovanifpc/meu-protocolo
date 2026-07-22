@@ -90,6 +90,16 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### Cache do Cloudflare servindo ícone antigo + nome "Painel" trocado (2026-07-22)
+
+Depois do fix de resolução (seção abaixo), o usuário reinstalou o PWA no Android e ainda viu a imagem antiga. Investigado: **o arquivo novo já estava correto no GitHub** (confirmado comparando `raw.githubusercontent.com/.../icons/icon-512.png`, que bate com o arquivo novo local, contra `meuprotocolo.app/icons/icon-512.png`, que ainda respondia com o tamanho do arquivo antigo e `cf-cache-status: HIT`) — o Cloudflare (proxy na frente do domínio desde a Fase B) estava servindo uma cópia em cache de até 4 horas (`Cache-Control: max-age=14400`) do mesmo nome de arquivo. Não é bug de deploy nem de código, é cache de CDN num nome de URL reaproveitado.
+
+- **Decisão do usuário**: em vez de esperar o cache expirar ou pedir pra ele limpar manualmente no painel do Cloudflare, resolver por cache-busting — renomear os 5 arquivos de ícone com sufixo `-v2` (`icon-192-v2.png`, `icon-512-v2.png`, `icon-512-maskable-v2.png`, `apple-touch-icon-v2.png`, `favicon-32-v2.png`). URL nova nunca foi cacheada pelo Cloudflare, então serve o conteúdo certo imediatamente, sem esperar nem depender de acesso ao painel do Cloudflare.
+- **Todas as referências atualizadas** (`sed` em bloco, depois conferido via grep que não sobrou nome antigo fora deste arquivo): `manifest.json`, `manifest-painel.json`, `sw.js` (`PRECACHE_URLS` + ícone de push notification), `scripts/generate_icons.py` (grava direto nos nomes `-v2` — próxima vez que rodar, já gera com esse nome), e o `<link rel="icon">`/`<link rel="apple-touch-icon">` de todas as páginas HTML do profissional e do aluno.
+- **Nome "Painel" no ícone do app do profissional**: era o `short_name` do `manifest-painel.json` (Android usa esse campo, não o `name` completo, como rótulo embaixo do ícone) — trocado pra "Meu Protocolo" a pedido do usuário, mesma marca do app do aluno (ele só instala o painel no próprio celular, sem ambiguidade com o app do aluno instalado ao lado).
+- **Testado localmente**: os 5 arquivos novos e os dois manifests servem 200 via servidor estático local, nenhuma referência quebrada, console sem erro.
+- **Segue exigindo reinstalar o PWA** (mesma exigência de sempre — ícone fica em cache na instalação) pra ver o resultado, mas agora sem depender de esperar o Cloudflare nem de limpar cache manualmente.
+
 ### Ícone do PWA em baixa resolução corrigido (2026-07-22)
 
 Usuário relatou que a tela de abertura do PWA (splash screen) mostra o ícone "MP" borrado/esticado. Causa raiz: `logo.png` (raiz do repo, o "mestre" usado por `scripts/generate_icons.py` pra gerar todos os tamanhos de ícone do PWA) tinha só **301×286 pixels** — mesmo o arquivo nominalmente "512×512" (`icon-512.png`) era só esse logo pequeno esticado, nunca teve resolução de verdade. Usuário forneceu uma versão em alta resolução (1254×1254, mesmo desenho).

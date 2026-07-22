@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://drive.google.com https://*.supabase.co; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co https://o4511757250199552.ingest.us.sentry.io; object-src 'none'; base-uri 'self';">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="icons/favicon-32.png">
+<link rel="manifest" href="manifest-painel.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#F8F9FA">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Meu Protocolo — Mensagens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://js.sentry-cdn.com/dd3ca3ee7a720284b2a9bf8240b29158.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="support-widget.js" defer></script>
+<script src="assistant-hints.js" defer></script>
+<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch((e) => console.error('Falha ao registrar service worker:', e));</script>
+<style>
+  :root {
+    --bg:#F8F9FA; --primary:#2D6BE4; --accent:#1E8C64; --accent-dim:#146B4D; --text:#1E2A3A;
+    --line:#E9EBEF; --card:#FFFFFF; --muted:#63707F; --faint:#94A0AF; --danger:#C0392B; --font:'Inter', sans-serif;
+    --radius:14px; --radius-lg:18px;
+    --card-grad:linear-gradient(165deg,#FFFFFF 0%,#F7FBF9 55%,#F6F8FE 100%);
+    --shadow-sm:0 1px 2px rgba(20,30,45,.05);
+    --shadow-card:0 1px 2px rgba(20,30,45,.04), 0 10px 24px -14px rgba(20,30,45,.14);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font-family:var(--font); }
+  header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--card); border-bottom:1px solid var(--line); }
+  header h1 { font-size:18px; font-weight:700; margin:0; }
+  main { max-width:720px; margin:0 auto; padding:20px 20px 90px; }
+  .card { background:var(--card-grad); border:1px solid rgba(20,30,45,.04); box-shadow:var(--shadow-card); border-radius:var(--radius-lg); padding:16px 18px; margin-bottom:16px; }
+  .card h2 { font-size:15px; margin:0 0 12px; }
+  .btn { padding:10px 16px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; border:none; background:var(--primary); color:#fff; font-family:var(--font); text-decoration:none; display:inline-block; transition:transform .15s ease; }
+  .btn:active { transform:scale(.97); }
+  .btn.secondary { background:var(--bg); color:var(--text); border:1px solid var(--line); }
+  .empty { color:var(--muted); font-size:13px; text-align:center; padding:20px 0; }
+  .bottom-nav { position:fixed; bottom:0; left:0; right:0; max-width:720px; margin:0 auto; height:64px; background:var(--card); border-top:1px solid var(--line); display:flex; z-index:60; }
+  .nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; color:var(--faint); text-decoration:none; font-family:var(--font); padding-top:6px; }
+  .nav-btn .nav-ico { width:22px; height:22px; line-height:1; position:relative; }
+  .nav-btn .nav-ico svg { width:100%; height:100%; display:block; }
+  .nav-btn .nav-lbl { font-size:10px; font-weight:700; }
+  .nav-btn.active { color:var(--primary); }
+  .nav-dot { position:absolute; top:-2px; right:-4px; width:8px; height:8px; border-radius:50%; background:var(--danger); border:2px solid var(--card); display:none; }
+
+  .inbox-item { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 0; border-bottom:1px solid var(--line); cursor:pointer; }
+  .inbox-item:last-child { border-bottom:none; }
+  .inbox-name { font-weight:700; font-size:14px; }
+  .inbox-preview { font-size:12px; color:var(--muted); margin-top:2px; max-width:420px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .inbox-meta { display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0; }
+  .inbox-time { font-size:11px; color:var(--faint); white-space:nowrap; }
+  .inbox-unread-dot { width:9px; height:9px; border-radius:50%; background:var(--danger); }
+
+  .thread-header { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .thread-student-name { font-weight:700; font-size:15px; }
+  .chat-messages { display:flex; flex-direction:column; gap:10px; height:52vh; overflow-y:auto; padding:12px; background:var(--card); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:10px; }
+  .chat-bubble { max-width:78%; padding:10px 14px; border-radius:16px; font-size:14px; line-height:1.4; white-space:pre-wrap; word-break:break-word; }
+  .chat-bubble.mine { align-self:flex-end; background:var(--primary); color:#fff; border-bottom-right-radius:4px; }
+  .chat-bubble.theirs { align-self:flex-start; background:var(--bg); border:1px solid var(--line); color:var(--text); border-bottom-left-radius:4px; }
+  .chat-bubble .cb-time { display:block; font-size:10px; opacity:.65; margin-top:4px; }
+  .chat-input-row { display:flex; gap:8px; margin-bottom:60px; }
+  .chat-input-row input { flex:1; min-width:0; background:var(--card); border:1px solid var(--line); border-radius:20px; padding:11px 16px; font-size:14px; font-family:var(--font); color:var(--text); }
+  .chat-input-row input:focus { outline:none; border-color:var(--primary); }
+  .chat-send-btn { width:42px; height:42px; border-radius:50%; background:var(--primary); color:#fff; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; padding:0; }
+  .chat-send-btn svg { width:18px; height:18px; }
+  .chat-send-btn:disabled { opacity:.5; cursor:not-allowed; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Mensagens</h1>
+    <button class="btn secondary" id="logoutBtn">Sair</button>
+  </header>
+
+  <main>
+    <div id="inboxView">
+      <div class="card">
+        <h2>Conversas</h2>
+        <div id="inboxList"><div class="empty">Carregando...</div></div>
+      </div>
+    </div>
+
+    <div id="threadView" style="display:none;">
+      <div class="thread-header">
+        <button class="btn secondary" id="backToInboxBtn">‹ Conversas</button>
+        <span class="thread-student-name" id="threadStudentName"></span>
+      </div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="Escreva uma mensagem..." maxlength="1000">
+        <button class="chat-send-btn" id="chatSendBtn" aria-label="Enviar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+      </div>
+    </div>
+  </main>
+
+  <nav class="bottom-nav">
+    <a class="nav-btn" href="index.html"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg></span><span class="nav-lbl">Início</span></a>
+    <a class="nav-btn" href="alunos.html"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="nav-lbl">Alunos</span></a>
+    <a class="nav-btn active" href="mensagens.html"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="nav-dot" id="navMsgDot"></span></span><span class="nav-lbl">Mensagens</span></a>
+    <a class="nav-btn" href="relatorios.html"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg></span><span class="nav-lbl">Relatórios</span></a>
+    <a class="nav-btn" href="perfil.html"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.7.36 1.15 1.03 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span class="nav-lbl">Config</span></a>
+  </nav>
+
+<script>
+  const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';
+  const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const $ = (id) => document.getElementById(id);
+
+  let professional = null;
+  let conversations = [];
+  let currentThreadStudentId = null;
+  let currentThreadStudentName = '';
+  let threadPollTimer = null;
+
+  function escapeHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  async function boot() {
+    const { data: { session } } = await supa.auth.getSession();
+    if (!session) { window.location.href = 'login.html'; return; }
+
+    const { data: pro, error } = await supa.from('professionals').select('*').eq('email', session.user.email).maybeSingle();
+    if (error || !pro) { window.location.href = error ? 'login.html' : 'onboarding.html'; return; }
+
+    professional = pro;
+    await loadInbox();
+  }
+
+  async function loadInbox() {
+    const { data, error } = await supa.rpc('get_professional_conversations');
+    if (error) {
+      console.error('Falha ao carregar conversas:', error.message);
+      $('inboxList').innerHTML = `<div class="empty">Erro ao carregar: ${escapeHtml(error.message)}</div>`;
+      return;
+    }
+    conversations = data || [];
+    renderInbox();
+    const totalUnread = conversations.reduce((sum, c) => sum + Number(c.unread_count || 0), 0);
+    $('navMsgDot').style.display = totalUnread > 0 ? 'block' : 'none';
+  }
+
+  function renderInbox() {
+    const el = $('inboxList');
+    if (!conversations.length) {
+      el.innerHTML = '<div class="empty">Nenhuma conversa ainda. Quando um aluno mandar uma mensagem, ela aparece aqui.</div>';
+      return;
+    }
+    el.innerHTML = conversations.map((c, i) => {
+      const d = new Date(c.last_message_at);
+      const timeStr = d.toLocaleDateString('pt-BR');
+      const prefix = c.last_sender === 'professional' ? 'Você: ' : '';
+      return `
+        <div class="inbox-item" data-idx="${i}">
+          <div style="min-width:0;">
+            <div class="inbox-name">${escapeHtml(c.student_nome)}</div>
+            <div class="inbox-preview">${escapeHtml(prefix + (c.last_message || ''))}</div>
+          </div>
+          <div class="inbox-meta">
+            <span class="inbox-time">${timeStr}</span>
+            ${Number(c.unread_count) > 0 ? '<span class="inbox-unread-dot"></span>' : ''}
+          </div>
+        </div>`;
+    }).join('');
+    el.querySelectorAll('.inbox-item').forEach(row => {
+      row.addEventListener('click', () => openThread(conversations[Number(row.dataset.idx)]));
+    });
+  }
+
+  async function openThread(conv) {
+    currentThreadStudentId = conv.student_id;
+    currentThreadStudentName = conv.student_nome;
+    $('threadStudentName').textContent = conv.student_nome;
+    $('inboxView').style.display = 'none';
+    $('threadView').style.display = 'block';
+    await loadAndRenderThread();
+    await supa.rpc('mark_messages_read', { p_student_id: currentThreadStudentId });
+    clearInterval(threadPollTimer);
+    threadPollTimer = setInterval(loadAndRenderThread, 10000);
+  }
+
+  function backToInbox() {
+    clearInterval(threadPollTimer);
+    threadPollTimer = null;
+    currentThreadStudentId = null;
+    $('threadView').style.display = 'none';
+    $('inboxView').style.display = 'block';
+    loadInbox();
+  }
+
+  async function loadAndRenderThread() {
+    if (!currentThreadStudentId) return;
+    const { data, error } = await supa.rpc('get_conversation', { p_student_id: currentThreadStudentId });
+    if (error) { console.error('Falha ao carregar conversa:', error.message); return; }
+    renderThread(data || []);
+  }
+
+  function renderThread(messages) {
+    const el = $('chatMessages');
+    if (!messages.length) {
+      el.innerHTML = '<div class="empty">Nenhuma mensagem ainda.</div>';
+      return;
+    }
+    el.innerHTML = messages.map(m => {
+      const mine = m.sender === 'professional';
+      const d = new Date(m.created_at);
+      const timeStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      return `<div class="chat-bubble ${mine ? 'mine' : 'theirs'}">${escapeHtml(m.body)}<span class="cb-time">${timeStr}</span></div>`;
+    }).join('');
+    el.scrollTop = el.scrollHeight;
+  }
+
+  async function sendThreadMessage() {
+    const input = $('chatInput');
+    const text = input.value.trim();
+    if (!text || !currentThreadStudentId) return;
+    $('chatSendBtn').disabled = true;
+    const { error } = await supa.rpc('send_message', { p_student_id: currentThreadStudentId, p_body: text });
+    $('chatSendBtn').disabled = false;
+    if (error) { alert('Erro ao enviar: ' + error.message); return; }
+    input.value = '';
+    await loadAndRenderThread();
+  }
+
+  $('backToInboxBtn').addEventListener('click', backToInbox);
+  $('chatSendBtn').addEventListener('click', sendThreadMessage);
+  $('chatInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); sendThreadMessage(); }
+  });
+
+  $('logoutBtn').addEventListener('click', async () => {
+    await supa.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  boot();
+</script>
+</body>
+</html>

@@ -66,8 +66,23 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .pro-row-text{flex:1;min-width:0;padding-top:52px}
 .pro-row-name{font-size:18px;font-weight:800;color:var(--text);line-height:1.25}
 .pro-row-sub{font-size:12px;color:var(--muted);margin-top:4px}
-.pro-row-wa{margin:0 0 14px;display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--card-border);color:var(--text);padding:10px 16px;border-radius:14px;font-size:13px;font-weight:700;text-decoration:none;box-shadow:var(--shadow-card)}
+.pro-actions-row{display:flex;gap:10px;margin:0 0 14px}
+.pro-row-wa{margin:0;flex:1;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--card);border:1px solid var(--card-border);color:var(--text);padding:10px 16px;border-radius:14px;font-size:13px;font-weight:700;text-decoration:none;box-shadow:var(--shadow-card)}
 .pro-row-wa svg{width:16px;height:16px;color:var(--accent-dim);flex-shrink:0}
+.pro-row-msg{position:relative;flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--card);border:1px solid var(--card-border);color:var(--primary);border-radius:14px;box-shadow:var(--shadow-card);cursor:pointer;padding:0}
+.pro-row-msg svg{width:19px;height:19px}
+.pro-row-msg .msg-dot{position:absolute;top:6px;right:6px;width:9px;height:9px;border-radius:50%;background:var(--danger);border:2px solid var(--card);display:none}
+.chat-messages{flex:1;overflow-y:auto;padding:10px 18px;display:flex;flex-direction:column;gap:10px}
+.chat-bubble{max-width:78%;padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.4;white-space:pre-wrap;word-break:break-word}
+.chat-bubble.mine{align-self:flex-end;background:var(--primary);color:#fff;border-bottom-right-radius:4px}
+.chat-bubble.theirs{align-self:flex-start;background:var(--card);border:1px solid var(--card-border);color:var(--text);border-bottom-left-radius:4px}
+.chat-bubble .cb-time{display:block;font-size:10px;opacity:.65;margin-top:4px}
+.chat-input-row{display:flex;gap:8px;padding:10px 18px calc(env(safe-area-inset-bottom) + 12px);border-top:1px solid var(--line);background:var(--bg)}
+.chat-input-row input{flex:1;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:11px 16px;font-size:14px;font-family:var(--font);color:var(--text)}
+.chat-input-row input:focus{outline:none;border-color:var(--primary)}
+.chat-send-btn{width:42px;height:42px;border-radius:50%;background:var(--primary);color:#fff;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0}
+.chat-send-btn svg{width:18px;height:18px}
+.chat-send-btn:disabled{opacity:.5;cursor:not-allowed}
 .week-cal{display:flex;gap:6px;margin-bottom:16px}
 .wc-day{flex:1;aspect-ratio:1/1;border-radius:10px;background:var(--elev);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--faint);border:1px solid var(--card-border)}
 .wc-day .wc-lbl{font-size:9px;font-weight:700;text-transform:uppercase}
@@ -683,6 +698,19 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   <div class="content" id="notificationsContent"></div>
 </section>
 
+<!-- ===== MENSAGENS ===== -->
+<section class="screen" id="chat">
+  <div class="topbar">
+    <button class="back-btn" onclick="goTab('home')">‹</button>
+    <span class="brand">Mensagens</span>
+  </div>
+  <div class="chat-messages" id="chatMessages"></div>
+  <div class="chat-input-row">
+    <input type="text" id="chatInput" placeholder="Escreva uma mensagem..." maxlength="1000">
+    <button class="chat-send-btn" id="chatSendBtn" aria-label="Enviar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+  </div>
+</section>
+
 <!-- ===== MENU LATERAL ===== -->
 <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
 <div class="side-drawer" id="sideDrawer">
@@ -698,6 +726,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     <button class="drawer-item" data-tab="history"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6.5" y1="6.5" x2="6.5" y2="17.5"/><line x1="17.5" y1="6.5" x2="17.5" y2="17.5"/><line x1="3" y1="9" x2="3" y2="15"/><line x1="21" y1="9" x2="21" y2="15"/><line x1="6.5" y1="12" x2="17.5" y2="12"/></svg></span>Treino</button>
     <button class="drawer-item" data-tab="nutri"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v6a2 2 0 0 0 4 0V3"/><path d="M8 3v18"/><path d="M16 3c-1.5 0-2.5 1.5-2.5 4s1 4 2.5 4v11"/></svg></span>Nutri</button>
     <button class="drawer-item" data-tab="profile"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></span>Perfil</button>
+    <button class="drawer-item" id="drawerChatBtn"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>Mensagens</button>
     <button class="drawer-item" id="drawerNotifBtn"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>Notificações</button>
     <div class="drawer-divider"></div>
     <button class="drawer-item" id="drawerSettingsBtn"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.7.36 1.15 1.03 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>Configurações</button>
@@ -806,6 +835,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     droplet: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`,
     moon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
     whatsapp: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.16-.17.2-.35.22-.65.08-.3-.15-1.26-.46-2.4-1.48-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.21-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.87 1.21 3.07c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.62.71.23 1.36.2 1.87.12.57-.08 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35z"/><path d="M12 2C6.48 2 2 6.48 2 12c0 1.79.48 3.47 1.3 4.92L2 22l5.21-1.26A9.96 9.96 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18.03a8 8 0 0 1-4.08-1.12l-.29-.17-3.03.74.75-2.97-.19-.3A8 8 0 1 1 12 20.03z"/></svg>`,
+    message: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
   };
 
   // Cor de marca (plano Pro/Elite) e modo claro/escuro são eixos
@@ -909,6 +939,9 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   let assessments = [];
   let anamnese = null;
   let notifications = [];
+  let chatThreadMessages = [];
+  let chatUnreadCount = 0;
+  let chatPollTimer = null;
   let todayCheckin = null; // linha de student_checkins de hoje, ou null se ainda não existe
   let sleepQualitySel = null;
   let sleepDurationSel = null;
@@ -925,6 +958,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
   function showScreen(id) {
+    if (id !== 'chat' && chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     $(id).classList.add('active');
     window.scrollTo(0,0);
@@ -1117,6 +1151,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     notifications = notifs || [];
     updateNotifBadge();
 
+    const { data: unreadMsgCount } = await supa.rpc('get_student_unread_message_count');
+    chatUnreadCount = unreadMsgCount || 0;
+    updateChatBadge();
+
     await loadTodayCheckin();
 
     goTab('home');
@@ -1158,6 +1196,61 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         </div>`;
     }).join('');
   }
+
+  function updateChatBadge() {
+    document.querySelectorAll('.msg-dot').forEach(el => { el.style.display = chatUnreadCount > 0 ? 'block' : 'none'; });
+  }
+
+  async function openChat() {
+    hideNav();
+    showScreen('chat');
+    await loadAndRenderChat();
+    await supa.rpc('mark_messages_read', { p_student_id: student.id });
+    chatUnreadCount = 0;
+    updateChatBadge();
+    clearInterval(chatPollTimer);
+    chatPollTimer = setInterval(loadAndRenderChat, 10000);
+  }
+
+  async function loadAndRenderChat() {
+    const { data, error } = await supa.rpc('get_conversation', { p_student_id: student.id });
+    if (error) { console.error('Falha ao carregar conversa:', error.message); return; }
+    chatThreadMessages = data || [];
+    renderChatThread();
+  }
+
+  function renderChatThread() {
+    const el = $('chatMessages');
+    if (!chatThreadMessages.length) {
+      el.innerHTML = `<div class="empty-state"><div class="es-ico">${ICONS.message}</div><div class="es-txt">Nenhuma mensagem ainda.<br>Mande um "oi" pro seu personal.</div></div>`;
+      return;
+    }
+    el.innerHTML = chatThreadMessages.map(m => {
+      const mine = m.sender === 'student';
+      const d = new Date(m.created_at);
+      const timeStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      return `<div class="chat-bubble ${mine ? 'mine' : 'theirs'}">${escapeHtml(m.body)}<span class="cb-time">${timeStr}</span></div>`;
+    }).join('');
+    el.scrollTop = el.scrollHeight;
+  }
+
+  async function sendChatMessage() {
+    const input = $('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    $('chatSendBtn').disabled = true;
+    const { error } = await supa.rpc('send_message', { p_student_id: student.id, p_body: text });
+    $('chatSendBtn').disabled = false;
+    if (error) { toast('Erro ao enviar: ' + error.message); return; }
+    input.value = '';
+    await loadAndRenderChat();
+  }
+
+  $('chatSendBtn').addEventListener('click', sendChatMessage);
+  $('chatInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); sendChatMessage(); }
+  });
+  $('drawerChatBtn').addEventListener('click', () => { closeDrawer(); openChat(); });
 
   function renderHomeError(msg) {
     $('homeContent').innerHTML = `<div class="empty-state"><div class="es-ico">${ICONS.warning}</div><div class="es-txt">${escapeHtml(msg)}</div></div>`;
@@ -1261,7 +1354,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
             <div class="pro-row-sub">Sua evolução começa hoje.</div>
           </div>
         </div>
-        ${waHref ? `<a class="pro-row-wa" href="${waHref}" target="_blank" rel="noopener">${ICONS.whatsapp} Falar com seu treinador</a>` : ''}
+        <div class="pro-actions-row">
+          ${waHref ? `<a class="pro-row-wa" href="${waHref}" target="_blank" rel="noopener">${ICONS.whatsapp} Falar com seu treinador</a>` : ''}
+          <button class="pro-row-msg" onclick="openChat()" aria-label="Mensagens">${ICONS.message}<span class="msg-dot"></span></button>
+        </div>
       </div>
     `;
     container.innerHTML = `
@@ -1290,6 +1386,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       });
     });
     renderHistorySubContent();
+    updateChatBadge();
   }
 
   // Troca a sub-aba de detalhe (Evolução de carga / Avaliação física) e

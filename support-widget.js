@@ -58,10 +58,12 @@
   fab.id = 'supportFab';
   fab.type = 'button';
   fab.setAttribute('aria-label', 'Suporte');
-  // Robô com interrogação (não message-bubble) — precisa ser visualmente
-  // distinto do ícone de mensageria entre profissional/aluno, pra não dar a
-  // entender que este widget é a mesma coisa que o chat humano.
-  fab.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="7" width="14" height="12" rx="4"/><line x1="12" y1="7" x2="12" y2="4"/><circle cx="12" cy="3" r="1" fill="currentColor" stroke="none"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+  // Robô com headset de atendente (não message-bubble, não robô-com-
+  // interrogação — trocado a pedido do usuário por não ficar claro
+  // visualmente) — precisa ser distinto do ícone de mensageria entre
+  // profissional/aluno, pra não dar a entender que este widget é a mesma
+  // coisa que o chat humano.
+  fab.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="7"/><circle cx="9" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1" fill="currentColor" stroke="none"/><path d="M5.3 9.5a7 6.8 0 0 1 13.4 0"/><circle cx="5.3" cy="10.2" r="1.6"/><circle cx="18.7" cy="10.2" r="1.6"/><path d="M18.7 11.8v1.7a3 3 0 0 1-3 3h-1"/><circle cx="14.2" cy="16.5" r="0.9" fill="currentColor" stroke="none"/></svg>';
   if (document.querySelector('.bottom-nav')) fab.classList.add('has-nav');
   document.body.appendChild(fab);
 

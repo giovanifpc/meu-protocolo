@@ -60,6 +60,16 @@
   .conv-transcript.open { display:block; }
   .conv-msg { margin-bottom:10px; white-space:pre-wrap; line-height:1.4; }
   .conv-msg .who { font-weight:700; font-size:10px; text-transform:uppercase; color:var(--muted); letter-spacing:.4px; margin-bottom:2px; }
+  .view-tabs { display:flex; gap:8px; margin-bottom:18px; }
+  .view-tab { padding:8px 16px; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; border:1px solid var(--line); background:var(--card); color:var(--text); font-family:var(--font); }
+  .view-tab.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .summary-card.money .num { color:var(--accent-dim); }
+  .revenue-note { font-size:12px; color:var(--muted); margin:-4px 0 14px; }
+  .rev-row { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  .rev-row:last-child { border-bottom:none; }
+  .rev-name { font-weight:600; }
+  .rev-sub { font-size:11px; color:var(--muted); }
+  .rev-value { font-weight:700; color:var(--accent-dim); white-space:nowrap; }
 </style>
 </head>
 <body>
@@ -69,6 +79,12 @@
   </header>
 
   <main>
+    <div class="view-tabs">
+      <button class="view-tab active" data-view="professionals">Profissionais</button>
+      <button class="view-tab" data-view="revenue">Receita</button>
+    </div>
+
+    <div id="professionalsView">
     <div class="card" id="createCard">
       <h2>Cadastrar profissional manualmente</h2>
       <p style="font-size:12px; color:var(--muted); margin:0 0 12px;">Pra criar a conta de um cliente fundador antes do primeiro login dele — informe o e-mail e o nome combinados na conversa. Depois de cadastrado, defina plano/preço/isenção direto na linha da tabela abaixo. Se a isenção de cobrança já estiver marcada quando ele logar pela primeira vez, ele cai direto no painel (nunca vê a tela de cartão nem escolhe o próprio nome — pode trocar depois em Perfil).</p>
@@ -113,6 +129,23 @@
       <h2>Conversas de suporte (últimos 30 dias)</h2>
       <div id="supportConvList"><div class="msg">Carregando...</div></div>
     </div>
+    </div>
+
+    <div id="revenueView" style="display:none;">
+      <div class="summary-row" id="revenueSummaryRow"></div>
+
+      <div class="card">
+        <h2>Receita recorrente mensal projetada (MRR)</h2>
+        <p class="revenue-note">Soma do valor mensal de quem tem assinatura ativa de verdade agora (não isento, cartão autorizado no Mercado Pago). É uma projeção de quanto entra por mês se nada mudar — o Mercado Pago não informa uma "data exata da próxima cobrança" por assinante.</p>
+        <div id="mrrList"><div class="msg">Carregando...</div></div>
+      </div>
+
+      <div class="card">
+        <h2>Pagamentos recebidos</h2>
+        <p class="revenue-note">Histórico real, direto dos webhooks do Mercado Pago — não é projeção.</p>
+        <div id="paymentsList"><div class="msg">Carregando...</div></div>
+      </div>
+    </div>
   </main>
 
 <script>
@@ -126,6 +159,27 @@
 
   function escapeHtml(s) {
     return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  // Máscara de dinheiro (digita centavos da direita pra esquerda, tipo
+  // qualquer app de pagamento) — evita confundir 0,50 com 50,00, que era
+  // o risco real do input numérico cru de antes.
+  function centsToMoneyStr(cents) {
+    const reais = (cents / 100).toFixed(2);
+    const [intPart, decPart] = reais.split('.');
+    const intFormatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return `R$ ${intFormatted},${decPart}`;
+  }
+  function reaisToMoneyStr(reais) {
+    return reais == null ? '' : centsToMoneyStr(Math.round(Number(reais) * 100));
+  }
+  function applyMoneyMask(input) {
+    const digits = input.value.replace(/\D/g, '');
+    input.value = digits ? centsToMoneyStr(parseInt(digits, 10)) : '';
+  }
+  function moneyStrToReais(value) {
+    const digits = String(value).replace(/\D/g, '');
+    return digits ? parseInt(digits, 10) / 100 : null;
   }
 
   function renderSummary(rows) {
@@ -156,7 +210,7 @@
       <td>${escapeHtml(row.email)}</td>
       <td><select class="planSelect">${planOptions}</select></td>
       <td><select class="statusSelect">${statusOptions}</select></td>
-      <td><input type="number" class="valorInput" step="0.01" placeholder="tabela" value="${row.valor_customizado ?? ''}"></td>
+      <td><input type="text" inputmode="numeric" class="valorInput" placeholder="tabela" value="${reaisToMoneyStr(row.valor_customizado)}"></td>
       <td style="text-align:center;"><input type="checkbox" class="billingExemptCheckbox" ${row.billing_exempt ? 'checked' : ''} title="Conta isenta de cobrança (teste interno / programa Founder) — pula a exigência de cartão no login"></td>
       <td><input type="date" class="trialEndsInput" value="${trialValue}" title="Data até quando a conta fica isenta/em trial — ajuste livre, não é aplicado automaticamente em lugar nenhum"></td>
       <td>${row.alunos_count ?? 0}</td>
@@ -168,20 +222,22 @@
       </td>
     `;
 
+    tr.querySelector('.valorInput').addEventListener('input', (e) => applyMoneyMask(e.target));
+
     tr.querySelector('.saveBtn').addEventListener('click', async () => {
       const btn = tr.querySelector('.saveBtn');
       btn.disabled = true;
       const newPlan = tr.querySelector('.planSelect').value;
       const newStatus = tr.querySelector('.statusSelect').value;
-      const valorRaw = tr.querySelector('.valorInput').value.trim();
+      const valorParsed = moneyStrToReais(tr.querySelector('.valorInput').value);
       const newBillingExempt = tr.querySelector('.billingExemptCheckbox').checked;
       const trialRaw = tr.querySelector('.trialEndsInput').value;
       const args = {
         prof_id: row.id,
         new_plan: newPlan,
         new_status: newStatus,
-        new_valor_customizado: valorRaw === '' ? null : Number(valorRaw),
-        clear_valor_customizado: valorRaw === '',
+        new_valor_customizado: valorParsed,
+        clear_valor_customizado: valorParsed === null,
         new_billing_exempt: newBillingExempt,
         new_trial_ends_at: trialRaw === '' ? null : new Date(trialRaw + 'T23:59:59').toISOString(),
       };
@@ -303,6 +359,72 @@
     $('newProEmail').value = '';
     $('newProName').value = '';
     await loadProfessionals();
+  });
+
+  function moneyStr(n) {
+    return 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  let revenueLoaded = false;
+
+  async function loadRevenue() {
+    const [{ data: summary, error: sumErr }, { data: subs, error: subsErr }, { data: payments, error: payErr }] = await Promise.all([
+      supa.rpc('master_get_revenue_summary'),
+      supa.rpc('master_list_active_subscribers'),
+      supa.rpc('master_list_received_payments'),
+    ]);
+
+    if (sumErr) {
+      console.error('Falha ao carregar resumo de receita:', sumErr.message);
+      $('revenueSummaryRow').innerHTML = `<div class="msg error">Erro: ${escapeHtml(sumErr.message)}</div>`;
+    } else {
+      const s = summary?.[0] || {};
+      $('revenueSummaryRow').innerHTML = [
+        { num: moneyStr(s.total_recebido), lbl: 'Recebido (total)' },
+        { num: moneyStr(s.recebido_mes_atual), lbl: 'Recebido este mês' },
+        { num: moneyStr(s.mrr_projetado), lbl: 'MRR projetado' },
+        { num: s.assinantes_ativos ?? 0, lbl: 'Assinantes ativos' },
+      ].map(c => `<div class="summary-card money"><div class="num">${c.num}</div><div class="lbl">${c.lbl}</div></div>`).join('');
+    }
+
+    if (subsErr) {
+      console.error('Falha ao carregar assinantes ativos:', subsErr.message);
+      $('mrrList').innerHTML = `<div class="msg error">Erro: ${escapeHtml(subsErr.message)}</div>`;
+    } else if (!subs || !subs.length) {
+      $('mrrList').innerHTML = '<div class="msg">Nenhum assinante pagando de verdade ainda.</div>';
+    } else {
+      $('mrrList').innerHTML = subs.map(s => `
+        <div class="rev-row">
+          <div><div class="rev-name">${escapeHtml(s.display_name)}</div><div class="rev-sub">${escapeHtml(s.plan)}</div></div>
+          <div class="rev-value">${moneyStr(s.valor_mensal)}/mês</div>
+        </div>`).join('');
+    }
+
+    if (payErr) {
+      console.error('Falha ao carregar pagamentos recebidos:', payErr.message);
+      $('paymentsList').innerHTML = `<div class="msg error">Erro: ${escapeHtml(payErr.message)}</div>`;
+    } else if (!payments || !payments.length) {
+      $('paymentsList').innerHTML = '<div class="msg">Nenhum pagamento recebido ainda.</div>';
+    } else {
+      $('paymentsList').innerHTML = payments.map(p => `
+        <div class="rev-row">
+          <div><div class="rev-name">${escapeHtml(p.professional_nome)}</div><div class="rev-sub">${new Date(p.data_pagamento).toLocaleString('pt-BR')}</div></div>
+          <div class="rev-value">${moneyStr(p.valor)}</div>
+        </div>`).join('');
+    }
+  }
+
+  document.querySelectorAll('.view-tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.view-tab').forEach((b) => b.classList.toggle('active', b === btn));
+      const view = btn.dataset.view;
+      $('professionalsView').style.display = view === 'professionals' ? 'block' : 'none';
+      $('revenueView').style.display = view === 'revenue' ? 'block' : 'none';
+      if (view === 'revenue' && !revenueLoaded) {
+        revenueLoaded = true;
+        loadRevenue();
+      }
+    });
   });
 
   async function boot() {

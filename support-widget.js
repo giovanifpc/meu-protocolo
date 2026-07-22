@@ -58,7 +58,10 @@
   fab.id = 'supportFab';
   fab.type = 'button';
   fab.setAttribute('aria-label', 'Suporte');
-  fab.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
+  // Robô com interrogação (não message-bubble) — precisa ser visualmente
+  // distinto do ícone de mensageria entre profissional/aluno, pra não dar a
+  // entender que este widget é a mesma coisa que o chat humano.
+  fab.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="7" width="14" height="12" rx="4"/><line x1="12" y1="7" x2="12" y2="4"/><circle cx="12" cy="3" r="1" fill="currentColor" stroke="none"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
   if (document.querySelector('.bottom-nav')) fab.classList.add('has-nav');
   document.body.appendChild(fab);
 

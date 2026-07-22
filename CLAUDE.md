@@ -90,6 +90,15 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### Ícone do PWA em baixa resolução corrigido (2026-07-22)
+
+Usuário relatou que a tela de abertura do PWA (splash screen) mostra o ícone "MP" borrado/esticado. Causa raiz: `logo.png` (raiz do repo, o "mestre" usado por `scripts/generate_icons.py` pra gerar todos os tamanhos de ícone do PWA) tinha só **301×286 pixels** — mesmo o arquivo nominalmente "512×512" (`icon-512.png`) era só esse logo pequeno esticado, nunca teve resolução de verdade. Usuário forneceu uma versão em alta resolução (1254×1254, mesmo desenho).
+
+- **`logo.png` substituído** pela versão de alta resolução (o antigo fica só no histórico do git, recuperável se precisar — não existe em nenhum outro lugar do código além do script de geração de ícones, confirmado via grep antes de sobrescrever).
+- **`scripts/generate_icons.py` rodado de novo** — regenerou `icon-192.png`, `icon-512.png`, `icon-512-maskable.png`, `apple-touch-icon.png` e `favicon-32.png`, todos nitidamente mais nítidos agora (conferido visualmente cada um). Nenhuma mudança nos manifests (`manifest.json`/`manifest-painel.json`) foi necessária — já referenciavam esses mesmos nomes de arquivo, só o conteúdo interno melhorou.
+- **Detalhe técnico**: a imagem nova vem com fundo quase-branco sólido (RGB, sem transparência) em vez de transparente como o `logo.png` antigo — o script já converte pra RGBA e a função `square_master()` simplesmente não encontra nada pra recortar (bbox = tela inteira), o que é o comportamento certo aqui já que a imagem nova já vem quadrada e bem centralizada, sem precisar do recorte-e-centralização que o `logo.png` antigo exigia.
+- **Importante pro usuário**: o ícone do PWA fica em cache no momento da instalação — só rodar o deploy não é suficiente pra ver a mudança no celular. É preciso remover o atalho da tela de início e instalar de novo (mesmo lembrete já registrado antes neste arquivo, seção "Pacote de comodidades pro profissional").
+
 ### Ajustes pós-teste da mensageria: ícone do bot, máscara de preço, aba de Receita no master (2026-07-22)
 
 Três pedidos do usuário depois de acompanhar os testes da mensageria: (1) o balão flutuante do `support-widget.js` usava um ícone de balão de chat quase idêntico ao novo ícone de mensagem entre profissional/aluno — confuso, dava a entender que eram a mesma coisa; (2) o campo "Preço customizado" do painel master era um `<input type="number">` cru — risco real de digitar 50 achando que é R$50 e cair como R$0,50 (ou vice-versa); (3) pedido de uma aba nova "Receita" no master, com valores recebidos e a receber, no padrão de dashboard de pagamento de mercado.

@@ -26,6 +26,7 @@
     #supportFab { position:fixed; right:16px; bottom:20px; width:52px; height:52px; border-radius:50%; background:var(--primary,#2D6BE4); color:#fff; border:none; box-shadow:0 8px 20px -6px rgba(20,30,45,.4); display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:500; transition:transform .15s ease; }
     #supportFab:active { transform:scale(.94); }
     #supportFab svg { width:24px; height:24px; }
+    #supportFab img { width:100%; height:100%; object-fit:cover; border-radius:50%; display:block; }
     #supportFab.has-nav { bottom:80px; }
     #supportOverlay { position:fixed; inset:0; background:rgba(15,20,28,.55); z-index:600; display:none; align-items:flex-end; justify-content:center; }
     #supportOverlay.show { display:flex; }
@@ -58,12 +59,13 @@
   fab.id = 'supportFab';
   fab.type = 'button';
   fab.setAttribute('aria-label', 'Suporte');
-  // Robô com headset de atendente (não message-bubble, não robô-com-
-  // interrogação — trocado a pedido do usuário por não ficar claro
-  // visualmente) — precisa ser distinto do ícone de mensageria entre
-  // profissional/aluno, pra não dar a entender que este widget é a mesma
-  // coisa que o chat humano.
-  fab.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="7"/><circle cx="9" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1" fill="currentColor" stroke="none"/><path d="M5.3 9.5a7 6.8 0 0 1 13.4 0"/><circle cx="5.3" cy="10.2" r="1.6"/><circle cx="18.7" cy="10.2" r="1.6"/><path d="M18.7 11.8v1.7a3 3 0 0 1-3 3h-1"/><circle cx="14.2" cy="16.5" r="0.9" fill="currentColor" stroke="none"/></svg>';
+  // Imagem de verdade (não SVG recriado) — o usuário mandou o ícone exato
+  // (robô com headset de atendente) e pediu pra usar o arquivo original,
+  // não uma recriação aproximada. Arquivo já vem com fundo azul sólido
+  // (mesmo tom do --primary), por isso preenche o botão inteiro
+  // (object-fit:cover + border-radius:50%) em vez de sobrar espaço em
+  // branco como no ícone SVG anterior.
+  fab.innerHTML = '<img src="icons/support-bot.png" alt="Suporte">';
   if (document.querySelector('.bottom-nav')) fab.classList.add('has-nav');
   document.body.appendChild(fab);
 

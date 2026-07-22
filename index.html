@@ -123,11 +123,17 @@
     $('profName').textContent = pro.display_name;
 
     if (pro.status === 'trial' && pro.trial_ends_at) {
-      const daysLeft = Math.ceil((new Date(pro.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24));
       $('trialBanner').style.display = 'block';
-      $('trialBanner').textContent = daysLeft > 0
-        ? `Trial gratuito: ${daysLeft} dia(s) restante(s).`
-        : 'Seu trial terminou. A cobrança automática deve ocorrer em breve.';
+      if (pro.billing_exempt) {
+        // Conta isenta (teste interno / programa Founder) nunca tem cartão
+        // cadastrado — não existe cobrança automática nenhuma pra avisar.
+        $('trialBanner').textContent = 'Sua conta está isenta de cobrança.';
+      } else {
+        const daysLeft = Math.ceil((new Date(pro.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24));
+        $('trialBanner').textContent = daysLeft > 0
+          ? `Trial gratuito: ${daysLeft} dia(s) restante(s).`
+          : 'Seu trial terminou. A cobrança automática deve ocorrer em breve.';
+      }
     }
 
     await loadDashboard();

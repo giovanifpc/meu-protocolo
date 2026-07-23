@@ -64,6 +64,8 @@ Corrigir apenas os problemas encontrados pelo Cliente 0. Não adicionar recursos
 
 **Objetivo**: criar um pequeno grupo de clientes fundadores. Quantidade ideal: 5 a 10 profissionais.
 
+**Decisão real do usuário (2026-07-23): o grupo Founder vai ser de só 4 pessoas**, menor do que a faixa ideal acima — e a intenção já declarada é migrar pra divulgação orgânica e venda a valor cheio logo depois que esses 4 validarem, sem esperar chegar a 5-10. Não é um desvio problemático do plano, é só o número real com o qual a Fase 4 vai rodar desta vez.
+
 Como fazer:
 - **Não alterar o código atual.** O fluxo de pagamento já está pronto e não deve ser modificado por causa dos primeiros clientes.
 - Em vez disso: criar manualmente as contas Founder pelo painel administrativo (`master.html`), liberar acesso Premium, **não exigir cadastro de cartão neste momento**.
@@ -157,7 +159,7 @@ Neste momento o fluxo padrão do sistema passa a ser: **Cadastro → Cartão →
 O bloco acima (Landing Page, conteúdo, SEO etc.) é o "o quê"; esta subseção é o "em que ordem/ritmo", com metas de assinantes só como referência de ritmo — **não são gatilho pra pular fase nenhuma das Fases 1-10 nem pra construir feature sem 3+ relatos** (ver nota no topo do documento). Se o Cliente 0/Founders ainda não confirmaram retenção (Fase 8), não faz sentido acelerar pra essas metas.
 
 - **Autoridade (conteúdo)**: publicar conteúdo com regularidade (ideal: diário, mas sustentável > frequente), sempre mostrando funcionalidade real do app (não conceito) — reaproveita os vídeos de demonstração já gravados na Fase 4 e as frases reais dos clientes já coletadas na Fase 10. Publicar depoimentos reais dos Founders (com autorização deles).
-- **Landing page profissional**: versão definitiva, escrita com a linguagem real dos clientes (Fase 10), não copy inventado.
+- **Landing page profissional**: versão definitiva, escrita com a linguagem real dos clientes (Fase 10), não copy inventado. **Nota (2026-07-23)**: uma versão bem mais enxuta (`landing.html`) já foi criada antes desta fase — não é a definitiva, é só um portão de entrada decente pra substituir o link cru de `login.html` mandado por WhatsApp durante o período Founder (4 pessoas, plano reduzido do que este documento previa). Sem depoimento nem preço — essa parte espera a validação de verdade.
 - **Automatizar onboarding**: reduzir o quanto o Giovani precisa fazer manualmente pra um profissional novo começar a usar — o `master.html` hoje cadastra manualmente (bom pro estágio Founder, baixo volume); automatizar aqui significa o cadastro self-service (`onboarding.html`, já existe) virar o caminho padrão outra vez, sem precisar do master pré-provisionar cada conta.
 - **Escala orgânica**: melhorar o sistema de indicação com base no uso real (não adivinhar o que falta), lançar pequenas atualizações continuamente (mesmo espírito da Fase 7, só que agora com base em atrito real de uma base maior), criar uma comunidade (WhatsApp ou Telegram) pros profissionais trocarem experiência entre si, buscar parcerias com criadores de conteúdo pequenos/nichados (não precisa ser influenciador grande) que já falam pro público de personal trainers.
 - **Consolidação**: uma vez que a base cresce, redobrar a atenção da Fase 8 (retenção) — é fácil perder o controle de cancelamento quando o número de clientes sobe rápido.

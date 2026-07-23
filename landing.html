@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://js.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://o4511757250199552.ingest.us.sentry.io; object-src 'none'; base-uri 'self';">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Gestão completa de alunos pra personal trainers autônomos, com suporte 24/7 por IA e um app próprio com a sua marca pro seu aluno.">
+<link rel="icon" href="icons/favicon-32-v2.png">
+<title>Meu Protocolo — Gestão para Personal Trainers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#F8F9FA; --primary:#2D6BE4; --primary-dim:#1E4FAE; --accent:#1E8C64; --accent-dim:#146B4D;
+    --text:#1E2A3A; --muted:#63707F; --line:#E9EBEF; --font:'Inter', -apple-system, sans-serif;
+    --card-grad:linear-gradient(165deg,#FFFFFF 0%,#F7FBF9 55%,#F6F8FE 100%);
+    --shadow-card:0 1px 2px rgba(20,30,45,.04), 0 10px 24px -14px rgba(20,30,45,.14);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:var(--font); -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:520px; margin:0 auto; padding:28px 22px 60px; }
+
+  header.top { display:flex; align-items:center; gap:10px; margin-bottom:36px; }
+  header.top img { width:36px; height:36px; border-radius:9px; }
+  header.top span { font-size:16px; font-weight:800; letter-spacing:-.2px; }
+
+  .hero h1 { font-size:28px; line-height:1.25; font-weight:800; letter-spacing:-.5px; margin:0 0 14px; }
+  .hero h1 em { color:var(--primary); font-style:normal; }
+  .hero p { font-size:15.5px; line-height:1.6; color:var(--muted); margin:0 0 26px; }
+
+  .cta { display:block; text-align:center; background:linear-gradient(135deg,var(--primary),var(--primary-dim)); color:#fff; text-decoration:none; font-weight:700; font-size:16px; padding:15px 20px; border-radius:14px; box-shadow:0 10px 22px -10px rgba(45,107,228,.55); }
+  .cta:active { transform:scale(.98); }
+  .cta-note { text-align:center; font-size:12.5px; color:var(--muted); margin:10px 0 0; }
+
+  .features { margin:44px 0 8px; display:flex; flex-direction:column; gap:14px; }
+  .feature { display:flex; gap:14px; align-items:flex-start; background:var(--card-grad); border:1px solid rgba(20,30,45,.04); box-shadow:var(--shadow-card); border-radius:16px; padding:16px 18px; }
+  .feature .ico { flex-shrink:0; width:38px; height:38px; border-radius:10px; background:rgba(45,107,228,.1); color:var(--primary); display:flex; align-items:center; justify-content:center; }
+  .feature .ico svg { width:19px; height:19px; }
+  .feature .txt strong { display:block; font-size:14.5px; font-weight:700; margin-bottom:3px; }
+  .feature .txt p { margin:0; font-size:13px; line-height:1.5; color:var(--muted); }
+
+  .steps { margin:44px 0 8px; }
+  .steps h2 { font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin:0 0 16px; }
+  .step { display:flex; gap:14px; margin-bottom:16px; }
+  .step .n { flex-shrink:0; width:26px; height:26px; border-radius:50%; background:var(--text); color:#fff; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .step p { margin:2px 0 0; font-size:14px; line-height:1.5; }
+
+  .final { margin-top:46px; text-align:center; }
+  .final p { font-size:14px; color:var(--muted); margin:0 0 16px; }
+
+  footer { margin-top:50px; text-align:center; }
+  footer a { color:var(--muted); font-size:12px; text-decoration:underline; margin:0 8px; }
+</style>
+<script src="https://js.sentry-cdn.com/dd3ca3ee7a720284b2a9bf8240b29158.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <img src="icons/icon-512-v2.png" alt="">
+      <span>Meu Protocolo</span>
+    </header>
+
+    <div class="hero">
+      <h1>Toda a gestão dos seus alunos, num só lugar — com <em>suporte 24/7 por IA</em>.</h1>
+      <p>Monte treinos, acompanhe avaliação física e nutrição, e dê ao seu aluno um app de acompanhamento com a sua marca. Sem fila de ticket, sem planilha solta.</p>
+      <a class="cta" href="login.html">Começar agora</a>
+      <p class="cta-note">Leva menos de um minuto pra começar.</p>
+    </div>
+
+    <div class="features">
+      <div class="feature">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <div class="txt"><strong>Suporte 24/7, sem fila</strong><p>Uma IA responde você e seu aluno na hora — dúvida de uso, dúvida de treino, o que for. Sem esperar horário comercial.</p></div>
+      </div>
+      <div class="feature">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5"/><path d="m20.5 20.5-2-2"/><path d="m3.5 3.5 2 2"/><path d="m14.5 6.5 3-3 3 3-3 3"/><path d="m6.5 14.5-3 3 3 3 3-3"/></svg></div>
+        <div class="txt"><strong>Treino, avaliação e nutrição juntos</strong><p>Monte protocolos de treino (manual ou com IA), registre avaliação física e oriente a alimentação — tudo no mesmo lugar, sem planilha nem WhatsApp perdido.</p></div>
+      </div>
+      <div class="feature">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></svg></div>
+        <div class="txt"><strong>App próprio pro seu aluno</strong><p>Seu aluno acompanha o treino, a evolução e recebe suporte pelo celular, num app com a sua cor e sua logo — não a nossa marca.</p></div>
+      </div>
+      <div class="feature">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6l-8-4z"/></svg></div>
+        <div class="txt"><strong>Dado do seu aluno, protegido</strong><p>Informação de saúde é sensível — cada aluno só é visto pelo próprio profissional, com segurança pensada desde o primeiro dia.</p></div>
+      </div>
+    </div>
+
+    <div class="steps">
+      <h2>Como funciona</h2>
+      <div class="step"><div class="n">1</div><p>Você cadastra seus alunos e monta os treinos (ou deixa a IA sugerir).</p></div>
+      <div class="step"><div class="n">2</div><p>Seu aluno recebe acesso e acompanha tudo pelo próprio celular.</p></div>
+      <div class="step"><div class="n">3</div><p>Qualquer dúvida, dos dois lados, tem suporte por IA na hora.</p></div>
+    </div>
+
+    <div class="final">
+      <p>Pronto pra organizar sua rotina de personal trainer?</p>
+      <a class="cta" href="login.html">Começar agora</a>
+    </div>
+
+    <footer>
+      <a href="termos.html">Termos de Uso</a>
+      <a href="privacidade.html">Privacidade</a>
+    </footer>
+  </div>
+</body>
+</html>

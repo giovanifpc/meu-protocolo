@@ -90,6 +90,15 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### Landing page enxuta (`landing.html`) pra substituir o link de login cru (2026-07-23)
+
+Pedido do usuário depois de repensar como o produto é entregue hoje: mesmo o plano Founder sendo bem menor do que o roadmap previa (**4 pessoas**, não 10), e mesmo já com intenção de migrar pra divulgação orgânica e venda a valor cheio logo depois desses 4 validarem — hoje o link mandado por WhatsApp pra um profissional novo cai direto em `login.html`, uma tela de login crua, sem contexto nenhum do que é o produto.
+
+- **Não é a "Landing Page definitiva" da Fase 11 do `roadmap-pos-dev.md`** — aquela ainda depende de retenção validada, depoimentos reais dos Founders e linguagem tirada de entrevistas de verdade (Fase 10), e segue corretamente sem começar. Esta é deliberadamente mais enxuta: um "portão de entrada" decente pra substituir um link de login puro, sem inventar prova social que ainda não existe (nenhum depoimento, nenhuma tabela de preço — a venda hoje continua manual/Founder). Ver nota adicionada na Fase 11 do roadmap explicando essa distinção.
+- **`landing.html`** (novo, raiz do repo, sem link nenhum apontando pra ela ainda de dentro do app — é só a URL que o Giovani vai mandar manualmente): página estática, sem Supabase/JS de app nenhum (CSP bem mais restrita que o resto do site — nem `unsafe-inline` precisou, já que não tem script inline nenhum, só o loader do Sentry via `<script src>`). Hero com a promessa central (gestão completa + suporte 24/7 por IA), 4 cards de funcionalidade real (suporte 24/7, treino/avaliação/nutrição juntos, app com a marca do profissional pro aluno, segurança do dado de saúde), 3 passos de "como funciona", e botão "Começar agora" repetido no topo e no fim — sempre linkando pra `login.html` (que já lida com conta nova ou existente via OTP, `shouldCreateUser:true`), nunca duplicando o fluxo de auth.
+- **Testado só localmente por inspeção** (contagem de tags balanceada, sem JS pra quebrar) — não visto num navegador real ainda nesta sessão.
+- **Não integrado a mais nada do app**: nenhuma outra página linka pra `landing.html` (nem precisa — o uso previsto é só o Giovani mandar a URL direto). Se decidir mais adiante que o domínio raiz (`meuprotocolo.app`) deve servir esta página em vez do painel do profissional, isso é uma decisão maior (renomear `index.html`, hoje o painel logado, presente em várias referências internas) — não fiz isso agora, só a página nova e independente.
+
 ### ✅ Fusão do roadmap de crescimento mês a mês concluída (2026-07-23)
 
 O usuário trouxe um segundo roadmap — plano de crescimento mês a mês (Mês 1 ao Mês 12: metas de assinantes/receita, conteúdo, internacionalização) mais visão de longo prazo pós-ano-1 e objetivo de 3 anos (3 SaaS, ~R$80 mil/mês combinado). Pedido explícito: **fundir** com o `roadmap-pos-dev.md` já existente, não substituir.

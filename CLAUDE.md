@@ -90,7 +90,7 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
-### Fusão do roadmap de crescimento mês a mês no `roadmap-pos-dev.md` (2026-07-23)
+### ✅ Fusão do roadmap de crescimento mês a mês concluída (2026-07-23)
 
 O usuário trouxe um segundo roadmap — plano de crescimento mês a mês (Mês 1 ao Mês 12: metas de assinantes/receita, conteúdo, internacionalização) mais visão de longo prazo pós-ano-1 e objetivo de 3 anos (3 SaaS, ~R$80 mil/mês combinado). Pedido explícito: **fundir** com o `roadmap-pos-dev.md` já existente, não substituir.
 

@@ -1,0 +1,79 @@
+<!--
+  Template de e-mail de login por código (OTP) — Meu Protocolo.
+
+  Não é servido pelo app: cola direto no painel do Supabase em
+  Authentication → Emails → Templates, nos DOIS templates que o projeto usa
+  (ver CLAUDE.md, seção "E-mail transacional"):
+    - "Confirm signup"     → dispara quando o e-mail ainda não tem conta
+    - "Magic Link or OTP"  → dispara quando o e-mail já tem conta
+
+  Mesmo conteúdo nos dois (cole o corpo abaixo em ambos) — pro usuário a
+  experiência é idêntica (só recebe um código), não faz sentido meio texto
+  diferente dependendo de já ter conta ou não. `{{ .Token }}` é a variável
+  do Supabase que imprime o código numérico de 8 dígitos (Email OTP length
+  = 8, configurado em Authentication → Emails → OTP Expiry/Length — bate
+  com o maxlength="8" do input em login.html).
+
+  Assunto sugerido (Subject Heading, mesmo texto nos dois templates):
+    Seu código de acesso — Meu Protocolo
+
+  Não existe "botão de copiar" funcional dentro de um e-mail: nenhum
+  cliente de e-mail (Gmail, Apple Mail, Outlook, etc.) executa JavaScript
+  por segurança, então um <button onclick="..."> simplesmente não faz nada
+  ao ser tocado — colocar um ali seria enganoso. Em vez disso, o código sai
+  grande, em negrito, espaçado e monoespaçado (mesmo padrão usado por
+  Google/GitHub/Slack em e-mail de código) — fácil de selecionar/copiar
+  manualmente com toque longo, e o próprio Gmail/Apple Mail no celular
+  costuma reconhecer o padrão de código e oferecer autopreenchimento.
+-->
+<div style="background:#F8F9FA;padding:32px 16px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background:#FFFFFF;border-radius:16px;overflow:hidden;box-shadow:0 1px 2px rgba(20,30,45,.04),0 10px 24px -14px rgba(20,30,45,.14);">
+    <tr>
+      <td style="background:linear-gradient(135deg,#2D6BE4,#1E8C64);padding:26px 32px;text-align:center;">
+        <span style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-.2px;">Meu Protocolo</span>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:32px 32px 4px;">
+        <p style="margin:0 0 6px;color:#1E2A3A;font-size:18px;font-weight:700;">Olá!</p>
+        <p style="margin:0 0 24px;color:#63707F;font-size:14px;line-height:1.5;">
+          Use o código abaixo pra entrar no Meu Protocolo. Ele vale só por alguns minutos e só pode ser usado uma vez.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:0 32px;">
+        <div style="background:#F8F9FA;border:1px solid #E9EBEF;border-radius:12px;padding:22px 12px;text-align:center;">
+          <span style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:28px;font-weight:700;letter-spacing:6px;color:#2D6BE4;">{{ .Token }}</span>
+          <p style="margin:12px 0 0;color:#63707F;font-size:12px;">Toque e segure sobre o código pra copiar</p>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:22px 32px 4px;">
+        <p style="margin:0;color:#1E2A3A;font-size:13px;line-height:1.6;">
+          <strong>Primeiro acesso?</strong> Depois de confirmar o código, é só completar um cadastro rápido — leva menos de um minuto e você já cai direto no seu painel.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:20px 32px 30px;">
+        <p style="margin:0 0 10px;color:#1E2A3A;font-size:13px;font-weight:700;">Dica: transforme o Meu Protocolo em um app no seu celular</p>
+        <p style="margin:0 0 8px;color:#63707F;font-size:13px;line-height:1.6;">
+          <strong>Android (Chrome):</strong> toque no menu (⋮) no canto superior direito e escolha "Instalar aplicativo" ou "Adicionar à tela inicial".
+        </p>
+        <p style="margin:0;color:#63707F;font-size:13px;line-height:1.6;">
+          <strong>iPhone (Safari):</strong> toque no ícone de compartilhar (o quadrado com a seta pra cima, na barra de baixo) e escolha "Adicionar à Tela de Início".
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:16px 32px;border-top:1px solid #E9EBEF;">
+        <p style="margin:0;color:#63707F;font-size:11px;line-height:1.5;">
+          Se você não pediu esse código, pode ignorar este e-mail com segurança.<br>
+          Meu Protocolo · meuprotocolo.app
+        </p>
+      </td>
+    </tr>
+  </table>
+</div>

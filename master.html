@@ -70,13 +70,27 @@
   .rev-name { font-weight:600; }
   .rev-sub { font-size:11px; color:var(--muted); }
   .rev-value { font-weight:700; color:var(--accent-dim); white-space:nowrap; }
+  #mfaGate { display:none; position:fixed; inset:0; background:var(--bg); z-index:999; align-items:center; justify-content:center; padding:20px; overflow-y:auto; }
+  .mfa-card { background:var(--card-grad); border:1px solid rgba(20,30,45,.04); box-shadow:var(--shadow-card); border-radius:16px; padding:26px; max-width:420px; width:100%; }
+  .mfa-card h2 { font-size:17px; margin:0 0 10px; }
+  .mfa-card p { font-size:13px; color:var(--muted); line-height:1.5; margin:0 0 12px; }
+  .mfa-card input[type=text] { width:100%; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:15px; font-family:var(--font); color:var(--text); margin-bottom:10px; letter-spacing:1px; }
+  .mfa-card .btn { width:100%; }
+  .mfa-codes { display:grid; grid-template-columns:1fr 1fr; gap:8px; font-family:monospace; font-size:13.5px; background:var(--bg); border-radius:10px; padding:14px; margin:14px 0; text-align:center; }
+  #mfaLostBtn { background:none; border:none; color:var(--muted); font-size:12px; text-decoration:underline; cursor:pointer; width:auto; padding:4px 0; }
+  #headerRecoveryBtn { margin-right:8px; }
 </style>
 </head>
 <body>
   <header>
     <h1>Painel Master</h1>
-    <button class="btn secondary" id="logoutBtn">Sair</button>
+    <div>
+      <button class="btn secondary" id="headerRecoveryBtn" title="Gera um novo lote de 8 códigos de recuperação, invalidando os anteriores">Novos códigos de recuperação</button>
+      <button class="btn secondary" id="logoutBtn">Sair</button>
+    </div>
   </header>
+
+  <div id="mfaGate"></div>
 
   <main>
     <div class="view-tabs">
@@ -427,6 +441,178 @@
     });
   });
 
+  // ── 2FA obrigatório do painel master (item 17 do roadmap) ──────────────
+  // Checagem de e-mail já existia (só UX). A segurança de verdade contra
+  // "só o e-mail vaza, alguém entra" agora é dupla: (1) RPCs master_* exigem
+  // claim aal='aal2' no JWT (supabase_37, servidor); (2) esta tela nem chama
+  // essas RPCs enquanto a sessão não estiver em aal2 — sem isso o profissional
+  // veria "Não autorizado" cru em vez de um fluxo de cadastro/desafio claro.
+  function renderMfaGate(html) {
+    $('mfaGate').innerHTML = html;
+    $('mfaGate').style.display = 'flex';
+  }
+  function hideMfaGate() {
+    $('mfaGate').style.display = 'none';
+    $('mfaGate').innerHTML = '';
+  }
+
+  async function showRecoveryCodes(isFirstSetup) {
+    const { data, error } = await supa.rpc('master_generate_recovery_codes');
+    if (error) {
+      renderMfaGate(`<div class="mfa-card"><p class="msg error">${isFirstSetup ? 'Autenticador confirmado, mas houve' : 'Houve'} erro ao gerar códigos de recuperação: ${escapeHtml(error.message)}</p><button class="btn" id="mfaContinueBtn">${isFirstSetup ? 'Continuar mesmo assim' : 'Fechar'}</button></div>`);
+      $('mfaContinueBtn').addEventListener('click', () => { if (isFirstSetup) { hideMfaGate(); loadSupportConversations(); loadProfessionals(); } else { hideMfaGate(); } });
+      return;
+    }
+    renderMfaGate(`
+      <div class="mfa-card">
+        <h2>${isFirstSetup ? 'Autenticador configurado!' : 'Novos códigos de recuperação'}</h2>
+        <p><strong>Guarde estes 8 códigos agora, em um lugar seguro (gerenciador de senhas, papel).</strong> Cada um só funciona uma vez e serve pra recuperar o acesso se você perder o celular com o autenticador. Gerar novos invalida os anteriores — eles não aparecem de novo depois de fechar esta tela.</p>
+        <div class="mfa-codes">${data.map(c => `<div>${escapeHtml(c)}</div>`).join('')}</div>
+        <button class="btn secondary" id="mfaCodesCopyBtn" style="margin-bottom:8px;">Copiar todos</button>
+        <button class="btn" id="mfaCodesDoneBtn">Já salvei, ${isFirstSetup ? 'entrar no painel' : 'fechar'}</button>
+      </div>
+    `);
+    $('mfaCodesCopyBtn').addEventListener('click', () => {
+      navigator.clipboard.writeText(data.join('\n'));
+      $('mfaCodesCopyBtn').textContent = 'Copiado!';
+      setTimeout(() => { $('mfaCodesCopyBtn').textContent = 'Copiar todos'; }, 1500);
+    });
+    $('mfaCodesDoneBtn').addEventListener('click', () => {
+      hideMfaGate();
+      if (isFirstSetup) { loadSupportConversations(); loadProfessionals(); }
+    });
+  }
+
+  async function showEnrollScreen() {
+    // Limpa fatores não verificados de tentativas de cadastro abandonadas
+    // antes — senão o enroll() novo colide com o friendly_name já em uso.
+    const { data: existing } = await supa.auth.mfa.listFactors();
+    const unverified = (existing?.totp || []).filter(f => f.status !== 'verified');
+    for (const f of unverified) { await supa.auth.mfa.unenroll({ factorId: f.id }); }
+
+    const { data, error } = await supa.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Painel Master' });
+    if (error) {
+      renderMfaGate(`<div class="mfa-card"><p class="msg error">Erro ao iniciar o cadastro do autenticador: ${escapeHtml(error.message)}</p></div>`);
+      return;
+    }
+    const factorId = data.id;
+
+    renderMfaGate(`
+      <div class="mfa-card">
+        <h2>Configurar autenticação em duas etapas</h2>
+        <p>Obrigatório pra acessar o painel master. Escaneie o QR code com um app autenticador (Google Authenticator, Authy, 1Password) e digite o código de 6 dígitos pra confirmar.</p>
+        <img src="${data.totp.qr_code}" alt="QR code do autenticador" style="width:180px;height:180px;display:block;margin:0 auto 12px;">
+        <p style="text-align:center;">Não consegue escanear? Digite manualmente: <code>${escapeHtml(data.totp.secret)}</code></p>
+        <input type="text" id="mfaEnrollCode" inputmode="numeric" maxlength="6" placeholder="000000">
+        <button class="btn" id="mfaEnrollBtn">Confirmar</button>
+        <div class="msg" id="mfaEnrollMsg"></div>
+      </div>
+    `);
+
+    $('mfaEnrollBtn').addEventListener('click', async () => {
+      const code = $('mfaEnrollCode').value.trim();
+      const msgEl = $('mfaEnrollMsg');
+      if (!/^\d{6}$/.test(code)) { msgEl.textContent = 'Digite os 6 dígitos do app autenticador.'; msgEl.className = 'msg error'; return; }
+      $('mfaEnrollBtn').disabled = true;
+      const { data: challenge, error: chErr } = await supa.auth.mfa.challenge({ factorId });
+      if (chErr) { msgEl.textContent = chErr.message; msgEl.className = 'msg error'; $('mfaEnrollBtn').disabled = false; return; }
+      const { error: verErr } = await supa.auth.mfa.verify({ factorId, challengeId: challenge.id, code });
+      if (verErr) { msgEl.textContent = 'Código incorreto, tente de novo.'; msgEl.className = 'msg error'; $('mfaEnrollBtn').disabled = false; return; }
+      await showRecoveryCodes(true);
+    });
+  }
+
+  function showRecoveryInput() {
+    const box = $('mfaRecoveryBox');
+    box.style.display = 'block';
+    box.innerHTML = `
+      <p style="font-size:12px;">Digite um dos códigos de recuperação gerados quando você configurou o autenticador.</p>
+      <input type="text" id="mfaRecoveryCode" placeholder="XXXX-XXXX-XXXX">
+      <button class="btn secondary" id="mfaRecoveryBtn">Usar código de recuperação</button>
+      <div class="msg" id="mfaRecoveryMsg"></div>
+    `;
+    $('mfaRecoveryBtn').addEventListener('click', async () => {
+      const code = $('mfaRecoveryCode').value.trim();
+      const msgEl = $('mfaRecoveryMsg');
+      if (!code) { msgEl.textContent = 'Digite o código.'; msgEl.className = 'msg error'; return; }
+      $('mfaRecoveryBtn').disabled = true;
+      msgEl.textContent = 'Verificando...';
+      msgEl.className = 'msg';
+      const { data, error } = await supa.functions.invoke('master-mfa-recovery', { body: { code } });
+      if (error || !data?.ok) {
+        let motivo = data?.error || error?.message || 'Código inválido.';
+        if (error?.context?.json) {
+          try { const body = await error.context.json(); if (body?.error) motivo = body.error; } catch {}
+        }
+        msgEl.textContent = motivo;
+        msgEl.className = 'msg error';
+        $('mfaRecoveryBtn').disabled = false;
+        return;
+      }
+      msgEl.textContent = 'Autenticador removido. Configure um novo agora.';
+      msgEl.className = 'msg ok';
+      setTimeout(() => showEnrollScreen(), 1200);
+    });
+  }
+
+  function showChallengeScreen(factorId) {
+    renderMfaGate(`
+      <div class="mfa-card">
+        <h2>Confirme sua identidade</h2>
+        <p>Digite o código de 6 dígitos do seu app autenticador.</p>
+        <input type="text" id="mfaChallengeCode" inputmode="numeric" maxlength="6" placeholder="000000">
+        <button class="btn" id="mfaChallengeBtn">Confirmar</button>
+        <div class="msg" id="mfaChallengeMsg"></div>
+        <button id="mfaLostBtn">Perdi o acesso ao autenticador</button>
+        <div id="mfaRecoveryBox" style="display:none;"></div>
+      </div>
+    `);
+
+    $('mfaChallengeBtn').addEventListener('click', async () => {
+      const code = $('mfaChallengeCode').value.trim();
+      const msgEl = $('mfaChallengeMsg');
+      if (!/^\d{6}$/.test(code)) { msgEl.textContent = 'Digite os 6 dígitos.'; msgEl.className = 'msg error'; return; }
+      $('mfaChallengeBtn').disabled = true;
+      const { data: challenge, error: chErr } = await supa.auth.mfa.challenge({ factorId });
+      if (chErr) { msgEl.textContent = chErr.message; msgEl.className = 'msg error'; $('mfaChallengeBtn').disabled = false; return; }
+      const { error: verErr } = await supa.auth.mfa.verify({ factorId, challengeId: challenge.id, code });
+      if (verErr) { msgEl.textContent = 'Código incorreto.'; msgEl.className = 'msg error'; $('mfaChallengeBtn').disabled = false; return; }
+      hideMfaGate();
+      loadSupportConversations();
+      loadProfessionals();
+    });
+
+    $('mfaLostBtn').addEventListener('click', showRecoveryInput);
+  }
+
+  // Retorna true se a sessão já está em aal2 (pode prosseguir pro painel).
+  // Quando retorna false, já cuidou de mostrar a tela certa (cadastro ou
+  // desafio) — boot() simplesmente para ali.
+  async function ensureMfa() {
+    const { data: aalData, error: aalErr } = await supa.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aalErr) {
+      renderMfaGate(`<div class="mfa-card"><p class="msg error">Erro ao checar MFA: ${escapeHtml(aalErr.message)}</p></div>`);
+      return false;
+    }
+    if (aalData.currentLevel === 'aal2') return true;
+
+    const { data: factorsData, error: factorsErr } = await supa.auth.mfa.listFactors();
+    if (factorsErr) {
+      renderMfaGate(`<div class="mfa-card"><p class="msg error">Erro ao checar autenticador: ${escapeHtml(factorsErr.message)}</p></div>`);
+      return false;
+    }
+    const verifiedTotp = (factorsData.totp || []).find(f => f.status === 'verified');
+
+    if (!verifiedTotp) {
+      await showEnrollScreen();
+    } else {
+      showChallengeScreen(verifiedTotp.id);
+    }
+    return false;
+  }
+
+  $('headerRecoveryBtn').addEventListener('click', () => showRecoveryCodes(false));
+
   async function boot() {
     const { data: { session } } = await supa.auth.getSession();
     if (!session) { window.location.href = 'login.html'; return; }
@@ -439,6 +625,9 @@
       window.location.href = 'index.html';
       return;
     }
+
+    const mfaOk = await ensureMfa();
+    if (!mfaOk) return;
 
     loadSupportConversations();
     await loadProfessionals();

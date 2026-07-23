@@ -13,7 +13,7 @@
   :root {
     --bg:#F8F9FA; --primary:#2D6BE4; --primary-dim:#1E4FAE; --accent:#1E8C64; --accent-dim:#146B4D;
     --text:#1E2A3A; --muted:#63707F; --line:#E9EBEF; --font:'Inter', -apple-system, sans-serif;
-    --card-grad:linear-gradient(165deg,#FFFFFF 0%,#F7FBF9 55%,#F6F8FE 100%);
+    --card-grad:linear-gradient(165deg,#FFFFFF 0%,#DFF5EA 48%,#E7EFFE 100%);
     --shadow-card:0 1px 2px rgba(20,30,45,.04), 0 10px 24px -14px rgba(20,30,45,.14);
   }
   * { box-sizing:border-box; }
@@ -24,7 +24,7 @@
   header.top img { width:36px; height:36px; border-radius:9px; }
   header.top span { font-size:16px; font-weight:800; letter-spacing:-.2px; }
 
-  .hero-card { background:var(--card-grad); border:1px solid rgba(20,30,45,.04); box-shadow:var(--shadow-card); border-radius:20px; padding:26px 22px; }
+  .hero-card { background:var(--card-grad); border:1px solid rgba(30,140,100,.14); box-shadow:var(--shadow-card); border-radius:20px; padding:26px 22px; }
   .hero h1 { font-size:28px; line-height:1.25; font-weight:800; letter-spacing:-.5px; margin:0 0 14px; }
   .hero h1 em { color:var(--primary); font-style:normal; }
   .hero p { font-size:15.5px; line-height:1.6; color:var(--muted); margin:0 0 26px; }
@@ -34,7 +34,7 @@
   .cta-note { text-align:center; font-size:12.5px; color:var(--muted); margin:10px 0 0; }
 
   .features { margin:44px 0 8px; display:flex; flex-direction:column; gap:14px; }
-  .feature { display:flex; gap:14px; align-items:flex-start; background:var(--card-grad); border:1px solid rgba(20,30,45,.04); box-shadow:var(--shadow-card); border-radius:16px; padding:16px 18px; }
+  .feature { display:flex; gap:14px; align-items:flex-start; background:var(--card-grad); border:1px solid rgba(30,140,100,.14); box-shadow:var(--shadow-card); border-radius:16px; padding:16px 18px; }
   .feature .ico { flex-shrink:0; width:38px; height:38px; border-radius:10px; background:rgba(45,107,228,.1); color:var(--primary); display:flex; align-items:center; justify-content:center; }
   .feature .ico svg { width:19px; height:19px; }
   .feature .txt strong { display:block; font-size:14.5px; font-weight:700; margin-bottom:3px; }
@@ -75,7 +75,11 @@
       </div>
       <div class="feature">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5"/><path d="m20.5 20.5-2-2"/><path d="m3.5 3.5 2 2"/><path d="m14.5 6.5 3-3 3 3-3 3"/><path d="m6.5 14.5-3 3 3 3 3-3"/></svg></div>
-        <div class="txt"><strong>Treino sob medida, nunca genérico</strong><p>A IA monta o protocolo cruzando a anamnese completa do aluno (histórico, lesões, restrições), a sua avaliação profissional e a periodização/técnica certa pro momento dele — o resultado é individual de verdade, não um modelo pronto repetido pra todo mundo.</p></div>
+        <div class="txt"><strong>Treino sob medida — do seu jeito ou com IA</strong><p>Monte o protocolo você mesmo, do zero, com controle total sobre série, carga e técnica — ou deixe a IA sugerir, cruzando a anamnese completa do aluno (histórico, lesões, restrições), a sua avaliação profissional e a periodização certa pro momento dele. Nenhum dos dois caminhos entrega modelo genérico repetido pra todo mundo.</p></div>
+      </div>
+      <div class="feature">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="10 8 16 12 10 16 10 8"/><rect x="2" y="4" width="20" height="16" rx="3"/></svg></div>
+        <div class="txt"><strong>Vídeo de execução com a sua cara</strong><p>Cole o link do seu próprio vídeo do YouTube em cada exercício — seu aluno vê você ensinando a execução do seu jeito, não uma animação genérica de banco de dados.</p></div>
       </div>
       <div class="feature">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l3-4 3 2 4-6"/></svg></div>

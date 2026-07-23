@@ -7,7 +7,7 @@ SaaS B2B2C de gestão para **personal trainers autônomos brasileiros**. O profi
 Produto **totalmente separado da marca Fox Performance** — projetos distintos, sem mistura de dados, marca ou branding.
 
 - **Documento master (planejamento de negócio):** `C:\Users\Giovani\Documents\Meu Ciclo\MEU-PROTOCOLO-MASTER.md` — ler antes de qualquer sessão de desenvolvimento. Decisões estratégicas ali são definições fechadas, não sugestões.
-- **Roadmap pós-desenvolvimento (`roadmap-pos-dev.md`, salvo 2026-07-19, execução ainda não iniciada):** plano de validação com usuários reais (Cliente 0 → Programa Founder → padrões em 3+ relatos → só então evoluir). **Importante (esclarecido pelo usuário em 2026-07-19): esse roadmap só começa depois que o dev estiver de fato completo — ainda faltam itens de desenvolvimento normal antes disso** (ver "Status atual" pra lista atualizada). Não confundir "salvar no contexto" com "já estamos no modo congelamento" — continuar desenvolvendo normalmente até o usuário sinalizar que o MVP fechou.
+- **Roadmap pós-desenvolvimento (`roadmap-pos-dev.md`):** plano de validação com usuários reais (Cliente 0 → Programa Founder → padrões em 3+ relatos → só então evoluir), **fundido em 2026-07-23** com um segundo roadmap de crescimento mês a mês (metas de assinantes/receita, internacionalização, visão de 3 anos) — ver Fases 11/12 e a seção final "Visão de longo prazo" do documento. Na prática, as Fases 2/3 (Cliente 0) já estão em andamento (ver "Status atual"). Não confundir "documento salvo" com "já estamos no modo congelamento" — o dev normal segue até o usuário sinalizar que o MVP fechou, e nenhuma meta de calendário do roadmap de crescimento justifica pular uma fase de validação.
 - **Repositório:** https://github.com/giovanifpc/meu-protocolo
 - **Backend:** Supabase (`https://yumqmramxbahkfxsthtt.supabase.co`)
 - **Stack:** HTML + CSS + JS puro (sem framework), Supabase Auth + DB (RLS multi-tenant), Mercado Pago (webhook), Claude API (suporte IA), GitHub Pages
@@ -89,6 +89,15 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 ---
 
 ## Status atual
+
+### Fusão do roadmap de crescimento mês a mês no `roadmap-pos-dev.md` (2026-07-23)
+
+O usuário trouxe um segundo roadmap — plano de crescimento mês a mês (Mês 1 ao Mês 12: metas de assinantes/receita, conteúdo, internacionalização) mais visão de longo prazo pós-ano-1 e objetivo de 3 anos (3 SaaS, ~R$80 mil/mês combinado). Pedido explícito: **fundir** com o `roadmap-pos-dev.md` já existente, não substituir.
+
+- **Onde o conteúdo novo já falava da mesma coisa que uma Fase existente, virou reforço dela**: Fase 4 (Founder) ganhou a cadência de feedback semanal + vídeos de demonstração; Fase 8 (retenção) ganhou acompanhamento de cancelamento/suporte automatizado/central de ajuda; Fase 11 (Escala) ganhou uma subseção "Detalhamento mês a mês" com o ritmo de conteúdo/landing page/comunidade/parcerias que antes só existia como lista solta.
+- **Onde era assunto genuinamente novo, virou Fase nova**: Fase 12 — Internacionalização (tradução, Stripe, ida a mercados de brasileiros no exterior, depois mercado internacional amplo) e uma seção final "Visão de longo prazo (pós ano 1)" (contratar suporte/atendimento, automatizar marketing, reduzir atuação operacional, segundo SaaS só depois de tudo validado).
+- **Decisão de governança explícita, escrita no topo do documento**: metas de calendário/receita do roadmap de crescimento nunca têm prioridade sobre as regras de validação das Fases 1-10 (3+ relatos antes de construir, Cliente 0 sozinha antes do programa Founder, etc.) — se o negócio for mais devagar que o calendário sugerido, o calendário cede.
+- **Aproveitado pra corrigir uma inconsistência que já existia**: o documento dizia em dois lugares que a Fase 2 (Cliente 0) "segue não iniciada" — desatualizado, já que a Cliente 0 está cadastrada de verdade e já deu feedback real (ver seção "Feedback real da Cliente 0 aplicado" mais abaixo). Corrigido nos dois lugares.
 
 ### E-mail de login redesenhado (2026-07-23)
 

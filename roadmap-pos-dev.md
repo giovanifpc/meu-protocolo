@@ -3,6 +3,10 @@
 > **Status: salvo em 2026-07-19, execução ainda não iniciada.** Este documento é um plano de execução operacional — diz o que fazer em cada fase e, principalmente, **o que não fazer**. Regra central: não desenvolver porque parece boa ideia — desenvolver porque vários clientes reais demonstraram a mesma necessidade (nunca com base na opinião de um único usuário).
 >
 > **Esclarecido pelo usuário no mesmo dia: o MVP ainda não está fechado, o desenvolvimento normal continua.** Este roadmap só entra em vigor (Fase 1 — congelamento) depois que o usuário confirmar explicitamente que o dev terminou. Não tratar "documento salvo" como "já podemos parar de construir". Ver `CLAUDE.md`, seção "Status atual", pro estado mais recente do que ainda falta implementar.
+>
+> **Atualização de status (2026-07-23): na prática, as Fases 2/3 já começaram.** A Cliente 0 (`Jujuelilicaanimacoes@hotmail.com`) já está cadastrada de verdade (não pagante, em trial) e já mandou feedback real, já aplicado em 2 commits (ver `CLAUDE.md`, seção "Feedback real da Cliente 0 aplicado"). O texto acima ("execução ainda não iniciada") ficou parcialmente desatualizado — mantido por ora como registro histórico de quando o documento foi criado, mas não leia como "nada começou ainda".
+>
+> **Fusão de roadmap (2026-07-23):** o usuário trouxe um segundo roadmap — um plano de crescimento mês a mês (metas de assinantes/receita, Mês 1 ao Mês 12, mais visão de longo prazo pós-ano-1 e objetivo de 3 anos). Ele foi **fundido** neste documento, não substitui as Fases abaixo. Onde os dois falavam da mesma coisa, o conteúdo novo virou detalhe/reforço da Fase já existente; onde era assunto novo (internacionalização, visão de longo prazo, metas de receita por mês), virou Fase nova (12 e a seção final "Visão de longo prazo"). **A regra de ouro das Fases 1-10 continua valendo por cima de qualquer meta de calendário**: nenhuma meta de "X assinantes até o mês Y" justifica pular uma fase de validação ou construir feature sem 3+ relatos — se o negócio estiver mais lento que o calendário do roadmap de crescimento, o calendário cede, não o processo.
 
 ---
 
@@ -46,7 +50,7 @@ Ao final de alguns dias, conversa com estas perguntas:
 
 **Não perguntar apenas se gostou.**
 
-**Cliente 0 registrada (2026-07-21): `Jujuelilicaanimacoes@hotmail.com`** — e-mail guardado aqui só de referência pra quando essa fase for iniciada de verdade; nenhuma conta foi criada ainda, execução desta fase segue não iniciada (ver nota no topo do documento).
+**Cliente 0 registrada (2026-07-21): `Jujuelilicaanimacoes@hotmail.com`** — **atualização 2026-07-23: a conta já foi criada de verdade** (não pagante, em trial, cadastrada pelo Giovani via `master.html`) e já está em uso real, com feedback já recebido e aplicado em pelo menos 2 correções (ver `CLAUDE.md`, seção "Feedback real da Cliente 0 aplicado"). Esta fase está, na prática, em andamento — falta ainda a conversa estruturada de fim de fase (as 5 perguntas acima).
 
 ---
 
@@ -74,6 +78,11 @@ Isso evita retrabalho no código, mantém o fluxo principal intacto, e reduz atr
 Benefícios Founder: plano Premium completo, valor vitalício de R$50/mês enquanto mantiver a assinatura ativa, participação na construção do sistema, canal direto para sugestões, acesso antecipado às novidades. **O programa Founder não é um desconto — é uma recompensa por participar da construção inicial do produto.**
 
 **⚠️ Pendência técnica registrada em 2026-07-22, antes de confiar 100% no billing de qualquer Founder que vier a pagar de verdade**: duas chamadas reais à API do Mercado Pago nunca foram executadas nem uma vez contra o ambiente real (nem em sandbox, nem em produção) — `PUT /preapproval/{id}` (sincroniza o valor cobrado quando o profissional troca de plano pelo `perfil.html`, `mercadopago-update-preapproval`) e `POST /v1/payments/{id}/refunds` (estorno automático do mês grátis do programa de indicação, dentro de `mercadopago-webhook`). Toda a lógica de negócio em volta delas (barreira de limite de aluno no downgrade, resolução de indicação, crédito/consumo de mês grátis) já foi validada de verdade contra o banco — só a integração com a API externa em si segue sem execução real. Risco prático: zero enquanto ninguém tiver assinatura paga de verdade (nenhum profissional tem `mp_preapproval_id`, incluindo Cliente 0 via `billing_exempt`). **Validar antes de**: o primeiro Founder que trocar de plano pelo próprio painel, ou o primeiro crédito de indicação precisar ser aplicado de verdade numa cobrança real. Ver seção "Pendências do celular aplicadas no PC (2026-07-22)" no topo do `CLAUDE.md` pro detalhamento completo do que já foi testado com segurança (RPCs/SQL) vs. o que falta.
+
+**Do roadmap de crescimento fundido (2026-07-23) — cadência a manter durante todo o período Founder, não só no fim:**
+- **Feedback semanal, não só a entrevista formal da Fase 5**: pedir um retorno rápido (mensagem, ligação curta) toda semana com cada Founder ativo, além da conversa estruturada que vem só depois de 2-3 semanas. Detecta atrito cedo, sem esperar o ciclo de entrevista completo — mas não substitui a Fase 5, só antecipa sinais.
+- **Gravar vídeos curtos demonstrando o app** (cadastrar aluno, montar treino, ver progresso) durante esse período — serve de material de onboarding pros próprios Founders agora, e vira semente de conteúdo de marketing pra Fase 10/11 depois (ver "Construção da comunicação").
+- **Programa de indicação já está implementado tecnicamente** (item 16 do roadmap de dev, `CLAUDE.md`) — "implementar" aqui já não é tarefa de código, é só usar/divulgar o link entre os próprios Founders. Lembrar da pendência técnica do parágrafo acima (estorno real via Mercado Pago) antes de confiar que o crédito é aplicado de verdade numa cobrança.
 
 ---
 
@@ -114,6 +123,11 @@ Antes de pensar em marketing, responder: os clientes continuam usando? Entram di
 
 **Enquanto essa resposta não for claramente "sim", ainda não é hora de escalar.**
 
+**Do roadmap de crescimento fundido (2026-07-23) — ações concretas pra sustentar essa fase, não só medir:**
+- **Acompanhar cancelamentos de perto**: todo cancelamento merece entender o motivo (mesmo que informal, não precisa de pesquisa formal) — é o mesmo espírito da Fase 6 (padrão em 3+ relatos), aplicado ao sinal mais caro que existe (cliente saindo).
+- **Automatizar suporte**: o chatbot de suporte via IA (`support-chat`, já implementado e testado — ver `CLAUDE.md`) é a base disso. Nesta fase, o foco é reduzir escalonamento manual pro Giovani, não construir feature nova.
+- **Central de ajuda**: um lugar único (FAQ/artigos) pras perguntas mais repetidas do chatbot de suporte — só vale a pena depois que `support_messages` (log do master) mostrar quais perguntas se repetem; não adiantar conteúdo antes de ter esse dado real.
+
 ---
 
 ## FASE 9 — Prospecção
@@ -137,6 +151,53 @@ Só quando houver aproximadamente: 10 clientes ativos, retenção consistente, f
 Iniciar: Landing Page definitiva, trial padrão de 14 dias, cadastro obrigatório do cartão, produção de conteúdo, SEO, Instagram, parcerias, programa de indicação, tráfego pago (quando houver orçamento).
 
 Neste momento o fluxo padrão do sistema passa a ser: **Cadastro → Cartão → 14 dias → Cobrança automática.** Os clientes Founder permanecem no plano vitalício de R$50/mês, enquanto mantiverem a assinatura ativa.
+
+### Detalhamento mês a mês (do roadmap de crescimento fundido, 2026-07-23)
+
+O bloco acima (Landing Page, conteúdo, SEO etc.) é o "o quê"; esta subseção é o "em que ordem/ritmo", com metas de assinantes só como referência de ritmo — **não são gatilho pra pular fase nenhuma das Fases 1-10 nem pra construir feature sem 3+ relatos** (ver nota no topo do documento). Se o Cliente 0/Founders ainda não confirmaram retenção (Fase 8), não faz sentido acelerar pra essas metas.
+
+- **Autoridade (conteúdo)**: publicar conteúdo com regularidade (ideal: diário, mas sustentável > frequente), sempre mostrando funcionalidade real do app (não conceito) — reaproveita os vídeos de demonstração já gravados na Fase 4 e as frases reais dos clientes já coletadas na Fase 10. Publicar depoimentos reais dos Founders (com autorização deles).
+- **Landing page profissional**: versão definitiva, escrita com a linguagem real dos clientes (Fase 10), não copy inventado.
+- **Automatizar onboarding**: reduzir o quanto o Giovani precisa fazer manualmente pra um profissional novo começar a usar — o `master.html` hoje cadastra manualmente (bom pro estágio Founder, baixo volume); automatizar aqui significa o cadastro self-service (`onboarding.html`, já existe) virar o caminho padrão outra vez, sem precisar do master pré-provisionar cada conta.
+- **Escala orgânica**: melhorar o sistema de indicação com base no uso real (não adivinhar o que falta), lançar pequenas atualizações continuamente (mesmo espírito da Fase 7, só que agora com base em atrito real de uma base maior), criar uma comunidade (WhatsApp ou Telegram) pros profissionais trocarem experiência entre si, buscar parcerias com criadores de conteúdo pequenos/nichados (não precisa ser influenciador grande) que já falam pro público de personal trainers.
+- **Consolidação**: uma vez que a base cresce, redobrar a atenção da Fase 8 (retenção) — é fácil perder o controle de cancelamento quando o número de clientes sobe rápido.
+- **Marco de transição pra internacionalização (Fase 12)**: quando o crescimento doméstico estabilizar (retenção validada, cancelamento baixo, base de clientes pagantes recorrente) — **parar de adicionar funcionalidade nova e focar só em crescimento** é a mesma regra da Fase 1, reaplicada aqui: a essa altura o produto já deve estar maduro o bastante pra não precisar de feature nova pra crescer, só de mais gente conhecendo. Esse é o sinal de que faz sentido olhar pra Fase 12.
+
+---
+
+## FASE 12 — Internacionalização (do roadmap de crescimento fundido, 2026-07-23)
+
+**Pré-requisito**: só entrar aqui depois que a Fase 11 mostrar crescimento doméstico estável (ver "Marco de transição" no fim da Fase 11) — internacionalizar um produto que ainda não reteve bem no Brasil só multiplica o mesmo problema em mais idiomas.
+
+**Preparação técnica**:
+- Traduzir a interface pra inglês e espanhol.
+- Integrar Stripe (Mercado Pago não cobre bem cartão internacional/moeda estrangeira — é a lacuna real que motiva um segundo processador).
+- Ajustar exibição de moeda por região.
+- Criar uma landing page internacional (conteúdo e prova social separados da landing brasileira — não é tradução literal, é outro público).
+
+**Ida ao mercado, em ordem**:
+1. Brasileiros no exterior primeiro (EUA, Portugal, Irlanda, Reino Unido, Canadá) — usar vídeos em português mostrando que o app funciona em qualquer país, já que o público inicial fala português mesmo morando fora. Meta de referência: ~15 clientes internacionais nesse primeiro passo.
+2. Conteúdo específico pra brasileiros que trabalham como personal trainer fora do Brasil (dor específica: como validar formação/atender aluno à distância/etc.) — meta de referência: ~30 clientes internacionais.
+3. Só depois, investir em SEO, blog e canal no YouTube (produção de conteúdo em inglês/espanhol) + automação de e-mail marketing — meta de referência: ~40 clientes internacionais.
+4. Expandir tráfego pago internacional, melhorar onboarding com o aprendizado acumulado, criar plano anual (reduz cancelamento por reduzir a frequência de decisão de continuar) — meta de referência: ~50 clientes internacionais.
+5. Nessa altura, focar só em retenção — cliente satisfeito indica cliente, mesmo princípio da Fase 8/10, agora pro público internacional.
+
+**Marco de referência (não meta rígida)**: receita recorrente combinada (Brasil + exterior) na casa de R$20 mil/mês ao fim de ~1 ano de execução da Fase 11+12. É um número de calibração, não um prazo — se demorar mais porque a retenção pede mais cuidado, a retenção vence.
+
+---
+
+## Visão de longo prazo (pós ano 1) — do roadmap de crescimento fundido, 2026-07-23
+
+Depois que Brasil (Fase 11) e exterior (Fase 12) estiverem gerando receita recorrente estável, a ordem sugerida é:
+
+1. Contratar suporte (humano, pra complementar o chatbot de IA nos casos que ele já escala hoje).
+2. Contratar atendimento.
+3. Automatizar marketing.
+4. Reduzir a atuação operacional do Giovani no dia a dia do Meu Protocolo.
+5. Levar o app pra personal trainers de qualquer nacionalidade (não só brasileiros/brasileiros no exterior) — passo natural depois que a base em inglês/espanhol já validou o produto fora do público de origem.
+6. **Só depois de tudo isso**, considerar um segundo SaaS — nunca antes, pra não repetir o erro de dividir atenção entre dois produtos não validados ao mesmo tempo.
+
+**Objetivo de referência pra 3 anos** (norte, não prazo comprometido): três produtos SaaS operando — o Meu Protocolo (~R$40 mil/mês), um segundo SaaS (~R$20 mil/mês) e um terceiro (~R$20 mil/mês) — receita recorrente combinada na casa de R$80 mil/mês, com operação cada vez mais automatizada e menos dependente do trabalho diário do Giovani. **O fator que decide se esse cenário acontece de verdade não é o calendário — é retenção de cliente sustentada e aquisição constante de gente nova**, exatamente o que as Fases 1-11 acima existem pra garantir antes de qualquer expansão.
 
 ---
 

@@ -54,20 +54,23 @@
     return 'none';
   }
 
+  const HINT_ACCENT = '#7C3AED';
+
   const style = document.createElement('style');
   style.textContent = `
-    #hintCard { position:fixed; left:16px; bottom:20px; max-width:320px; background:var(--card-grad,#fff); border:1px solid rgba(20,30,45,.06); box-shadow:var(--shadow-card,0 4px 16px rgba(0,0,0,.15)); border-radius:var(--radius-lg,16px); padding:14px 16px; z-index:450; display:none; font-family:var(--font,sans-serif); }
+    #hintCard { position:fixed; left:16px; bottom:calc(64px + env(safe-area-inset-bottom) + 12px); max-width:320px; background:var(--card-grad,#fff); border:1px solid rgba(20,30,45,.06); border-left:5px solid ${HINT_ACCENT}; box-shadow:0 4px 20px -4px rgba(124,58,237,.4), var(--shadow-card,0 4px 16px rgba(0,0,0,.15)); border-radius:var(--radius-lg,16px); padding:16px 18px; z-index:450; display:none; font-family:var(--font,sans-serif); }
     #hintCard.show { display:block; animation:hintIn .2s ease; }
     @keyframes hintIn { from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
-    #hintCard .hint-close { position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; color:var(--muted,#94A0AF); padding:5px; display:flex; }
-    #hintCard .hint-close svg { width:14px; height:14px; display:block; }
-    #hintCard p { margin:0 20px 10px 0; font-size:13px; line-height:1.45; color:var(--text,#1E2A3A); }
-    #hintCard .hint-steps { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
-    #hintCard .hint-step { display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--text,#1E2A3A); }
-    #hintCard .hint-step .hint-step-num { flex-shrink:0; width:22px; height:22px; border-radius:50%; background:var(--primary,#2D6BE4); color:#fff; font-weight:800; font-size:11px; display:flex; align-items:center; justify-content:center; }
-    #hintCard .hint-step svg { width:17px; height:17px; flex-shrink:0; color:var(--primary,#2D6BE4); }
+    #hintCard .hint-close { position:absolute; top:10px; right:10px; background:none; border:none; cursor:pointer; color:var(--muted,#94A0AF); padding:5px; display:flex; }
+    #hintCard .hint-close svg { width:15px; height:15px; display:block; }
+    #hintCard .hint-tag { display:inline-block; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.5px; color:${HINT_ACCENT}; background:rgba(124,58,237,.12); padding:3px 9px; border-radius:20px; margin-bottom:8px; }
+    #hintCard p { margin:0 20px 12px 0; font-size:15px; line-height:1.5; color:var(--text,#1E2A3A); font-weight:500; }
+    #hintCard .hint-steps { display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
+    #hintCard .hint-step { display:flex; align-items:center; gap:10px; font-size:14px; color:var(--text,#1E2A3A); }
+    #hintCard .hint-step .hint-step-num { flex-shrink:0; width:24px; height:24px; border-radius:50%; background:${HINT_ACCENT}; color:#fff; font-weight:800; font-size:12px; display:flex; align-items:center; justify-content:center; }
+    #hintCard .hint-step svg { width:18px; height:18px; flex-shrink:0; color:${HINT_ACCENT}; }
     #hintCard .hint-actions { display:flex; gap:8px; flex-wrap:wrap; }
-    #hintCard .hint-btn { background:var(--primary,#2D6BE4); color:#fff; border:none; border-radius:9px; padding:7px 12px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:var(--font,sans-serif); }
+    #hintCard .hint-btn { background:${HINT_ACCENT}; color:#fff; border:none; border-radius:9px; padding:9px 14px; font-size:14px; font-weight:700; cursor:pointer; font-family:var(--font,sans-serif); }
     #hintCard .hint-btn.secondary { background:var(--bg,#F8F9FA); color:var(--text,#1E2A3A); border:1px solid var(--line,#E9EBEF); }
   `;
   document.head.appendChild(style);
@@ -114,6 +117,7 @@
       <button type="button" class="hint-close" aria-label="Fechar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
+      <span class="hint-tag">Dica</span>
       <p>${escapeHtml(hint.message)}</p>
       ${stepsHtml ? `<div class="hint-steps">${stepsHtml}</div>` : ''}
       <div class="hint-actions">${buttons}</div>

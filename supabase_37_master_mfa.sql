@@ -298,7 +298,13 @@ begin
     raise exception 'Não autorizado.';
   end if;
 
-  delete from master_recovery_codes;
+  -- "where true" é necessário mesmo apagando tudo: a role authenticator
+  -- roda com a extensão safeupdate (padrão de segurança do Supabase),
+  -- que bloqueia DELETE/UPDATE sem WHERE — sem isso, todo cadastro de
+  -- MFA falhava na hora de gerar os códigos de recuperação com o erro
+  -- "DELETE requires a WHERE clause" (bug real encontrado em produção,
+  -- 2026-07-24, logo depois do primeiro fator TOTP ser confirmado).
+  delete from master_recovery_codes where true;
 
   for i in 1..8 loop
     v_raw := upper(encode(gen_random_bytes(6), 'hex')); -- 12 chars hex

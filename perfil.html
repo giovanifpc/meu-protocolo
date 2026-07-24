@@ -72,18 +72,40 @@
   .preset-swatch.selected { border-color:var(--primary); }
   .preset-swatch .ps-dot { width:30px; height:30px; border-radius:50%; margin:0 auto 6px; }
   .preset-swatch .ps-name { font-size:10.5px; font-weight:700; color:var(--text); line-height:1.2; }
-  .preview-mode-toggle { display:inline-flex; gap:4px; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:4px; margin-bottom:10px; }
+  .preview-mode-toggle { display:inline-flex; gap:4px; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:4px; }
   .preview-mode-toggle .pm-btn { border:none; background:none; padding:6px 14px; border-radius:7px; font-size:12px; font-weight:700; font-family:var(--font); color:var(--muted); cursor:pointer; }
   .preview-mode-toggle .pm-btn.active { background:var(--card); color:var(--primary); box-shadow:0 1px 3px rgba(0,0,0,.08); }
-  .app-preview-frame { border-radius:16px; padding:14px; background:#E4E7EC; }
-  .app-preview { border-radius:14px; padding:16px; max-width:260px; margin:0 auto; font-family:var(--font); background:var(--ap-bg); color:var(--ap-text); }
-  .app-preview .ap-topbar { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
-  .app-preview .ap-topbar img { height:22px; width:auto; max-width:70px; object-fit:contain; border-radius:5px; }
-  .app-preview .ap-topbar span { font-weight:800; font-size:14px; flex:1; }
-  .app-preview .ap-card { border-radius:12px; padding:14px; margin-bottom:12px; background:var(--ap-card); border:1px solid var(--ap-border); }
-  .app-preview .ap-card-title { font-weight:700; font-size:13px; margin-bottom:3px; }
-  .app-preview .ap-card-sub { font-size:11px; color:var(--ap-muted); }
-  .app-preview .ap-btn { display:block; width:100%; border:none; border-radius:10px; padding:11px; font-weight:700; font-size:13px; color:#fff; background:var(--ap-primary); font-family:var(--font); }
+
+  /* Prévia "Visualizar como aluno" — réplica real do banner de
+     aluno.html (.pro-topband/.pro-row), não um mockup genérico. Variáveis
+     escopadas só neste elemento (nunca no :root da página), sobrescritas
+     via JS a cada troca de preset/modo — mesma técnica de tema já usada
+     em aluno.html, só que aplicada localmente em vez de global. */
+  .preview-overlay { position:fixed; inset:0; z-index:600; background:rgba(15,20,28,.6); display:none; align-items:center; justify-content:center; padding:24px; }
+  .preview-overlay.show { display:flex; }
+  .preview-modal { width:100%; max-width:380px; max-height:92vh; overflow-y:auto; background:var(--card); border-radius:var(--radius-lg); padding:18px; box-shadow:var(--shadow-card); }
+  .preview-modal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .preview-modal-head h3 { font-size:15px; font-weight:800; margin:0; }
+  .preview-close-btn { border:none; background:var(--bg); border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text); flex-shrink:0; }
+  .preview-close-btn svg { width:16px; height:16px; }
+  .student-preview-frame {
+    --primary:#2D6BE4; --primary-dim:#1E4FB0; --bg:#F8F9FA; --card:#FFFFFF; --text:#1E2A3A; --muted:#63707F;
+    --card-border:rgba(20,30,45,.045); --accent-dim:#146B4D;
+    --shadow-card:0 1px 2px rgba(20,30,45,.04), 0 10px 24px -14px rgba(20,30,45,.14);
+    border-radius:18px; overflow:hidden; background:var(--bg); font-family:var(--font);
+  }
+  .student-preview-frame .sp-topband { padding:18px 16px 33px; background:linear-gradient(135deg,var(--primary),var(--primary-dim)); display:flex; justify-content:flex-end; gap:8px; }
+  .student-preview-frame .sp-topband .ptb-icon { width:30px; height:30px; border-radius:50%; border:1.5px solid rgba(255,255,255,.4); background:rgba(255,255,255,.08); color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .student-preview-frame .sp-topband .ptb-icon svg { width:14px; height:14px; }
+  .student-preview-frame .sp-row { display:flex; align-items:flex-start; gap:10px; margin:-33px 14px 14px; }
+  .student-preview-frame .sp-avatar { width:88px; height:88px; border-radius:50%; background:var(--primary); color:#fff; font-size:30px; font-weight:800; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; border:4px solid var(--bg); box-shadow:0 8px 20px -8px rgba(20,30,45,.35); }
+  .student-preview-frame .sp-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
+  .student-preview-frame .sp-text { flex:1; min-width:0; padding-top:36px; }
+  .student-preview-frame .sp-name { font-size:15px; font-weight:800; color:var(--text); line-height:1.25; word-break:break-word; }
+  .student-preview-frame .sp-sub { font-size:11px; color:var(--muted); margin-top:4px; }
+  .student-preview-frame .sp-wa { margin:0 14px 16px; display:flex; align-items:center; justify-content:center; gap:8px; background:var(--card); border:1px solid var(--card-border); color:var(--text); padding:10px 14px; border-radius:14px; font-size:12px; font-weight:700; box-shadow:var(--shadow-card); }
+  .student-preview-frame .sp-wa svg { width:15px; height:15px; color:var(--accent-dim); flex-shrink:0; }
+  .preview-hint { font-size:12px; color:var(--muted); margin:0 0 12px; }
   .crop-overlay { position:fixed; inset:0; z-index:600; background:rgba(15,20,28,.6); display:none; align-items:center; justify-content:center; padding:24px; }
   .crop-overlay.show { display:flex; }
   .crop-card { width:100%; max-width:340px; background:var(--card); border-radius:var(--radius-lg); padding:22px; box-shadow:var(--shadow-card); }
@@ -151,6 +173,10 @@
         <label>WhatsApp (opcional)</label>
         <input type="text" id="whatsappInput" placeholder="Ex: 5511999999999 (DDI+DDD+número)">
       </div>
+      <div class="field">
+        <label>Frase de boas-vindas (opcional)</label>
+        <input type="text" id="homeSubtitleInput" maxlength="80" placeholder="Sua evolução começa hoje.">
+      </div>
       <div id="whiteLabelLock" class="msg" style="display:none;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;">Cor e logo personalizados são exclusivos dos planos Pro e Elite. <a href="#planCard" onclick="document.getElementById('planCard').scrollIntoView({behavior:'smooth',block:'start'})" style="color:var(--primary);font-weight:700;">Ver planos</a></div>
       <div id="whiteLabelFields">
         <div class="field">
@@ -173,24 +199,8 @@
         </div>
         <div class="field">
           <label>Prévia — como o aluno vai ver</label>
-          <p style="font-size:12px;color:var(--muted);margin:0 0 8px;">Quem decide entre claro e escuro é o aluno, no próprio celular — aqui é só pra você conferir os dois.</p>
-          <div class="preview-mode-toggle" id="previewModeToggle">
-            <button class="pm-btn active" data-mode="light" type="button">Claro</button>
-            <button class="pm-btn" data-mode="dark" type="button">Escuro</button>
-          </div>
-          <div class="app-preview-frame">
-            <div class="app-preview" id="appPreview">
-              <div class="ap-topbar">
-                <img id="apLogo" style="display:none;" alt="">
-                <span id="apName">Meu Protocolo</span>
-              </div>
-              <div class="ap-card">
-                <div class="ap-card-title">Próximo treino</div>
-                <div class="ap-card-sub">Treino A · 6 exercícios</div>
-              </div>
-              <button class="ap-btn" type="button" tabindex="-1">Iniciar treino</button>
-            </div>
-          </div>
+          <p style="font-size:12px;color:var(--muted);margin:0 0 8px;">Veja a tela inicial real do aluno com sua cor, sua logo e seu nome, antes de salvar.</p>
+          <button class="btn secondary" id="viewAsStudentBtn" type="button">Visualizar como aluno</button>
         </div>
       </div>
       <button class="btn" id="saveBtn">Salvar</button>
@@ -233,6 +243,34 @@
       <button class="btn danger" id="logoutBtn">Sair da conta</button>
     </div>
   </main>
+
+  <div class="preview-overlay" id="studentPreviewOverlay">
+    <div class="preview-modal">
+      <div class="preview-modal-head">
+        <h3>Visualizar como aluno</h3>
+        <button class="preview-close-btn" id="closeStudentPreviewBtn" type="button" aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <p class="preview-hint">Quem decide entre claro e escuro é o aluno, no próprio celular — aqui é só pra você conferir os dois.</p>
+      <div class="preview-mode-toggle" id="previewModeToggle" style="margin-bottom:14px;">
+        <button class="pm-btn active" data-mode="light" type="button">Claro</button>
+        <button class="pm-btn" data-mode="dark" type="button">Escuro</button>
+      </div>
+      <div class="student-preview-frame" id="studentPreviewFrame">
+        <div class="sp-topband">
+          <span class="ptb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
+          <span class="ptb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></span>
+        </div>
+        <div class="sp-row">
+          <div class="sp-avatar" id="spAvatar">M</div>
+          <div class="sp-text">
+            <div class="sp-name" id="spName">Seu nome</div>
+            <div class="sp-sub" id="spSub">Sua evolução começa hoje.</div>
+          </div>
+        </div>
+        <div class="sp-wa" id="spWa" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Falar com seu treinador</div>
+      </div>
+    </div>
+  </div>
 
   <div class="crop-overlay" id="logoCropOverlay">
     <div class="crop-card">
@@ -284,17 +322,17 @@
   // claro/escuro é o aluno, no próprio celular. A prévia abaixo deixa o
   // profissional espiar como a cor fica nos dois modos antes de salvar.
   const COLOR_PRESETS = {
-    azul:  { nome: 'Azul Clássico', light: { primary:'#2D6BE4' }, dark: { primary:'#2D6BE4' } },
-    vinho: { nome: 'Vinho Intenso', light: { primary:'#9C2B4E' }, dark: { primary:'#9C2B4E' } },
-    roxo:  { nome: 'Roxo Profundo', light: { primary:'#5B3A9E' }, dark: { primary:'#5B3A9E' } },
-    verde:   { nome: 'Verde Vibrante',   light: { primary:'#17812F' }, dark: { primary:'#17812F' } },
-    rosa:    { nome: 'Rosa Suave',       light: { primary:'#C94277' }, dark: { primary:'#C94277' } },
-    laranja: { nome: 'Laranja Vibrante', light: { primary:'#BF5010' }, dark: { primary:'#BF5010' } },
+    azul:  { nome: 'Azul Clássico', light: { primary:'#2D6BE4', dim:'#1E4FB0' }, dark: { primary:'#2D6BE4', dim:'#1E4FB0' } },
+    vinho: { nome: 'Vinho Intenso', light: { primary:'#9C2B4E', dim:'#6E1F38' }, dark: { primary:'#9C2B4E', dim:'#6E1F38' } },
+    roxo:  { nome: 'Roxo Profundo', light: { primary:'#5B3A9E', dim:'#3F2A70' }, dark: { primary:'#5B3A9E', dim:'#3F2A70' } },
+    verde:   { nome: 'Verde Vibrante',   light: { primary:'#17812F', dim:'#0E5C22' }, dark: { primary:'#17812F', dim:'#0E5C22' } },
+    rosa:    { nome: 'Rosa Suave',       light: { primary:'#C94277', dim:'#9C3059' }, dark: { primary:'#C94277', dim:'#9C3059' } },
+    laranja: { nome: 'Laranja Vibrante', light: { primary:'#BF5010', dim:'#8A3A0B' }, dark: { primary:'#BF5010', dim:'#8A3A0B' } },
   };
   const PRESET_ORDER = ['azul', 'vinho', 'roxo', 'verde', 'rosa', 'laranja'];
   const LOGO_BUCKET = 'professional-logos';
-  const DARK_MOCKUP = { bg:'#14161C', card:'#1E212B', border:'rgba(255,255,255,.07)', text:'#ECEEF2', muted:'#9AA3B2' };
   let previewMode = 'light';
+  let currentLogoPreviewUrl = null;
 
   function toast(msg) {
     const t = document.createElement('div');
@@ -389,16 +427,41 @@
     toast(`Plano alterado pra ${PLAN_LABELS[professional.plan]}.`);
   });
 
-  function updateMockup(presetId) {
-    const preset = COLOR_PRESETS[presetId] || COLOR_PRESETS.azul;
+  // Réplica real do banner de Início do aluno.html (.pro-topband/.pro-row),
+  // não um mockup genérico — mesma marcação/CSS, escopados em
+  // .student-preview-frame. Reflete nome/WhatsApp/logo ao vivo (mesmos
+  // campos do formulário acima, mesmo antes de salvar).
+  function renderStudentPreview() {
+    const preset = COLOR_PRESETS[selectedPreset] || COLOR_PRESETS.azul;
     const dark = previewMode === 'dark';
-    const el = $('appPreview');
-    el.style.setProperty('--ap-bg', dark ? DARK_MOCKUP.bg : '#F8F9FA');
-    el.style.setProperty('--ap-card', dark ? DARK_MOCKUP.card : '#FFFFFF');
-    el.style.setProperty('--ap-border', dark ? DARK_MOCKUP.border : 'rgba(20,30,45,.08)');
-    el.style.setProperty('--ap-text', dark ? DARK_MOCKUP.text : '#1E2A3A');
-    el.style.setProperty('--ap-muted', dark ? DARK_MOCKUP.muted : '#63707F');
-    el.style.setProperty('--ap-primary', (dark ? preset.dark : preset.light).primary);
+    const c = dark ? preset.dark : preset.light;
+    const frame = $('studentPreviewFrame');
+    frame.style.setProperty('--primary', c.primary);
+    frame.style.setProperty('--primary-dim', c.dim);
+    if (dark) {
+      frame.style.setProperty('--bg', '#14161C');
+      frame.style.setProperty('--card', '#1E212B');
+      frame.style.setProperty('--text', '#ECEEF2');
+      frame.style.setProperty('--muted', '#9AA3B2');
+      frame.style.setProperty('--card-border', 'rgba(255,255,255,.07)');
+      frame.style.setProperty('--shadow-card', '0 1px 2px rgba(0,0,0,.3), 0 10px 24px -14px rgba(0,0,0,.5)');
+    } else {
+      ['--bg', '--card', '--text', '--muted', '--card-border', '--shadow-card'].forEach((v) => frame.style.removeProperty(v));
+    }
+
+    const name = $('displayNameInput').value.trim() || (professional && professional.display_name) || 'Seu nome';
+    $('spName').textContent = name;
+    $('spSub').textContent = $('homeSubtitleInput').value.trim() || 'Sua evolução começa hoje.';
+
+    const wa = $('whatsappInput').value.trim().replace(/\D/g, '');
+    $('spWa').style.display = wa ? 'flex' : 'none';
+
+    const avatarEl = $('spAvatar');
+    if (currentLogoPreviewUrl) {
+      avatarEl.innerHTML = `<img src="${currentLogoPreviewUrl}" alt="">`;
+    } else {
+      avatarEl.textContent = name.trim().charAt(0).toUpperCase() || 'M';
+    }
   }
 
   function renderPresetGrid() {
@@ -415,7 +478,7 @@
         selectedPreset = el.dataset.preset;
         $('presetGrid').querySelectorAll('.preset-swatch').forEach((x) => x.classList.remove('selected'));
         el.classList.add('selected');
-        updateMockup(selectedPreset);
+        renderStudentPreview();
       });
     });
   }
@@ -430,25 +493,35 @@
     btn.addEventListener('click', () => {
       previewMode = btn.dataset.mode;
       renderPreviewModeToggle();
-      updateMockup(selectedPreset);
+      renderStudentPreview();
     });
   });
 
+  $('viewAsStudentBtn').addEventListener('click', () => {
+    renderStudentPreview();
+    $('studentPreviewOverlay').classList.add('show');
+  });
+  $('closeStudentPreviewBtn').addEventListener('click', () => {
+    $('studentPreviewOverlay').classList.remove('show');
+  });
+
+  $('displayNameInput').addEventListener('input', renderStudentPreview);
+  $('whatsappInput').addEventListener('input', renderStudentPreview);
+  $('homeSubtitleInput').addEventListener('input', renderStudentPreview);
+
   function setLogoPreview(url) {
+    currentLogoPreviewUrl = url;
     if (url) {
       $('logoPreviewImg').src = url;
       $('logoPreviewImg').style.display = 'block';
       $('logoPreviewPh').style.display = 'none';
-      $('apLogo').src = url;
-      $('apLogo').style.display = 'inline-block';
       $('removeLogoBtn').style.display = 'inline-block';
     } else {
       $('logoPreviewImg').style.display = 'none';
       $('logoPreviewPh').style.display = 'block';
-      $('apLogo').style.display = 'none';
-      $('apLogo').removeAttribute('src');
       $('removeLogoBtn').style.display = 'none';
     }
+    renderStudentPreview();
   }
 
   // Crop de logo — mesma mecânica de arrastar/zoom já usada no crop de
@@ -570,6 +643,7 @@
     }
     $('displayNameInput').value = pro.display_name || '';
     $('whatsappInput').value = pro.whatsapp || '';
+    $('homeSubtitleInput').value = pro.home_subtitle || '';
     $('rankingToggle').checked = !!pro.ranking_enabled;
 
     $('referralLinkInput').value = pro.referral_code ? `https://meuprotocolo.app/onboarding.html?ref=${pro.referral_code}` : '';
@@ -580,7 +654,7 @@
 
     selectedPreset = PRESET_ORDER.includes(pro.color_preset) ? pro.color_preset : 'azul';
     renderPresetGrid();
-    updateMockup(selectedPreset);
+    renderStudentPreview();
 
     const { data: logoSigned } = await supa.storage.from(LOGO_BUCKET).createSignedUrl(`${professional.id}/logo.png`, 300);
     if (logoSigned?.signedUrl) {
@@ -633,6 +707,7 @@
     const payload = {
       display_name: $('displayNameInput').value.trim() || professional.display_name,
       whatsapp: $('whatsappInput').value.replace(/\D/g, '') || null,
+      home_subtitle: $('homeSubtitleInput').value.trim() || null,
     };
     if (professional.plan !== 'starter') {
       payload.color_preset = selectedPreset;

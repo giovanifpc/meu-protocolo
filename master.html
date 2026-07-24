@@ -486,9 +486,16 @@
   async function showEnrollScreen() {
     // Limpa fatores não verificados de tentativas de cadastro abandonadas
     // antes — senão o enroll() novo colide com o friendly_name já em uso.
-    const { data: existing } = await supa.auth.mfa.listFactors();
-    const unverified = (existing?.totp || []).filter(f => f.status !== 'verified');
-    for (const f of unverified) { await supa.auth.mfa.unenroll({ factorId: f.id }); }
+    // Precisa passar pela Edge Function (Admin API): supa.auth.mfa.unenroll()
+    // pelo client exige sessão aal2, que é exatamente o que quem está
+    // cadastrando o autenticador pela primeira vez não tem — sem isso, um
+    // cadastro abandonado no meio trava pra sempre (bug real encontrado em
+    // produção em 2026-07-24, corrigido nesta sessão).
+    const { error: clearErr } = await supa.functions.invoke('master-mfa-clear-unverified');
+    if (clearErr) {
+      renderMfaGate(`<div class="mfa-card"><p class="msg error">Erro ao limpar cadastro anterior: ${escapeHtml(clearErr.message)}</p></div>`);
+      return;
+    }
 
     const { data, error } = await supa.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Painel Master' });
     if (error) {
@@ -501,7 +508,7 @@
       <div class="mfa-card">
         <h2>Configurar autenticação em duas etapas</h2>
         <p>Obrigatório pra acessar o painel master. Escaneie o QR code com um app autenticador (Google Authenticator, Authy, 1Password) e digite o código de 6 dígitos pra confirmar.</p>
-        <img src="${data.totp.qr_code}" alt="QR code do autenticador" style="width:180px;height:180px;display:block;margin:0 auto 12px;">
+        <img src="${escapeHtml(data.totp.qr_code)}" alt="QR code do autenticador" style="width:180px;height:180px;display:block;margin:0 auto 12px;">
         <p style="text-align:center;">Não consegue escanear? Digite manualmente: <code>${escapeHtml(data.totp.secret)}</code></p>
         <input type="text" id="mfaEnrollCode" inputmode="numeric" maxlength="6" placeholder="000000">
         <button class="btn" id="mfaEnrollBtn">Confirmar</button>

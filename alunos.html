@@ -115,6 +115,17 @@
         <label>E-mail</label>
         <input type="email" id="newStudentEmail" placeholder="aluno@email.com">
       </div>
+      <div class="field">
+        <label>WhatsApp (opcional)</label>
+        <input type="tel" id="newStudentTelefone" placeholder="Com DDD e país, ex: 5511999999999">
+      </div>
+      <div class="field">
+        <label>Mensalidade (opcional)</label>
+        <div class="billing-row">
+          <input type="number" step="0.01" id="newStudentMensalidadeValor" placeholder="Valor (R$)">
+          <input type="number" min="1" max="31" id="newStudentMensalidadeDia" placeholder="Dia venc. (1-31)">
+        </div>
+      </div>
       <button class="btn" id="addStudentBtn">Adicionar aluno</button>
       <div class="msg error" id="addStudentMsg"></div>
     </div>
@@ -447,8 +458,19 @@
       $('addStudentMsg').innerHTML = `Seu plano (${escapeHtml(professional.plan)}) permite até ${limite} alunos. <a href="perfil.html#planCard" style="color:var(--primary);font-weight:700;">Fazer upgrade</a>`;
       return;
     }
+    const telefone = $('newStudentTelefone').value.replace(/\D/g, '') || null;
+    const mensalidadeValor = $('newStudentMensalidadeValor').value ? Number($('newStudentMensalidadeValor').value) : null;
+    const mensalidadeDia = $('newStudentMensalidadeDia').value ? Number($('newStudentMensalidadeDia').value) : null;
+
     $('addStudentBtn').disabled = true;
-    const { error } = await supa.from('students').insert({ professional_id: professional.id, nome, email });
+    const { error } = await supa.from('students').insert({
+      professional_id: professional.id,
+      nome,
+      email,
+      telefone,
+      mensalidade_valor: mensalidadeValor,
+      mensalidade_dia_vencimento: mensalidadeDia,
+    });
     $('addStudentBtn').disabled = false;
     if (error) {
       $('addStudentMsg').textContent = 'Erro: ' + error.message;
@@ -456,6 +478,9 @@
     }
     $('newStudentName').value = '';
     $('newStudentEmail').value = '';
+    $('newStudentTelefone').value = '';
+    $('newStudentMensalidadeValor').value = '';
+    $('newStudentMensalidadeDia').value = '';
     toast('Aluno adicionado.');
     await loadStudents();
     window.__checkAssistantHint && window.__checkAssistantHint();

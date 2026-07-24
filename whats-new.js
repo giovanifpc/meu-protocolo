@@ -7,10 +7,9 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.1.0',
+      version: '1.2.0',
       items: [
-        'Corrigido um bug visual em que os ícones de Mensagens e Relatórios trocavam de posição ao abrir Config.',
-        'Novo menu lateral (ícone ☰ no topo) com atalho para "Financeiro" — cadastre seu QR/chave Pix e acompanhe o resumo de recebido e a receber dos seus alunos.'
+        'Novos ícones de "?" em Alunos, Treinos, Avaliação, Nutri, Relatórios e Financeiro — explicam na hora os pontos mais técnicos (status do aluno, periodização, técnicas de intensificação, protocolos de avaliação, como a Receita é calculada) sem precisar sair da tela.'
       ]
     },
     aluno: {

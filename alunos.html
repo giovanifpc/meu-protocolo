@@ -32,8 +32,8 @@
   main { max-width:720px; margin:0 auto; padding:20px 20px 90px; }
   .card { background:var(--card-grad); border:1px solid rgba(20,30,45,.04); box-shadow:var(--shadow-card); border-radius:var(--radius-lg); padding:16px 18px; margin-bottom:16px; }
   .card h2 { font-size:15px; margin:0 0 12px; }
-  .student-item { border-bottom:1px solid var(--line); padding:10px 0; }
-  .student-item:last-child { border-bottom:none; }
+  .student-item { background:var(--card); border:1px solid rgba(20,30,45,.18); border-radius:var(--radius); box-shadow:0 3px 10px rgba(20,30,45,.09); padding:14px; margin-bottom:18px; }
+  .student-item:last-child { margin-bottom:0; }
   .student-row { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
   .student-actions { display:flex; gap:6px; flex-wrap:wrap; }
   .student-name-row { display:flex; align-items:center; gap:8px; }
@@ -62,7 +62,10 @@
   .btn { padding:10px 16px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; border:none; background:var(--primary); color:#fff; font-family:var(--font); text-decoration:none; display:inline-block; transition:transform .15s ease; }
   .btn:active { transform:scale(.97); }
   .btn.secondary { background:var(--bg); color:var(--text); border:1px solid var(--line); }
+  .btn.danger { background:#FDEDEC; color:var(--danger); border:1px solid #F5C6C0; }
   .btn:disabled { opacity:.5; cursor:not-allowed; }
+  .danger-zone { margin-top:10px; padding-top:10px; border-top:1px dashed #F5C6C0; }
+  .danger-zone p { font-size:12.5px; line-height:1.5; color:var(--danger); margin:0 0 10px; }
   .btn-icon { display:inline-flex; align-items:center; justify-content:center; }
   .btn-icon svg { width:15px; height:15px; }
   .msg { font-size:13px; margin-top:8px; }
@@ -215,6 +218,20 @@
           <div class="billing-status">${s.ultimo_pagamento_em ? `Último pagamento: ${new Date(s.ultimo_pagamento_em + 'T00:00:00').toLocaleDateString('pt-BR')}` : 'Nenhum pagamento registrado ainda'}</div>
           <button class="btn small secondary" style="padding:7px 12px;font-size:12px;margin-right:6px;" data-role="save-billing" data-student-id="${s.id}">Salvar WhatsApp/mensalidade</button>
           <button class="btn small secondary" style="padding:7px 12px;font-size:12px;" data-role="mark-paid" data-student-id="${s.id}">Marcar pago hoje</button>
+
+          <div class="danger-zone" id="dangerZone-${s.id}" style="display:${note.status === 'inativo' ? 'block' : 'none'};">
+            <div id="deleteStep1-${s.id}">
+              <button class="btn danger" style="padding:7px 12px;font-size:12px;" data-role="open-delete" data-student-id="${s.id}">Excluir aluno</button>
+            </div>
+            <div id="deleteStep2-${s.id}" style="display:none;">
+              <p><strong>Isso apaga ${escapeHtml(s.nome)} permanentemente</strong> — treinos, avaliações, mensagens e histórico de nutrição, sem período de retenção. Não pode ser desfeito.</p>
+              <div style="display:flex;gap:8px;">
+                <button class="btn secondary" style="flex:1;padding:7px 12px;font-size:12px;" data-role="cancel-delete" data-student-id="${s.id}">Cancelar</button>
+                <button class="btn danger" style="flex:1;padding:7px 12px;font-size:12px;" data-role="confirm-delete" data-student-id="${s.id}">Confirmar exclusão</button>
+              </div>
+              <div class="msg error" id="deleteMsg-${s.id}"></div>
+            </div>
+          </div>
         </div>
       </div>
     `; }).join('');
@@ -249,6 +266,44 @@
     list.querySelectorAll('[data-role="mark-paid"]').forEach(btn => {
       btn.addEventListener('click', () => markPaid(btn.dataset.studentId));
     });
+    list.querySelectorAll('[data-role="note-status"]').forEach(sel => {
+      sel.addEventListener('change', () => {
+        const studentId = sel.dataset.studentId;
+        $('dangerZone-' + studentId).style.display = sel.value === 'inativo' ? 'block' : 'none';
+      });
+    });
+    list.querySelectorAll('[data-role="open-delete"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const studentId = btn.dataset.studentId;
+        $('deleteStep1-' + studentId).style.display = 'none';
+        $('deleteStep2-' + studentId).style.display = 'block';
+      });
+    });
+    list.querySelectorAll('[data-role="cancel-delete"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const studentId = btn.dataset.studentId;
+        $('deleteStep2-' + studentId).style.display = 'none';
+        $('deleteStep1-' + studentId).style.display = 'block';
+      });
+    });
+    list.querySelectorAll('[data-role="confirm-delete"]').forEach(btn => {
+      btn.addEventListener('click', () => deleteStudent(btn.dataset.studentId));
+    });
+  }
+
+  async function deleteStudent(studentId) {
+    const btn = document.querySelector(`[data-role="confirm-delete"][data-student-id="${studentId}"]`);
+    const msgEl = $('deleteMsg-' + studentId);
+    btn.disabled = true;
+    msgEl.textContent = '';
+    const { error } = await supa.from('students').delete().eq('id', studentId);
+    btn.disabled = false;
+    if (error) {
+      msgEl.textContent = 'Erro ao excluir: ' + error.message;
+      return;
+    }
+    toast('Aluno excluído.');
+    await loadStudents();
   }
 
   async function sendMessageToStudent(studentId) {

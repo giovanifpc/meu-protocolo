@@ -92,6 +92,36 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### 📐 Escopo desenhado, aguardando implementação: ícones de dúvida (?) no painel do profissional (2026-07-24)
+
+Pedido do usuário: um levantamento de todos os pontos do painel do profissional onde um texto de instrução é longo demais pra caber hardcoded na tela (ou é complexo o bastante pra merecer explicação à parte) — um pequeno ícone "?" que abre um banner com a explicação, sem sujar a UI principal. **10 pontos levantados e aprovados pelo usuário** (item 7 ficou como decisão em aberto, ver abaixo). Nenhuma linha de código foi escrita — isto é só o desenho de conteúdo + componente técnico, pronto pra próxima sessão implementar.
+
+**Componente técnico sugerido** (não construído ainda): um arquivo novo `help-banner.js`, mesmo padrão autocontido de `support-widget.js`/`whats-new.js` — expõe uma função global `window.showHelpBanner(titulo, corpoHtml)` que abre um modal simples (título + texto + botão fechar, visual parecido com o `.crop-card`/overlay já usado no crop de logo/QR, só sem a parte de imagem). Cada ponto abaixo vira um ícone "?" pequeno (SVG `help-circle`, mesmo já usado no item "Tirar dúvidas" do menu lateral) ao lado do título/label relevante, com `onclick="showHelpBanner('...', '...')"` chamando o texto específico daquele ponto. Um arquivo só, incluído nas páginas que precisam (alunos.html, treinos.html, avaliacoes.html, nutri.html, relatorios.html, financeiro.html) — evita duplicar a lógica do modal em cada página.
+
+**Os 10 pontos, com o conteúdo já rascunhado** (texto abaixo é o rascunho a usar — pode ajustar o tom na hora de codar, mas a ideia central de cada um já está fechada):
+
+1. **`alunos.html`, card "Adicionar aluno"** — "Como funciona o cadastro de aluno": só nome e e-mail são obrigatórios, o resto (WhatsApp, mensalidade) é opcional e pode ser preenchido depois no painel do aluno. WhatsApp alimenta o botão "Enviar convite" e os alertas de mensalidade atrasada na Início. Cadastrar aqui não avisa o aluno sozinho — depois de cadastrar, use "Enviar convite" pra mandar o link de primeiro acesso.
+
+2. **`alunos.html`, select de Status** — "O que cada status faz": Ativo é o normal, sem restrição. Pausado é só uma marcação sua — não muda nada pro aluno, ele continua acessando o app normalmente; útil pra organizar quem está temporariamente fora sem perder o controle. Inativo bloqueia o acesso de verdade — o aluno vê um aviso pra falar com você e não consegue mais usar o app, mas os dados dele continuam guardados até você decidir excluir.
+
+3. **`treinos.html`, dropdown de Periodização** — "As 6 técnicas de periodização", uma linha por técnica: Linear (carga sobe e volume desce de forma previsível, semana a semana); Ondulatória diária (varia por treino do loop — A pesado, B moderado, C leve —, não por semana); Ondulatória semanal (varia semana a semana num padrão ondulado, não sempre crescente); Em blocos (fases distintas, ex: volume depois intensidade); Reversa (começa leve/alto volume e termina pesado/baixo volume, o inverso do linear); Manual (você decide sozinho, sem progressão automática).
+
+4. **`treinos.html`, campo de Técnica por exercício** — "Técnicas de intensificação", uma linha por técnica: Drop-Set (reduz a carga e continua sem descanso ao falhar); Rest-Pause (pausa curta de 10-15s no meio da série pra continuar com a mesma carga); Cluster (divide a série em mini-blocos com descanso curtinho entre eles); Myo-Reps (uma série de ativação seguida de várias mini-séries curtas); Pirâmide Crescente/Decrescente (carga sobe ou desce a cada série); Super Slow (execução bem mais lenta que o normal); Bi-Set/Tri-Set (2 ou 3 exercícios seguidos sem descanso entre eles); Negativo (foco na fase excêntrica/descida do movimento, geralmente com ajuda de um parceiro).
+
+5. **`treinos.html`, wizard "Criar novo com IA"** — "Como a IA monta o treino": ela já lê a anamnese do aluno (lesões, restrições, histórico) automaticamente, sem você precisar redigitar nada. O resultado sempre cai na tela de edição normal pra revisar/ajustar antes de publicar — nada é publicado sozinho. A progressão semana a semana continua sendo calculada de forma determinística, não é a IA "inventando" número — só a escolha de exercícios/técnica é dela.
+
+6. **`avaliacoes.html`, seletor de protocolo de dobras cutâneas** — "Qual protocolo escolher": Pollock 3 (3 dobras, mais rápido, boa margem de erro pra maioria dos casos); Pollock 7 (7 dobras, mais preciso, leva mais tempo); Faulkner 4 (4 pontos fixos, não muda por sexo); Guedes 3 (3 dobras, fórmula brasileira, alternativa ao Pollock 3). Os pontos de medida mudam conforme o protocolo e o sexo do aluno — a tela já indica quais dobras pedir depois de escolher.
+
+7. **`avaliacoes.html`, perimetria/bioimpedância — decisão em aberto**: o usuário aprovou o levantamento inteiro, mas este ponto específico foi levantado como dúvida minha (é mais "como medir cada ponto do corpo", técnica profissional, do que "como usar o app") e não foi respondido diretamente. **Perguntar antes de codar este item específico** — os outros 9 já estão fechados.
+
+8. **`nutri.html`, campo de orientação + upload de PDF** — "O que colocar aqui": reaproveita o texto já usado na seção 5.8 do `contexto-ia-suporte.md`. Sem parceria com nutricionista: use só o campo de texto pra uma orientação básica (hidratação, evitar ultraprocessado, priorizar proteína magra) — já tem valor sem ser um plano formal. Com parceria: suba o PDF que o nutricionista parceiro preparou, e use o texto pra resumir os pontos principais.
+
+9. **`relatorios.html`, card "Interpretação com IA"** — "O que a interpretação cobre": adesão/consistência do aluno, sinais de alerta de bem-estar (água/sono), evolução física/carga, e uma sugestão prática de próximo passo. É baseada nos dados reais já registrados (treino, check-ins, avaliações) — a aritmética é sempre calculada primeiro, a IA só interpreta e escreve o texto.
+
+10. **`financeiro.html`, card "Receita"** — "Como esses números são calculados": é autodeclarado, não é extrato bancário nem integração de pagamento. "Recebido" conta quem tem o último pagamento registrado dentro do mês corrente; "A receber" é o resto dos alunos com mensalidade cadastrada. Só vira "recebido" quando você clica "Marcar pago hoje" na aba Alunos.
+
+**Não incluídos** (já têm explicação inline suficiente, decisão já tomada no levantamento original): "Cancelar assinatura", "Indique um amigo", "Excluir aluno", toggles de Ranking/Suporte em `perfil.html`.
+
 ### ✅ Status "Inativo" do aluno agora bloqueia acesso de verdade (2026-07-24, mesma sessão)
 
 Gap real reportado pelo usuário: o status ativo/pausado/inativo (aba Alunos) nunca teve efeito nenhum no acesso — um aluno marcado "Inativo" continuava logando e usando o app normalmente até o profissional decidir excluir a conta. Sem um jeito de suspender sem apagar dado, o profissional tende a não excluir (esperança de reatar o serviço depois), e o aluno antigo fica usando o app indefinidamente — falta real de controle.

@@ -1048,7 +1048,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 
     const { data: st, error } = await supa
       .from('students')
-      .select('*, professionals(display_name, color_preset, ranking_enabled, whatsapp)')
+      .select('*, professionals(display_name, color_preset, ranking_enabled, whatsapp, home_subtitle)')
       .eq('email', session.user.email)
       .maybeSingle();
 
@@ -1351,7 +1351,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
           <div class="pro-avatar">${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="">` : escapeHtml((proName || 'M').trim().charAt(0).toUpperCase())}</div>
           <div class="pro-row-text">
             <div class="pro-row-name">${escapeHtml(proName)}</div>
-            <div class="pro-row-sub">Sua evolução começa hoje.</div>
+            <div class="pro-row-sub">${escapeHtml(student.professionals?.home_subtitle || 'Sua evolução começa hoje.')}</div>
           </div>
         </div>
         <div class="pro-actions-row">

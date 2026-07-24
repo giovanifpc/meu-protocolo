@@ -94,10 +94,10 @@
     --shadow-card:0 1px 2px rgba(20,30,45,.04), 0 10px 24px -14px rgba(20,30,45,.14);
     border-radius:18px; overflow:hidden; background:var(--bg); font-family:var(--font);
   }
-  .student-preview-frame .sp-topband { padding:18px 16px 44px; background:linear-gradient(135deg,var(--primary),var(--primary-dim)); display:flex; justify-content:flex-end; gap:8px; }
+  .student-preview-frame .sp-topband { padding:18px 16px 33px; background:linear-gradient(135deg,var(--primary),var(--primary-dim)); display:flex; justify-content:flex-end; gap:8px; }
   .student-preview-frame .sp-topband .ptb-icon { width:30px; height:30px; border-radius:50%; border:1.5px solid rgba(255,255,255,.4); background:rgba(255,255,255,.08); color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
   .student-preview-frame .sp-topband .ptb-icon svg { width:14px; height:14px; }
-  .student-preview-frame .sp-row { display:flex; align-items:flex-start; gap:10px; margin:-44px 14px 14px; }
+  .student-preview-frame .sp-row { display:flex; align-items:flex-start; gap:10px; margin:-33px 14px 14px; }
   .student-preview-frame .sp-avatar { width:88px; height:88px; border-radius:50%; background:var(--primary); color:#fff; font-size:30px; font-weight:800; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; border:4px solid var(--bg); box-shadow:0 8px 20px -8px rgba(20,30,45,.35); }
   .student-preview-frame .sp-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
   .student-preview-frame .sp-text { flex:1; min-width:0; padding-top:36px; }
@@ -172,6 +172,10 @@
       <div class="field">
         <label>WhatsApp (opcional)</label>
         <input type="text" id="whatsappInput" placeholder="Ex: 5511999999999 (DDI+DDD+número)">
+      </div>
+      <div class="field">
+        <label>Frase de boas-vindas (opcional)</label>
+        <input type="text" id="homeSubtitleInput" maxlength="80" placeholder="Sua evolução começa hoje.">
       </div>
       <div id="whiteLabelLock" class="msg" style="display:none;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;">Cor e logo personalizados são exclusivos dos planos Pro e Elite. <a href="#planCard" onclick="document.getElementById('planCard').scrollIntoView({behavior:'smooth',block:'start'})" style="color:var(--primary);font-weight:700;">Ver planos</a></div>
       <div id="whiteLabelFields">
@@ -260,7 +264,7 @@
           <div class="sp-avatar" id="spAvatar">M</div>
           <div class="sp-text">
             <div class="sp-name" id="spName">Seu nome</div>
-            <div class="sp-sub">Sua evolução começa hoje.</div>
+            <div class="sp-sub" id="spSub">Sua evolução começa hoje.</div>
           </div>
         </div>
         <div class="sp-wa" id="spWa" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Falar com seu treinador</div>
@@ -447,6 +451,7 @@
 
     const name = $('displayNameInput').value.trim() || (professional && professional.display_name) || 'Seu nome';
     $('spName').textContent = name;
+    $('spSub').textContent = $('homeSubtitleInput').value.trim() || 'Sua evolução começa hoje.';
 
     const wa = $('whatsappInput').value.trim().replace(/\D/g, '');
     $('spWa').style.display = wa ? 'flex' : 'none';
@@ -502,6 +507,7 @@
 
   $('displayNameInput').addEventListener('input', renderStudentPreview);
   $('whatsappInput').addEventListener('input', renderStudentPreview);
+  $('homeSubtitleInput').addEventListener('input', renderStudentPreview);
 
   function setLogoPreview(url) {
     currentLogoPreviewUrl = url;
@@ -637,6 +643,7 @@
     }
     $('displayNameInput').value = pro.display_name || '';
     $('whatsappInput').value = pro.whatsapp || '';
+    $('homeSubtitleInput').value = pro.home_subtitle || '';
     $('rankingToggle').checked = !!pro.ranking_enabled;
 
     $('referralLinkInput').value = pro.referral_code ? `https://meuprotocolo.app/onboarding.html?ref=${pro.referral_code}` : '';
@@ -700,6 +707,7 @@
     const payload = {
       display_name: $('displayNameInput').value.trim() || professional.display_name,
       whatsapp: $('whatsappInput').value.replace(/\D/g, '') || null,
+      home_subtitle: $('homeSubtitleInput').value.trim() || null,
     };
     if (professional.plan !== 'starter') {
       payload.color_preset = selectedPreset;

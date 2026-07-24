@@ -90,6 +90,15 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### Bug real: cadastro de MFA do master travava pra sempre num "friendly name already exists" (2026-07-24)
+
+Reportado pelo usuário logo depois de tentar cadastrar o autenticador pela primeira vez (item 3 do checklist acima): o QR code apareceu mas "algo quebrado embaixo" impediu confirmar o código; ao recarregar a página, ficou preso num loop de erro "A factor with the friendly name 'Painel Master' for this user already exists", sem nenhuma saída na UI.
+
+- **Causa raiz confirmada no banco** (`auth.mfa_factors`): um fator TOTP `unverified` ficou órfão do cadastro abandonado. O código já tinha uma limpeza pra esse caso exato (`showEnrollScreen()` listava e tentava `unenroll()` fatores não verificados antes de criar um novo) — mas usava o client SDK (`supa.auth.mfa.unenroll()`), que o Supabase só permite com sessão em `aal2`. Quem está cadastrando o autenticador pela primeira vez está necessariamente em `aal1` — ou seja, a limpeza projetada pra resolver exatamente esse caso nunca conseguia rodar, e falhava silenciosamente (sem checagem de erro no loop), deixando o fator preso permanentemente.
+- **Desbloqueio imediato**: fator órfão removido direto via SQL (`delete from auth.mfa_factors where id=... and status='unverified'`) — usuário liberado pra tentar de novo.
+- **Correção da causa raiz**: nova Edge Function `master-mfa-clear-unverified` — usa a Admin API (service role, único jeito de remover fator MFA de outrem) pra limpar fatores `unverified` do e-mail master, chamada a partir de uma sessão comum (`aal1`, sem precisar de código de recuperação — seguro por design, já que um fator nunca verificado nunca protegeu nada de verdade; se já existir um fator `verified`, a function não mexe em nada, preservando o autenticador real em uso). `showEnrollScreen()` em `master.html` trocou o loop de `unenroll()` client-side por uma chamada a essa function, com erro devidamente checado e exibido (antes também faltava isso).
+- **Testado**: função deployada e confirmada `ACTIVE`; barreira de autorização testada com JWT de uma conta não-master (rejeitada com "Não autorizado."). **Não testado ponta a ponta como o e-mail master de verdade** (a sessão não tem acesso a essa caixa de entrada) — o teste completo (cadastrar o autenticador do zero depois da correção) fica pro próximo acesso do usuário, junto do item 3 do checklist acima.
+
 ### Alunos: divisão visual clara + exclusão; Perfil: prévia real "Visualizar como aluno" (2026-07-24, sessão local no PC)
 
 Dois pedidos pontuais do usuário, antes do checklist de MFA/e-mail abaixo (ver seção seguinte).

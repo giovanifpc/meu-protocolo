@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://js.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://o4511757250199552.ingest.us.sentry.io; object-src 'none'; base-uri 'self';">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Acompanhe seu treino, evolução e nutrição, e fale direto com seu personal trainer — tudo num só app, com suporte 24/7 por IA.">
+<link rel="icon" href="icons/favicon-32-v2.png">
+<title>Meu Protocolo — App do Aluno</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#F8F9FA; --primary:#2D6BE4; --primary-dim:#1E4FAE; --accent:#1E8C64; --accent-dim:#146B4D;
+    --text:#1E2A3A; --muted:#63707F; --line:#E9EBEF; --font:'Inter', -apple-system, sans-serif;
+    --card-grad:linear-gradient(135deg,rgba(30,140,100,.10),transparent 55%),#FFFFFF;
+    --shadow-card:0 1px 2px rgba(20,30,45,.04), 0 10px 24px -14px rgba(20,30,45,.14);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:var(--font); -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:520px; margin:0 auto; padding:28px 22px 60px; }
+
+  header.top { display:flex; align-items:center; gap:10px; margin-bottom:36px; }
+  header.top img { width:36px; height:36px; border-radius:9px; }
+  header.top span { font-size:16px; font-weight:800; letter-spacing:-.2px; }
+
+  .hero-card { background:var(--card-grad); border:1px solid rgba(30,140,100,.14); box-shadow:var(--shadow-card); border-radius:20px; padding:26px 22px; }
+  .hero h1 { font-size:28px; line-height:1.25; font-weight:800; letter-spacing:-.5px; margin:0 0 14px; }
+  .hero h1 em { color:var(--primary); font-style:normal; }
+  .hero p { font-size:15.5px; line-height:1.6; color:var(--muted); margin:0 0 26px; }
+
+  .cta { display:block; text-align:center; background:linear-gradient(135deg,var(--primary),var(--primary-dim)); color:#fff; text-decoration:none; font-weight:700; font-size:16px; padding:15px 20px; border-radius:14px; box-shadow:0 10px 22px -10px rgba(45,107,228,.55); }
+  .cta:active { transform:scale(.98); }
+  .cta-note { text-align:center; font-size:12.5px; color:var(--muted); margin:10px 0 0; }
+
+  .list-card { margin:44px 0 8px; background:var(--card-grad); border:1px solid rgba(30,140,100,.14); box-shadow:var(--shadow-card); border-radius:18px; padding:2px 18px; }
+  .list-row { display:flex; align-items:center; gap:13px; padding:15px 0; border-bottom:1px solid var(--line); }
+  .list-row:last-child { border-bottom:none; }
+  .list-row .ico { flex-shrink:0; width:34px; height:34px; border-radius:10px; background:rgba(30,140,100,.10); color:var(--accent-dim); display:flex; align-items:center; justify-content:center; }
+  .list-row .ico svg { width:17px; height:17px; }
+  .list-row .txt strong { display:block; font-size:14px; font-weight:700; }
+  .list-row .txt span { font-size:12.5px; color:var(--muted); }
+
+  .steps { margin:44px 0 8px; }
+  .steps h2 { font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin:0 0 16px; }
+  .step { display:flex; gap:14px; margin-bottom:16px; }
+  .step .n { flex-shrink:0; width:26px; height:26px; border-radius:50%; background:var(--text); color:#fff; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .step p { margin:2px 0 0; font-size:14px; line-height:1.5; }
+
+  .final { margin-top:46px; text-align:center; }
+  .final p { font-size:14px; color:var(--muted); margin:0 0 16px; }
+
+  footer { margin-top:50px; text-align:center; }
+  footer a { color:var(--muted); font-size:12px; text-decoration:underline; margin:0 8px; }
+</style>
+<script src="https://js.sentry-cdn.com/dd3ca3ee7a720284b2a9bf8240b29158.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <img src="icons/icon-512-v2.png" alt="">
+      <span>Meu Protocolo</span>
+    </header>
+
+    <div class="hero hero-card">
+      <h1>Seu personal trainer te chamou pro <em>Meu Protocolo</em>.</h1>
+      <p>Acompanhe seu treino, sua evolução e sua nutrição, e fale direto com seu personal — tudo num só app, com suporte 24/7 por IA se precisar de ajuda.</p>
+      <a class="cta" href="login.html">Entrar</a>
+      <p class="cta-note">Leva menos de um minuto pra começar.</p>
+    </div>
+
+    <div class="list-card">
+      <div class="list-row">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6.5" y1="6.5" x2="6.5" y2="17.5"/><line x1="17.5" y1="6.5" x2="17.5" y2="17.5"/><line x1="3" y1="9" x2="3" y2="15"/><line x1="21" y1="9" x2="21" y2="15"/><line x1="6.5" y1="12" x2="17.5" y2="12"/></svg></div>
+        <div class="txt"><strong>Seu treino, sempre à mão</strong><span>prescrito pelo seu personal, direto no celular</span></div>
+      </div>
+      <div class="list-row">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l3-4 3 2 4-6"/></svg></div>
+        <div class="txt"><strong>Evolução e avaliação física</strong><span>carga, medidas e fotos comparadas ao longo do tempo</span></div>
+      </div>
+      <div class="list-row">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v6a2 2 0 0 0 4 0V3"/><path d="M8 3v18"/><path d="M16 3c-1.5 0-2.5 1.5-2.5 4s1 4 2.5 4v11"/></svg></div>
+        <div class="txt"><strong>Orientação nutricional</strong><span>texto e PDF direto do seu personal</span></div>
+      </div>
+      <div class="list-row">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <div class="txt"><strong>Fale direto com seu personal</strong><span>mensagem dentro do próprio app</span></div>
+      </div>
+      <div class="list-row">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <div class="txt"><strong>Suporte 24/7 por IA</strong><span>tira dúvida na hora, sem fila de ticket</span></div>
+      </div>
+    </div>
+
+    <div class="steps">
+      <h2>Como funciona</h2>
+      <div class="step"><div class="n">1</div><p>Você entra com o e-mail que seu personal cadastrou (ou o seu, se for seu primeiro acesso).</p></div>
+      <div class="step"><div class="n">2</div><p>Confirma o código que chega por e-mail — sem senha pra decorar.</p></div>
+      <div class="step"><div class="n">3</div><p>Responde uma anamnese rápida e já cai no seu treino.</p></div>
+    </div>
+
+    <div class="final">
+      <p>Pronto pra começar a treinar por aqui?</p>
+      <a class="cta" href="login.html">Entrar</a>
+    </div>
+
+    <footer>
+      <a href="termos.html">Termos de Uso</a>
+      <a href="privacidade.html">Privacidade</a>
+    </footer>
+  </div>
+</body>
+</html>

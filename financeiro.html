@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://drive.google.com https://*.supabase.co; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co https://o4511757250199552.ingest.us.sentry.io; object-src 'none'; base-uri 'self';">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="icons/favicon-32-v2.png">
+<link rel="manifest" href="manifest-painel.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon-v2.png">
+<meta name="theme-color" content="#F8F9FA">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Meu Protocolo — Financeiro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://js.sentry-cdn.com/dd3ca3ee7a720284b2a9bf8240b29158.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="support-widget.js" defer></script>
+<script src="assistant-hints.js" defer></script>
+<script src="whats-new.js" defer></script>
+<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch((e) => console.error('Falha ao registrar service worker:', e));</script>
+<style>
+  :root {
+    --bg:#F8F9FA; --primary:#2D6BE4; --accent:#1E8C64; --accent-dim:#146B4D; --text:#1E2A3A;
+    --line:#E9EBEF; --card:#FFFFFF; --muted:#63707F; --faint:#94A0AF; --danger:#C0392B; --font:'Inter', sans-serif;
+    --radius:14px; --radius-lg:18px;
+    --card-grad:linear-gradient(165deg,#FFFFFF 0%,#F7FBF9 55%,#F6F8FE 100%);
+    --shadow-card:0 1px 2px rgba(20,30,45,.04), 0 10px 24px -14px rgba(20,30,45,.14);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font-family:var(--font); }
+  header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--card); border-bottom:1px solid var(--line); }
+  header h1 { font-size:18px; font-weight:700; margin:0; }
+  main { max-width:720px; margin:0 auto; padding:20px 20px 90px; }
+  .card { background:var(--card-grad); border:1px solid rgba(20,30,45,.04); box-shadow:var(--shadow-card); border-radius:var(--radius-lg); padding:16px 18px; margin-bottom:16px; }
+  .card h2 { font-size:15px; margin:0 0 4px; }
+  .card .card-sub { font-size:12.5px; color:var(--muted); margin:0 0 14px; }
+  .field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+  .field label { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .field input { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; color:var(--text); font-family:var(--font); }
+  .field input:focus { outline:none; border-color:var(--primary); }
+  .btn { padding:10px 16px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; border:none; background:var(--primary); color:#fff; font-family:var(--font); transition:transform .15s ease; }
+  .btn:active { transform:scale(.97); }
+  .btn.secondary { background:var(--bg); color:var(--text); border:1px solid var(--line); }
+  .btn.danger { background:#FDEDEC; color:var(--danger); border:1px solid #F5C6C0; }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+  .btn.small { padding:7px 12px; font-size:12px; }
+  .msg { font-size:13px; margin-top:8px; }
+  .msg.error { color:var(--danger); }
+  .toggle-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+  .toggle-row .tr-text { flex:1; }
+  .toggle-row .tr-label { font-size:14px; font-weight:600; }
+  .toggle-row .tr-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+  .switch { position:relative; width:44px; height:26px; flex-shrink:0; }
+  .switch input { opacity:0; width:0; height:0; }
+  .switch .slider { position:absolute; inset:0; background:var(--line); border-radius:999px; cursor:pointer; transition:background .15s ease; }
+  .switch .slider::before { content:''; position:absolute; width:20px; height:20px; left:3px; top:3px; background:#fff; border-radius:50%; transition:transform .15s ease; box-shadow:0 1px 2px rgba(0,0,0,.2); }
+  .switch input:checked + .slider { background:var(--primary); }
+  .switch input:checked + .slider::before { transform:translateX(18px); }
+  .toggle-fields { display:none; }
+  .toggle-fields.show { display:block; }
+  .logo-row { display:flex; align-items:center; gap:12px; }
+  .logo-preview { width:64px; height:64px; border-radius:12px; border:1px dashed var(--line); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; background:var(--bg); }
+  .logo-preview img { max-width:100%; max-height:100%; object-fit:contain; }
+  .logo-preview span { font-size:9px; color:var(--faint); text-align:center; padding:4px; line-height:1.3; }
+  .logo-actions { display:flex; flex-direction:column; gap:6px; }
+  .qr-note { font-size:12px; color:var(--muted); background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin:12px 0; }
+  .revenue-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:10px; }
+  .revenue-stat { background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:14px 12px; text-align:center; }
+  .revenue-stat .rv-num { font-size:21px; font-weight:800; color:var(--text); line-height:1.1; }
+  .revenue-stat.received .rv-num { color:var(--accent-dim); }
+  .revenue-stat .rv-lbl { font-size:11.5px; color:var(--muted); margin-top:6px; font-weight:600; }
+  .revenue-disclaimer { font-size:11.5px; color:var(--faint); line-height:1.5; margin:0; }
+  .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:#23263a; color:#fff; padding:10px 18px; border-radius:10px; font-size:13px; z-index:999; }
+  .bottom-nav { position:fixed; bottom:0; left:0; right:0; max-width:720px; margin:0 auto; height:64px; background:var(--card); border-top:1px solid var(--line); display:flex; z-index:60; }
+  .nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; color:var(--faint); text-decoration:none; font-family:var(--font); padding-top:6px; }
+  .nav-btn .nav-ico { width:22px; height:22px; line-height:1; position:relative; }
+  .nav-btn .nav-ico svg { width:100%; height:100%; display:block; }
+  .nav-btn .nav-lbl { font-size:10px; font-weight:700; }
+  .nav-btn.active { color:var(--primary); }
+  .nav-dot { position:absolute; top:-2px; right:-4px; width:8px; height:8px; border-radius:50%; background:var(--danger); border:2px solid var(--card); display:none; }
+  .header-actions{display:flex;align-items:center;gap:8px;}
+  .menu-btn{background:none;border:none;padding:6px;margin:0;cursor:pointer;color:var(--text);display:flex;align-items:center;justify-content:center;}
+  .menu-btn svg{width:22px;height:22px;}
+  .drawer-overlay{position:fixed;inset:0;z-index:400;background:rgba(15,20,28,.45);display:none;opacity:0;transition:opacity .25s ease}
+  .drawer-overlay.show{display:block;opacity:1}
+  .side-drawer{position:fixed;top:0;right:0;bottom:0;width:80%;max-width:300px;background:var(--card);box-shadow:-10px 0 30px rgba(0,0,0,.18);z-index:401;transform:translateX(100%);transition:transform .3s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;overflow-y:auto}
+  .side-drawer.show{transform:translateX(0)}
+  .drawer-head{padding:calc(env(safe-area-inset-top) + 20px) 18px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);flex-shrink:0}
+  .drawer-head .dh-title{font-size:16px;font-weight:700;}
+  .drawer-close{background:none;border:none;font-size:24px;line-height:1;color:var(--muted);cursor:pointer;padding:2px 6px}
+  .drawer-nav{padding:12px;display:flex;flex-direction:column;gap:2px}
+  .drawer-item{display:flex;align-items:center;gap:14px;width:100%;background:none;border:none;padding:12px 10px;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:600;color:var(--text);cursor:pointer;text-align:left;text-decoration:none}
+  .drawer-item:active{background:var(--bg)}
+  .drawer-item.active{color:var(--primary)}
+  .drawer-item .di-ico{width:20px;height:20px;color:var(--muted);flex-shrink:0;display:flex}
+  .drawer-item .di-ico svg{width:100%;height:100%}
+  .drawer-item.active .di-ico{color:var(--primary)}
+</style>
+</head>
+<body>
+  <header>
+    <h1>Financeiro</h1>
+    <div class="header-actions"><button class="menu-btn" onclick="openDrawer()" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button></div>
+  </header>
+
+  <main>
+    <div class="card">
+      <h2>Recebimento dos alunos</h2>
+      <p class="card-sub">Ligue pra deixar seu QR e chave Pix visíveis pros seus alunos, dentro do app deles.</p>
+      <div class="toggle-row">
+        <div class="tr-text">
+          <div class="tr-label">Mostrar Pix pros meus alunos</div>
+          <div class="tr-sub">Sem isso ligado, o aluno vê uma tela orientando a falar direto com você.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="paymentToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="toggle-fields" id="paymentFields">
+        <div class="qr-note">Use um QR Pix <strong>estático, sem valor fixo</strong> — o mesmo QR serve pra todos os seus alunos, já que o app mostra a mensalidade de cada um em texto ao lado. QRs com valor fixo geram cobrança errada pra quem paga um valor diferente.</div>
+        <div class="field">
+          <label>QR code Pix</label>
+          <div class="logo-row">
+            <div class="logo-preview" id="qrPreviewWrap">
+              <img id="qrPreviewImg" style="display:none;" alt="">
+              <span id="qrPreviewPh">Sem QR</span>
+            </div>
+            <div class="logo-actions">
+              <button class="btn secondary small" id="chooseQrBtn" type="button">Escolher arquivo</button>
+              <button class="btn danger small" id="removeQrBtn" type="button" style="display:none;">Remover</button>
+            </div>
+            <input type="file" id="qrFileInput" accept="image/png,image/jpeg" style="display:none;">
+          </div>
+        </div>
+        <div class="field">
+          <label>Chave Pix (copia-e-cola)</label>
+          <input type="text" id="pixKeyInput" placeholder="CPF, e-mail, telefone ou chave aleatória">
+        </div>
+        <button class="btn" id="saveBtn">Salvar</button>
+        <div class="msg" id="saveMsg"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Receita</h2>
+      <p class="card-sub">Vinda dos seus próprios alunos — não confundir com a cobrança da sua assinatura do Meu Protocolo.</p>
+      <div class="revenue-grid">
+        <div class="revenue-stat received">
+          <div class="rv-num" id="rvReceived">—</div>
+          <div class="rv-lbl">Recebido este mês</div>
+        </div>
+        <div class="revenue-stat">
+          <div class="rv-num" id="rvPending">—</div>
+          <div class="rv-lbl">A receber este mês</div>
+        </div>
+      </div>
+      <p class="revenue-disclaimer">Baseado no que você marcou como pago em cada aluno (aba Alunos) — não é um pagamento verificado automaticamente, já que o recebimento é direto por Pix, sem gateway.</p>
+    </div>
+  </main>
+
+  <nav class="bottom-nav">
+    <a class="nav-btn" href="index.html"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg></span><span class="nav-lbl">Início</span></a>
+    <a class="nav-btn" href="alunos.html"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="nav-lbl">Alunos</span></a>
+    <a class="nav-btn" href="mensagens.html"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="nav-dot" id="navMsgDot"></span></span><span class="nav-lbl">Mensagens</span></a>
+    <a class="nav-btn" href="relatorios.html"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg></span><span class="nav-lbl">Relatórios</span></a>
+    <a class="nav-btn" href="perfil.html"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.7.36 1.15 1.03 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span class="nav-lbl">Config</span></a>
+  </nav>
+
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="side-drawer" id="sideDrawer">
+  <div class="drawer-head">
+    <span class="dh-title">Menu</span>
+    <button class="drawer-close" onclick="closeDrawer()" aria-label="Fechar">&times;</button>
+  </div>
+  <div class="drawer-nav">
+    <a class="drawer-item" href="index.html"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg></span>Início</a>
+    <a class="drawer-item" href="alunos.html"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>Alunos</a>
+    <a class="drawer-item" href="mensagens.html"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>Mensagens</a>
+    <a class="drawer-item" href="relatorios.html"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg></span>Relatórios</a>
+    <a class="drawer-item active" href="financeiro.html"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>Financeiro</a>
+    <a class="drawer-item" href="perfil.html"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.7.36 1.15 1.03 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>Config</a>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';
+  const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const $ = (id) => document.getElementById(id);
+  function openDrawer() { $('drawerOverlay').classList.add('show'); $('sideDrawer').classList.add('show'); }
+  function closeDrawer() { $('drawerOverlay').classList.remove('show'); $('sideDrawer').classList.remove('show'); }
+
+  let professional = null;
+  let pendingQrBlob = null;
+  let pendingQrPreviewUrl = null;
+  let removeQrRequested = false;
+  let hasExistingQr = false;
+  const QR_BUCKET = 'professional-logos';
+
+  function toast(msg) {
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+
+  function setQrPreview(url) {
+    if (url) {
+      $('qrPreviewImg').src = url;
+      $('qrPreviewImg').style.display = 'block';
+      $('qrPreviewPh').style.display = 'none';
+      $('removeQrBtn').style.display = 'inline-block';
+    } else {
+      $('qrPreviewImg').style.display = 'none';
+      $('qrPreviewPh').style.display = 'block';
+      $('removeQrBtn').style.display = 'none';
+    }
+  }
+
+  $('paymentToggle').addEventListener('change', async (e) => {
+    const enabled = e.target.checked;
+    e.target.disabled = true;
+    const { error } = await supa.from('professionals').update({ payment_info_enabled: enabled }).eq('id', professional.id);
+    e.target.disabled = false;
+    if (error) {
+      e.target.checked = !enabled;
+      toast('Erro ao salvar: ' + error.message);
+      return;
+    }
+    professional.payment_info_enabled = enabled;
+    $('paymentFields').classList.toggle('show', enabled);
+    toast(enabled ? 'Pix visível pros seus alunos.' : 'Pix escondido dos seus alunos.');
+  });
+
+  $('chooseQrBtn').addEventListener('click', () => $('qrFileInput').click());
+
+  $('qrFileInput').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    pendingQrBlob = file;
+    removeQrRequested = false;
+    if (pendingQrPreviewUrl) URL.revokeObjectURL(pendingQrPreviewUrl);
+    pendingQrPreviewUrl = URL.createObjectURL(file);
+    setQrPreview(pendingQrPreviewUrl);
+  });
+
+  $('removeQrBtn').addEventListener('click', () => {
+    pendingQrBlob = null;
+    if (pendingQrPreviewUrl) { URL.revokeObjectURL(pendingQrPreviewUrl); pendingQrPreviewUrl = null; }
+    removeQrRequested = true;
+    setQrPreview(null);
+  });
+
+  $('saveBtn').addEventListener('click', async () => {
+    $('saveBtn').disabled = true;
+    $('saveMsg').textContent = '';
+    $('saveMsg').className = 'msg';
+
+    if (pendingQrBlob) {
+      const { error: uploadErr } = await supa.storage
+        .from(QR_BUCKET)
+        .upload(`${professional.id}/pix-qr.png`, pendingQrBlob, { contentType: pendingQrBlob.type || 'image/png', upsert: true });
+      if (uploadErr) {
+        $('saveBtn').disabled = false;
+        $('saveMsg').textContent = 'Erro ao subir o QR: ' + uploadErr.message;
+        $('saveMsg').className = 'msg error';
+        return;
+      }
+      hasExistingQr = true;
+    } else if (removeQrRequested && hasExistingQr) {
+      const { error: removeErr } = await supa.storage.from(QR_BUCKET).remove([`${professional.id}/pix-qr.png`]);
+      if (removeErr) {
+        $('saveBtn').disabled = false;
+        $('saveMsg').textContent = 'Erro ao remover o QR: ' + removeErr.message;
+        $('saveMsg').className = 'msg error';
+        return;
+      }
+      hasExistingQr = false;
+    }
+
+    const { error } = await supa.from('professionals').update({
+      pix_key_text: $('pixKeyInput').value.trim() || null,
+    }).eq('id', professional.id);
+    $('saveBtn').disabled = false;
+    if (error) {
+      $('saveMsg').textContent = 'Erro ao salvar: ' + error.message;
+      $('saveMsg').className = 'msg error';
+      return;
+    }
+    professional.pix_key_text = $('pixKeyInput').value.trim() || null;
+    pendingQrBlob = null;
+    removeQrRequested = false;
+    toast('Salvo com sucesso.');
+  });
+
+  // Receita própria do profissional (vinda dos alunos) — nunca confundir com
+  // a aba "Receita" do master.html, que é a receita do Giovani vinda da
+  // assinatura SaaS via Mercado Pago. Aqui não há ledger real (o pagamento
+  // aluno->profissional é Pix manual) — "recebido" é quem tem
+  // ultimo_pagamento_em dentro do mês corrente, "a receber" é o resto dos
+  // alunos com mensalidade cadastrada. Recebido + a receber = a expectativa
+  // de receita do mês inteiro. Sem filtro de status aqui de propósito —
+  // "ativo/pausado/inativo" não é coluna de students, vive só em
+  // student_notes (nota privada do profissional); soma qualquer aluno com
+  // mensalidade_valor cadastrado, independente disso.
+  function renderRevenue(students) {
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth();
+    let received = 0, pending = 0;
+    students.forEach((s) => {
+      if (!s.mensalidade_valor) return;
+      const valor = Number(s.mensalidade_valor) || 0;
+      let paidThisMonth = false;
+      if (s.ultimo_pagamento_em) {
+        const d = new Date(s.ultimo_pagamento_em + 'T00:00:00');
+        paidThisMonth = d.getFullYear() === y && d.getMonth() === m;
+      }
+      if (paidThisMonth) received += valor; else pending += valor;
+    });
+    $('rvReceived').textContent = `R$ ${received.toFixed(2)}`;
+    $('rvPending').textContent = `R$ ${pending.toFixed(2)}`;
+  }
+
+  async function boot() {
+    const { data: { session } } = await supa.auth.getSession();
+    if (!session) { window.location.href = 'login.html'; return; }
+
+    const { data: pro, error } = await supa.from('professionals').select('*').eq('email', session.user.email).maybeSingle();
+    if (error) { console.error('Falha ao carregar professional:', error.message); return; }
+    if (!pro) { window.location.href = 'onboarding.html'; return; }
+
+    professional = pro;
+    supa.rpc('get_professional_unread_message_count').then(({ data }) => {
+      $('navMsgDot').style.display = (data || 0) > 0 ? 'block' : 'none';
+    });
+
+    $('paymentToggle').checked = !!pro.payment_info_enabled;
+    $('paymentFields').classList.toggle('show', !!pro.payment_info_enabled);
+    $('pixKeyInput').value = pro.pix_key_text || '';
+
+    const { data: qrSigned } = await supa.storage.from(QR_BUCKET).createSignedUrl(`${professional.id}/pix-qr.png`, 300);
+    if (qrSigned?.signedUrl) {
+      hasExistingQr = true;
+      setQrPreview(qrSigned.signedUrl);
+    }
+
+    const { data: students, error: studentsError } = await supa
+      .from('students')
+      .select('mensalidade_valor, ultimo_pagamento_em')
+      .eq('professional_id', professional.id);
+    if (studentsError) { console.error('Falha ao carregar alunos pra Receita:', studentsError.message); return; }
+    renderRevenue(students || []);
+  }
+
+  boot();
+</script>
+</body>
+</html>

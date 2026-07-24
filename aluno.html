@@ -15,6 +15,7 @@
 <script src="https://js.sentry-cdn.com/dd3ca3ee7a720284b2a9bf8240b29158.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="student-hints.js" defer></script>
+<script src="whats-new.js" defer></script>
 <style>
 :root{
   --bg:#F8F9FA; --card:#FFFFFF; --card-2:#F1F3F5; --elev:#EDEFF2;
@@ -434,6 +435,18 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .crop-zoom-row input[type=range]{flex:1;accent-color:var(--primary)}
 .crop-actions{display:flex;gap:10px;margin-top:18px}
 .crop-actions .btn{flex:1}
+.fin-card{background:var(--card-grad);border:1px solid var(--card-border);box-shadow:var(--shadow-card);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:16px}
+.fin-status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:4px 12px;border-radius:999px;margin-bottom:12px}
+.fin-status.ok{background:rgba(30,140,100,.14);color:var(--accent-dim)}
+.fin-status.late{background:var(--danger-bg);color:var(--danger)}
+.fin-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.fin-row .fin-lbl{font-size:12.5px;color:var(--muted)}
+.fin-row .fin-val{font-size:14px;font-weight:700}
+.fin-qr{width:100%;max-width:220px;margin:14px auto 12px;display:block;border-radius:12px;border:1px solid var(--line)}
+.fin-pixkey{display:flex;gap:8px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12.5px;margin-top:8px}
+.fin-pixkey code{flex:1;min-width:0;overflow-wrap:break-word;font-family:inherit}
+.fin-copy-btn{border:none;background:var(--primary);color:#fff;font-weight:700;font-size:12px;padding:7px 12px;border-radius:8px;cursor:pointer;flex-shrink:0}
+.fin-disclaimer{font-size:11.5px;color:var(--faint);line-height:1.5;margin-top:12px}
 </style>
 </head>
 <body>
@@ -589,6 +602,35 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   </div>
 </section>
 
+<!-- ===== FINANCEIRO ===== -->
+<section class="screen" id="financeiro">
+  <div class="topbar">
+    <button class="back-btn" onclick="goTab('home')">‹</button>
+    <span class="brand">Financeiro</span>
+  </div>
+  <div class="content">
+    <div id="finEmpty" class="fin-card" style="display:none;text-align:center;color:var(--muted);font-size:13.5px;line-height:1.6;">
+      Seu personal ainda não disponibilizou o Pix por aqui — fale direto com ele(a) sobre sua mensalidade.
+    </div>
+    <div id="finContent" style="display:none;">
+      <div class="fin-card">
+        <div id="finStatus" class="fin-status ok">Em dia</div>
+        <div class="fin-row"><span class="fin-lbl">Mensalidade</span><span class="fin-val" id="finValor">—</span></div>
+        <div class="fin-row"><span class="fin-lbl">Vencimento</span><span class="fin-val" id="finVencimento">—</span></div>
+      </div>
+      <div class="fin-card" id="finPixCard" style="display:none;">
+        <div class="section-label" style="margin-top:0;">Pagar por Pix</div>
+        <img class="fin-qr" id="finQrImg" alt="QR code Pix" style="display:none;">
+        <div class="fin-pixkey" id="finPixKeyRow" style="display:none;">
+          <code id="finPixKeyText"></code>
+          <button class="fin-copy-btn" id="finCopyPixBtn" type="button">Copiar</button>
+        </div>
+        <div class="fin-disclaimer">Depois de pagar, avise seu personal por lá — a confirmação aqui no app é feita por ele(a), não automática.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ===== BOTTOM NAV ===== -->
 <nav class="bottom-nav" id="bottomNav" style="display:none">
   <button class="nav-btn active" id="navHome" onclick="goTab('home')">
@@ -725,6 +767,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     <button class="drawer-item" data-tab="home"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg></span>Início</button>
     <button class="drawer-item" data-tab="history"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6.5" y1="6.5" x2="6.5" y2="17.5"/><line x1="17.5" y1="6.5" x2="17.5" y2="17.5"/><line x1="3" y1="9" x2="3" y2="15"/><line x1="21" y1="9" x2="21" y2="15"/><line x1="6.5" y1="12" x2="17.5" y2="12"/></svg></span>Treino</button>
     <button class="drawer-item" data-tab="nutri"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v6a2 2 0 0 0 4 0V3"/><path d="M8 3v18"/><path d="M16 3c-1.5 0-2.5 1.5-2.5 4s1 4 2.5 4v11"/></svg></span>Nutri</button>
+    <button class="drawer-item" id="drawerFinanceiroBtn"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>Financeiro</button>
     <button class="drawer-item" data-tab="profile"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></span>Perfil</button>
     <button class="drawer-item" id="drawerChatBtn"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>Mensagens</button>
     <button class="drawer-item" id="drawerNotifBtn"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>Notificações</button>
@@ -986,6 +1029,71 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     updatePushButtonState();
   }
 
+  // Mesmo critério de vencimento já usado pelo profissional em index.html
+  // (computeDueInfo) — portado aqui pra profissional e aluno nunca verem
+  // status divergente pro mesmo aluno.
+  function computeDueInfoAluno(s) {
+    if (!s.mensalidade_dia_vencimento) return null;
+    const day = s.mensalidade_dia_vencimento;
+    const base = s.ultimo_pagamento_em ? new Date(s.ultimo_pagamento_em + 'T00:00:00') : new Date(s.created_at);
+    const monthOffset = s.ultimo_pagamento_em ? 1 : 0;
+    const due = new Date(base.getFullYear(), base.getMonth() + monthOffset, day);
+    const daysLate = Math.floor((Date.now() - due.getTime()) / 86400000);
+    return { due, daysLate };
+  }
+
+  async function openFinanceiro() {
+    hideNav();
+    showScreen('financeiro');
+    const enabled = !!student.professionals?.payment_info_enabled;
+    $('finEmpty').style.display = enabled ? 'none' : 'block';
+    $('finContent').style.display = enabled ? 'block' : 'none';
+    if (!enabled) return;
+
+    if (student.mensalidade_valor) {
+      $('finValor').textContent = `R$ ${Number(student.mensalidade_valor).toFixed(2)}`;
+    } else {
+      $('finValor').textContent = 'Não cadastrado';
+    }
+
+    const info = computeDueInfoAluno(student);
+    if (info) {
+      $('finVencimento').textContent = info.due.toLocaleDateString('pt-BR');
+      const late = info.daysLate > 0;
+      $('finStatus').textContent = late ? `Atrasado (${info.daysLate}d)` : 'Em dia';
+      $('finStatus').className = 'fin-status ' + (late ? 'late' : 'ok');
+    } else {
+      $('finVencimento').textContent = 'Não cadastrado';
+      $('finStatus').textContent = 'Sem vencimento cadastrado';
+      $('finStatus').className = 'fin-status ok';
+    }
+
+    const pixKey = student.professionals?.pix_key_text;
+    const hasPixKey = !!pixKey;
+    $('finPixKeyRow').style.display = hasPixKey ? 'flex' : 'none';
+    if (hasPixKey) $('finPixKeyText').textContent = pixKey;
+
+    const { data: qrSigned } = await supa.storage
+      .from('professional-logos')
+      .createSignedUrl(`${student.professional_id}/pix-qr.png`, 300);
+    const hasQr = !!qrSigned?.signedUrl;
+    $('finQrImg').style.display = hasQr ? 'block' : 'none';
+    if (hasQr) $('finQrImg').src = qrSigned.signedUrl;
+
+    $('finPixCard').style.display = (hasQr || hasPixKey) ? 'block' : 'none';
+  }
+
+  $('finCopyPixBtn').addEventListener('click', async () => {
+    const key = student.professionals?.pix_key_text;
+    if (!key) return;
+    try {
+      await navigator.clipboard.writeText(key);
+      toast('Chave Pix copiada.');
+    } catch {
+      toast('Não foi possível copiar — selecione o texto manualmente.');
+    }
+  });
+
   function openDrawer() {
     $('drawerAvatar').textContent = (student.nome || '?').trim().charAt(0).toUpperCase();
     $('drawerName').textContent = student.nome || '';
@@ -1006,6 +1114,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   });
   $('drawerNotifBtn').addEventListener('click', () => { closeDrawer(); openNotifications(); });
   $('drawerSettingsBtn').addEventListener('click', () => { closeDrawer(); openSettings(); });
+  $('drawerFinanceiroBtn').addEventListener('click', () => { closeDrawer(); openFinanceiro(); });
   $('drawerLogoutBtn').addEventListener('click', () => { closeDrawer(); doLogout(); });
   $('settingsLogoutBtn').addEventListener('click', doLogout);
 
@@ -1048,7 +1157,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 
     const { data: st, error } = await supa
       .from('students')
-      .select('*, professionals(display_name, color_preset, ranking_enabled, whatsapp, home_subtitle)')
+      .select('*, professionals(display_name, color_preset, ranking_enabled, whatsapp, home_subtitle, payment_info_enabled, pix_key_text)')
       .eq('email', session.user.email)
       .maybeSingle();
 

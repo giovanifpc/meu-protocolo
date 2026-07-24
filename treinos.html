@@ -16,6 +16,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="support-widget.js" defer></script>
 <script src="assistant-hints.js" defer></script>
+<script src="whats-new.js" defer></script>
 <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch((e) => console.error('Falha ao registrar service worker:', e));</script>
 <style>
   :root {
@@ -40,6 +41,23 @@
   .nav-btn .nav-lbl { font-size:10px; font-weight:700; }
   .nav-btn.active { color:var(--primary); }
   .nav-dot { position:absolute; top:-2px; right:-4px; width:8px; height:8px; border-radius:50%; background:var(--danger); border:2px solid var(--card); display:none; }
+  .header-actions{display:flex;align-items:center;gap:8px;}
+  .menu-btn{background:none;border:none;padding:6px;margin:0;cursor:pointer;color:var(--text);display:flex;align-items:center;justify-content:center;}
+  .menu-btn svg{width:22px;height:22px;}
+  .drawer-overlay{position:fixed;inset:0;z-index:400;background:rgba(15,20,28,.45);display:none;opacity:0;transition:opacity .25s ease}
+  .drawer-overlay.show{display:block;opacity:1}
+  .side-drawer{position:fixed;top:0;right:0;bottom:0;width:80%;max-width:300px;background:var(--card);box-shadow:-10px 0 30px rgba(0,0,0,.18);z-index:401;transform:translateX(100%);transition:transform .3s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;overflow-y:auto}
+  .side-drawer.show{transform:translateX(0)}
+  .drawer-head{padding:calc(env(safe-area-inset-top) + 20px) 18px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);flex-shrink:0}
+  .drawer-head .dh-title{font-size:16px;font-weight:700;}
+  .drawer-close{background:none;border:none;font-size:24px;line-height:1;color:var(--muted);cursor:pointer;padding:2px 6px}
+  .drawer-nav{padding:12px;display:flex;flex-direction:column;gap:2px}
+  .drawer-item{display:flex;align-items:center;gap:14px;width:100%;background:none;border:none;padding:12px 10px;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:600;color:var(--text);cursor:pointer;text-align:left;text-decoration:none}
+  .drawer-item:active{background:var(--bg)}
+  .drawer-item.active{color:var(--primary)}
+  .drawer-item .di-ico{width:20px;height:20px;color:var(--muted);flex-shrink:0;display:flex}
+  .drawer-item .di-ico svg{width:100%;height:100%}
+  .drawer-item.active .di-ico{color:var(--primary)}
   .card { background:var(--card-grad); border:1px solid rgba(20,30,45,.04); box-shadow:var(--shadow-card); border-radius:var(--radius-lg); padding:16px 18px; margin-bottom:16px; }
   .card h2 { font-size:15px; margin:0 0 12px; }
   .field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
@@ -136,7 +154,7 @@
 <body>
   <header>
     <h1>Montar treino</h1>
-    <a href="alunos.html" class="btn secondary small">‹ Alunos</a>
+    <div class="header-actions"><a href="alunos.html" class="btn secondary small">‹ Alunos</a><button class="menu-btn" onclick="openDrawer()" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button></div>
   </header>
 
   <div class="tabbar" id="studentTabbar">
@@ -321,6 +339,22 @@
     <a class="nav-btn" href="perfil.html"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.7.36 1.15 1.03 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span class="nav-lbl">Config</span></a>
   </nav>
 
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="side-drawer" id="sideDrawer">
+  <div class="drawer-head">
+    <span class="dh-title">Menu</span>
+    <button class="drawer-close" onclick="closeDrawer()" aria-label="Fechar">&times;</button>
+  </div>
+  <div class="drawer-nav">
+    <a class="drawer-item" href="index.html"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg></span>Início</a>
+    <a class="drawer-item active" href="alunos.html"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>Alunos</a>
+    <a class="drawer-item" href="mensagens.html"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>Mensagens</a>
+    <a class="drawer-item" href="relatorios.html"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg></span>Relatórios</a>
+    <a class="drawer-item" href="financeiro.html"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>Financeiro</a>
+    <a class="drawer-item" href="perfil.html"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.7.36 1.15 1.03 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>Config</a>
+  </div>
+</div>
+
   <div class="modal-overlay" id="confirmOverlay">
     <div class="modal-card">
       <h3>Criar um treino novo?</h3>
@@ -394,6 +428,8 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';
   const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const $ = (id) => document.getElementById(id);
+  function openDrawer() { $('drawerOverlay').classList.add('show'); $('sideDrawer').classList.add('show'); }
+  function closeDrawer() { $('drawerOverlay').classList.remove('show'); $('sideDrawer').classList.remove('show'); }
 
   let professional = null;
   let currentProtocol = null; // { id, student_id, titulo, status, periodizacao, duracao_semanas, workouts: [...] }

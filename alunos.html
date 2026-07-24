@@ -248,7 +248,7 @@
           <div class="notes-sub-label">WhatsApp e mensalidade</div>
           <div style="display:flex;gap:6px;">
             <input type="tel" data-role="telefone" data-student-id="${s.id}" placeholder="WhatsApp com DDD e país, ex: 5511999999999" value="${escapeHtml(s.telefone || '')}" style="flex:1;min-width:0;">
-            <button class="btn small secondary" style="padding:7px 10px;font-size:11.5px;white-space:nowrap;flex-shrink:0;" data-role="copy-invite" data-student-id="${s.id}" title="Copiar link de primeiro acesso pra mandar por WhatsApp">Copiar convite</button>
+            <button class="btn small secondary" style="padding:7px 10px;font-size:11.5px;white-space:nowrap;flex-shrink:0;" data-role="copy-invite" data-student-id="${s.id}" data-name="${escapeHtml(s.nome)}" title="Abrir convite no WhatsApp (ou copiar o link, se não tiver WhatsApp cadastrado)">Enviar convite</button>
           </div>
           <div class="billing-row">
             <input type="number" step="0.01" data-role="mensalidade-valor" data-student-id="${s.id}" placeholder="Valor (R$)" value="${s.mensalidade_valor ?? ''}">
@@ -306,7 +306,7 @@
       btn.addEventListener('click', () => markPaid(btn.dataset.studentId));
     });
     list.querySelectorAll('[data-role="copy-invite"]').forEach(btn => {
-      btn.addEventListener('click', () => copyInviteLink());
+      btn.addEventListener('click', () => sendInvite(btn.dataset.studentId, btn.dataset.name));
     });
     list.querySelectorAll('[data-role="note-status"]').forEach(sel => {
       sel.addEventListener('change', () => {
@@ -389,11 +389,22 @@
 
   // Link fixo pra mandar pro aluno novo (landing-aluno.html é genérica, sem
   // personalização por profissional — mesma URL serve pra qualquer aluno).
-  async function copyInviteLink() {
+  // Com WhatsApp já cadastrado, abre direto a conversa (mesmo padrão wa.me
+  // já usado em index.html pros alertas de adesão/pagamento). Sem WhatsApp
+  // cadastrado, cai pra copiar o link puro — nada pra abrir ainda.
+  function firstName(nome) { return (nome || '').trim().split(' ')[0]; }
+
+  async function sendInvite(studentId, nome) {
     const link = 'https://meuprotocolo.app/landing-aluno.html';
+    const telefone = document.querySelector(`[data-role="telefone"][data-student-id="${studentId}"]`).value.replace(/\D/g, '');
+    if (telefone) {
+      const msg = `Oi ${firstName(nome)}! Vou te acompanhar pelo Meu Protocolo — entra por aqui pra começar: ${link}`;
+      window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
+      return;
+    }
     try {
       await navigator.clipboard.writeText(link);
-      toast('Link copiado — cole na conversa de WhatsApp com o aluno.');
+      toast('Sem WhatsApp cadastrado — link copiado, cole onde preferir.');
     } catch {
       toast('Não foi possível copiar automaticamente: ' + link);
     }

@@ -6,7 +6,7 @@
 
 ## 1. Quem esse documento atende
 
-O suporte via IA é para o **profissional** (personal trainer autônomo, cliente pagante do Meu Protocolo) — não para o aluno final dele. Disponível em **todos os planos, incluindo o trial de 14 dias**, sempre visível como um botão/widget flutuante em todas as telas do painel do profissional (`index.html`, `alunos.html`, `treinos.html`, `avaliacoes.html`, `nutri.html`, `perfil.html`, `relatorios.html`).
+O suporte via IA é para o **profissional** (personal trainer autônomo, cliente pagante do Meu Protocolo) — não para o aluno final dele. Disponível em **todos os planos, incluindo o trial de 14 dias**, sempre visível como um botão/widget flutuante em todas as telas do painel do profissional (`index.html`, `alunos.html`, `mensagens.html`, `treinos.html`, `avaliacoes.html`, `nutri.html`, `perfil.html`, `relatorios.html`, `financeiro.html`).
 
 ---
 
@@ -86,7 +86,7 @@ SaaS de gestão para personal trainers autônomos brasileiros. O profissional as
 
 Cada aluno tem: nome, e-mail, telefone (opcional), valor e dia de vencimento da mensalidade (opcional, é só o profissional acompanhando quando o *aluno* deve pagar *ele*, não tem nada a ver com a cobrança do Meu Protocolo), status (ativo/pausado/inativo), nota privada do profissional, foto de perfil.
 
-O app **não processa pagamento de aluno pra profissional** — só ajuda o profissional a lembrar quem está com mensalidade atrasada, com um botão pronto pra abrir o WhatsApp com mensagem sugerida. O dinheiro nunca passa pelo Meu Protocolo nessa relação.
+O app **não processa pagamento de aluno pra profissional** — só ajuda o profissional a lembrar quem está com mensalidade atrasada, com um botão pronto pra abrir o WhatsApp com mensagem sugerida. O dinheiro nunca passa pelo Meu Protocolo nessa relação. Desde 2026-07-24 o profissional também pode exibir o próprio QR/chave Pix pro aluno dentro do app (ver 5.12) — isso não muda esse fato, é só mais fácil o aluno ver o Pix sem precisar pedir por fora.
 
 ### 5.5 Treinos
 
@@ -125,6 +125,26 @@ O profissional pode gerar um relatório em texto (não PDF) por aluno — resumo
 
 O profissional cancela a própria assinatura em Perfil/Configurações. Ao cancelar: acesso é encerrado na hora, mas os dados ficam retidos por 30 dias (nesse período dá pra reativar sem perder nada) — depois disso, exclusão permanente.
 
+### 5.11 Mensagens entre profissional e aluno (adicionado 2026-07-22)
+
+Aba "Mensagens" no painel do profissional — chat com histórico, um por aluno. O aluno vê o mesmo chat no próprio app (ícone ao lado do botão de WhatsApp, ou pelo menu lateral). Não substitui o WhatsApp — é um canal extra dentro do app, útil quando o profissional não quer misturar assunto de treino com o WhatsApp pessoal. Mensagem nova do profissional gera notificação no sino do aluno.
+
+### 5.12 Financeiro — Pix pro aluno (adicionado 2026-07-24)
+
+Recurso opcional (o profissional liga em "Financeiro", no menu lateral do painel — ícone de menu ☰ no topo de qualquer tela). Lá ele cadastra um QR code Pix (sobe um print de tela, com uma ferramenta de recorte pra ajustar só o QR) e a chave Pix copia-e-cola. Se ligado, o aluno passa a ver essas informações numa aba "Financeiro" própria (mesmo menu lateral, do lado dele) — junto do valor da própria mensalidade e se está em dia ou atrasada. **Continua sendo só exibição**: o app não confirma pagamento sozinho, quem marca "pago" continua sendo o profissional, na aba Alunos (mesmo mecanismo de sempre, seção 5.4). O painel do profissional também mostra ali um resumo de "Receita" (recebido e a receber no mês, dos próprios alunos) — importante não confundir com a cobrança da assinatura do próprio Meu Protocolo (seção 5.2): são duas coisas completamente diferentes.
+
+### 5.13 Ranking mensal entre alunos (adicionado 2026-07-19)
+
+Recurso opcional (o profissional liga em Configurações). Quando ligado, os alunos de um mesmo profissional veem um placar mensal entre si — pontos por treino concluído, medalha desbloqueada, recorde pessoal de carga — com nome abreviado (nunca o nome completo de outro aluno). O placar reseta todo mês.
+
+### 5.14 Vídeo de execução dos exercícios (adicionado 2026-07-19)
+
+O profissional pode colar um link do próprio canal do YouTube num exercício da biblioteca (dentro da tela de montar treino) — o aluno vê esse vídeo direto na tela de execução daquele exercício, no lugar do GIF padrão. É sempre link do YouTube, não upload de arquivo de vídeo.
+
+### 5.15 Programa de indicação (adicionado 2026-07-21/22)
+
+Cada profissional tem um link próprio de indicação, em Configurações ("Indique um amigo"). Quando outra pessoa se cadastra por esse link e vira cliente pagante de verdade (depois do trial dela), quem indicou ganha 1 mês grátis, aplicado automaticamente na cobrança seguinte. Só quem indica é recompensado — o indicado não ganha nada por ter sido indicado.
+
 ---
 
 ## 6. Perguntas frequentes esperadas (ponto de partida, não lista fechada)
@@ -136,6 +156,11 @@ O profissional cancela a própria assinatura em Perfil/Configurações. Ao cance
 - "Posso mudar a cor/logo do meu app?" → só Pro/Elite (5.2)
 - "Como funciona o período de teste?" → 14 dias, cartão cadastrado mas só cobra depois (5.2)
 - "Posso cobrar meus alunos pelo Meu Protocolo?" → não, o app não processa pagamento aluno→profissional, só lembra vencimento (5.4)
+- "Posso mostrar meu Pix pro aluno dentro do app?" → sim, opt-in na aba Financeiro do menu lateral (5.12) — continua sendo o profissional quem confirma o pagamento
+- "Meu aluno pode falar comigo pelo app, sem ser WhatsApp?" → sim, aba Mensagens (5.11)
+- "Dá pra colocar meu próprio vídeo de execução dos exercícios?" → sim, colando um link do YouTube (5.14), não é upload de arquivo
+- "Meus alunos competem entre si de alguma forma?" → ranking mensal opcional (5.13)
+- "Como funciona indicar outro profissional?" → link próprio em Configurações, 1 mês grátis só depois da 1ª cobrança real do indicado (5.15)
 
 ---
 
@@ -154,3 +179,17 @@ A API da Claude não é gratuita, então o chat precisa de um teto — mas sem g
 Única correção do Giovani: a orientação de uso da aba Nutri com/sem parceria de nutricionista (incorporada na seção 5.8, e virou também uma regra geral de comportamento na seção 2 — a IA deve sugerir uso eficiente, não só responder a pergunta literal). Fora isso, a seção 5 foi aprovada como estava.
 
 **Nenhuma pendência em aberto.** Documento pronto pra guiar a implementação do chatbot (itens 9-11 do roadmap).
+
+---
+
+## 9. Processo de manutenção — como manter a IA atualizada (adicionado 2026-07-24)
+
+**Este documento NÃO é lido ao vivo pelo chatbot.** O `SYSTEM_PROMPT` de verdade é uma string fixa dentro de `supabase/functions/support-chat/index.ts` — escrita a partir deste `.md`, mas uma cópia, não uma referência. Editar só este arquivo não muda o que a IA sabe.
+
+**Checklist sempre que uma feature nova voltada pro profissional for ao ar** (não precisa ser toda mudança de código — só o que muda o que o profissional pode fazer/perguntar):
+1. Atualizar a seção 5 aqui (nova subseção, ou ajustar uma existente).
+2. Copiar o trecho relevante pro `SYSTEM_PROMPT` em `supabase/functions/support-chat/index.ts` (mesma seção 5, resumida no tom que já está lá).
+3. Rodar `supabase functions deploy support-chat` — sem isso, o deploy do site não afeta o chatbot, são coisas completamente separadas.
+4. Se fizer sentido, adicionar uma pergunta nova na seção 6 (FAQ).
+
+**Sessão de 2026-07-24 (retroativa)**: até essa data, o `SYSTEM_PROMPT` estava desatualizado desde 2026-07-18 — não sabia de mensageria (5.11, lançada 07-22), ranking (5.13, 07-19), vídeo por YouTube (5.14, 07-19), nem do Financeiro/Pix (5.12, 07-24). Corrigido nesta sessão (seção 5 aqui + `SYSTEM_PROMPT` + redeploy) — ver `CLAUDE.md` pra confirmação de que o deploy realmente rodou.

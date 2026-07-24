@@ -1,7 +1,13 @@
 // Service worker do PWA — só cacheia assets estáticos same-origin (rede-primeiro,
 // cache como fallback). Nunca intercepta chamadas ao Supabase: auth e dados do
 // aluno sempre precisam ser requisição de rede real, nunca resposta velha de cache.
-const CACHE_NAME = 'meu-protocolo-v1';
+//
+// CACHE_NAME também é o gatilho do "força atualização" (ver <script> de
+// registro em cada página, listener de controllerchange): o navegador só
+// percebe que este arquivo mudou (e reativa um SW novo) se os BYTES dele
+// mudarem — por isso, sempre que uma mudança valer a pena forçar o
+// recarregamento de abas já abertas, bump este número junto do deploy.
+const CACHE_NAME = 'meu-protocolo-v2';
 const PRECACHE_URLS = ['/aluno.html', '/manifest.json', '/icons/icon-192-v2.png', '/icons/icon-512-v2.png'];
 
 self.addEventListener('install', (event) => {

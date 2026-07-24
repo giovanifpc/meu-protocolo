@@ -620,6 +620,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       </div>
       <div class="fin-card" id="finPixCard" style="display:none;">
         <div class="section-label" style="margin-top:0;">Pagar por Pix</div>
+        <div class="fin-disclaimer" id="finQrHint" style="display:none;margin-top:0;">Tire um print desse QR code e, no app do seu banco, escolha a opção de pagar via QR code a partir de uma imagem/galeria — não precisa de leitura por câmera.</div>
         <img class="fin-qr" id="finQrImg" alt="QR code Pix" style="display:none;">
         <div class="fin-pixkey" id="finPixKeyRow" style="display:none;">
           <code id="finPixKeyText"></code>
@@ -1078,6 +1079,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       .createSignedUrl(`${student.professional_id}/pix-qr.png`, 300);
     const hasQr = !!qrSigned?.signedUrl;
     $('finQrImg').style.display = hasQr ? 'block' : 'none';
+    $('finQrHint').style.display = hasQr ? 'block' : 'none';
     if (hasQr) $('finQrImg').src = qrSigned.signedUrl;
 
     $('finPixCard').style.display = (hasQr || hasPixKey) ? 'block' : 'none';
@@ -2671,6 +2673,12 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch((e) => console.error('Falha ao registrar service worker:', e));
+    let __swReloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (__swReloaded) return;
+      __swReloaded = true;
+      window.location.reload();
+    });
   }
 
   boot();

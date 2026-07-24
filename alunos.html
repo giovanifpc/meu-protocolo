@@ -17,7 +17,7 @@
 <script src="support-widget.js" defer></script>
 <script src="assistant-hints.js" defer></script>
 <script src="whats-new.js" defer></script>
-<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch((e) => console.error('Falha ao registrar service worker:', e));</script>
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch((e) => console.error('Falha ao registrar service worker:', e)); let __swReloaded = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (__swReloaded) return; __swReloaded = true; window.location.reload(); }); }</script>
 <style>
   :root {
     --bg:#F8F9FA; --primary:#2D6BE4; --accent:#1E8C64; --accent-dim:#146B4D; --text:#1E2A3A;
@@ -246,7 +246,10 @@
           <button class="btn small" style="padding:7px 12px;font-size:12px;" data-role="save-note" data-student-id="${s.id}">Salvar nota</button>
 
           <div class="notes-sub-label">WhatsApp e mensalidade</div>
-          <input type="tel" data-role="telefone" data-student-id="${s.id}" placeholder="WhatsApp com DDD e país, ex: 5511999999999" value="${escapeHtml(s.telefone || '')}">
+          <div style="display:flex;gap:6px;">
+            <input type="tel" data-role="telefone" data-student-id="${s.id}" placeholder="WhatsApp com DDD e país, ex: 5511999999999" value="${escapeHtml(s.telefone || '')}" style="flex:1;min-width:0;">
+            <button class="btn small secondary" style="padding:7px 10px;font-size:11.5px;white-space:nowrap;flex-shrink:0;" data-role="copy-invite" data-student-id="${s.id}" title="Copiar link de primeiro acesso pra mandar por WhatsApp">Copiar convite</button>
+          </div>
           <div class="billing-row">
             <input type="number" step="0.01" data-role="mensalidade-valor" data-student-id="${s.id}" placeholder="Valor (R$)" value="${s.mensalidade_valor ?? ''}">
             <input type="number" min="1" max="31" data-role="mensalidade-dia" data-student-id="${s.id}" placeholder="Dia venc. (1-31)" value="${s.mensalidade_dia_vencimento ?? ''}">
@@ -301,6 +304,9 @@
     });
     list.querySelectorAll('[data-role="mark-paid"]').forEach(btn => {
       btn.addEventListener('click', () => markPaid(btn.dataset.studentId));
+    });
+    list.querySelectorAll('[data-role="copy-invite"]').forEach(btn => {
+      btn.addEventListener('click', () => copyInviteLink());
     });
     list.querySelectorAll('[data-role="note-status"]').forEach(sel => {
       sel.addEventListener('change', () => {
@@ -379,6 +385,18 @@
     if (error) { toast('Erro ao salvar: ' + error.message); return; }
     toast('WhatsApp/mensalidade salvos.');
     await loadStudents();
+  }
+
+  // Link fixo pra mandar pro aluno novo (landing-aluno.html é genérica, sem
+  // personalização por profissional — mesma URL serve pra qualquer aluno).
+  async function copyInviteLink() {
+    const link = 'https://meuprotocolo.app/landing-aluno.html';
+    try {
+      await navigator.clipboard.writeText(link);
+      toast('Link copiado — cole na conversa de WhatsApp com o aluno.');
+    } catch {
+      toast('Não foi possível copiar automaticamente: ' + link);
+    }
   }
 
   async function markPaid(studentId) {

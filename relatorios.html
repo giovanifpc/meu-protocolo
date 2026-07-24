@@ -17,7 +17,7 @@
 <script src="support-widget.js" defer></script>
 <script src="assistant-hints.js" defer></script>
 <script src="whats-new.js" defer></script>
-<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch((e) => console.error('Falha ao registrar service worker:', e));</script>
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch((e) => console.error('Falha ao registrar service worker:', e)); let __swReloaded = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (__swReloaded) return; __swReloaded = true; window.location.reload(); }); }</script>
 <style>
   :root {
     --bg:#F8F9FA; --primary:#2D6BE4; --accent:#1E8C64; --accent-dim:#146B4D; --text:#1E2A3A;

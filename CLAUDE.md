@@ -28,6 +28,8 @@ Produto **totalmente separado da marca Fox Performance** — projetos distintos,
 - **Autonomia de execução:** o Giovani pediu operação sem pausas de confirmação — faça o commit e push das mudanças diretamente, sem perguntar "posso commitar?" a cada passo. Vale para qualquer sessão (PC, web, celular), não só a que recebeu essa instrução originalmente. Só pare pra confirmar em ações genuinamente arriscadas: alterar/apagar dado real de aluno ou profissional (não teste), mudar configuração de cobrança real, ou qualquer coisa irreversível fora do fluxo normal de código
 - Commits em português, mensagens descritivas
 - Sem TypeScript no frontend (só seria usado, se necessário, em Edge Functions)
+- **Sempre que uma feature nova voltada pro profissional for ao ar, atualizar a IA de suporte junto** (não é automático — descoberto/corrigido em 2026-07-24 depois de constatar que o chatbot estava desatualizado desde 07-18): (1) atualizar a seção 5 de `contexto-ia-suporte.md`; (2) copiar o trecho pro `SYSTEM_PROMPT` dentro de `supabase/functions/support-chat/index.ts` (é uma cópia fixa, **não lê o `.md` ao vivo**); (3) `supabase functions deploy support-chat` — sem isso o deploy do site não muda nada do que o bot sabe. Ver seção 9 do `contexto-ia-suporte.md` pro checklist completo.
+- **Bump `CACHE_NAME` em `sw.js` quando uma mudança visual merecer forçar o recarregamento de abas já abertas** (mecanismo criado em 2026-07-24, ver seção "Banner..." em Status atual) — sem isso, quem já está com o app aberto só pega o código novo fechando/reabrindo por conta própria.
 
 ---
 
@@ -89,6 +91,21 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 ---
 
 ## Status atual
+
+### ✅ Fricção do upload de QR corrigida + força atualização + chatbot atualizado + link de convite (2026-07-24, mesma sessão)
+
+Continuação direta da sessão anterior (ver seção logo abaixo). Quatro pedidos do usuário depois de testar o Financeiro em produção local pela primeira vez:
+
+**1. Crop + texto orientativo no upload do QR Pix** — o usuário testou de verdade e subiu o print de tela inteiro (não só o QR), porque nada na UI orientava a fazer isso nem dava ferramenta pra recortar. Corrigido nos dois lados:
+- `financeiro.html`: texto explicativo acima do botão de upload ("Tire um print de tela do QR code gerado pelo app do seu banco..."), e o clique em "Escolher arquivo" agora abre uma **tela de crop** (arrastar + zoom) idêntica em mecânica à do crop de logo em `perfil.html`, mas **sempre quadrada, sem toggle de círculo** (um QR recortado em círculo perde os cantos e fica ilegível). Canvas de saída 500×500 (maior que os 400 do logo, QR precisa de mais nitidez pra continuar escaneável). Testado com uma imagem sintética (retângulo branco + quadrado preto simulando print inteiro + QR) — zoom e recorte funcionando, upload e persistência confirmados (reload mostra o QR recortado, não o print inteiro).
+- `aluno.html`: texto novo acima da imagem do QR na tela Financeiro, condicionado a só aparecer quando há QR (`finQrHint`, junto de `finQrImg`) — orienta que é pra pagar via "QR a partir de imagem/galeria" no app do banco, não leitura por câmera (já que é uma foto na tela, não um código físico na frente do aluno). Testado ponta a ponta com as 2 contas de teste reais.
+
+**2. "Força atualização" implementado de verdade** (resposta à dúvida do usuário sobre se o banner de versão já fazia isso — não fazia, era só passivo). Adicionado em todas as 10 páginas que registram o service worker (`aluno.html` + as 9 do profissional, incluindo `financeiro.html` novo): um listener de `controllerchange` que recarrega a página automaticamente quando um Service Worker novo assume o controle (guardado por uma flag pra nunca entrar em loop de reload). **Depende de `sw.js` realmente mudar de bytes pro navegador notar a atualização** — por isso `CACHE_NAME` em `sw.js` virou também o gatilho manual desse mecanismo: `v1` → `v2` nesta sessão, com um comentário no próprio arquivo documentando a prática ("bump o número junto de qualquer deploy que valha a pena forçar recarregamento"). Regra nova registrada em "Regras de desenvolvimento" no topo deste arquivo.
+
+**3. Chatbot de suporte estava desatualizado desde 2026-07-18 — corrigido e redeployado.** O usuário perguntou se a IA já sabia das features novas; a resposta era não — `contexto-ia-suporte.md` é só o documento de design, o `SYSTEM_PROMPT` de verdade é uma cópia fixa em `supabase/functions/support-chat/index.ts`, sem nenhum processo de sincronia. Corrigido: seção 5 do `.md` ganhou 5 subseções novas (5.11 Mensagens, 5.12 Financeiro/Pix, 5.13 Ranking, 5.14 Vídeo por YouTube, 5.15 Programa de indicação) + perguntas novas na seção 6 (FAQ) + uma seção 9 nova documentando esse processo de manutenção pra não desatualizar de novo. O mesmo conteúdo (resumido, no tom já usado no prompt) foi copiado pro `SYSTEM_PROMPT`, e a function foi redeployada (`supabase functions deploy support-chat`, confirmado `ACTIVE` versão 5). **Testado de verdade**: chamada real à function (JWT do profissional de teste) perguntando sobre o Financeiro novo — resposta correta, mencionando a ferramenta de recorte, o menu lateral, e a distinção clara com a Receita do master. Conversa de teste removida do log depois.
+- Regra nova registrada em "Regras de desenvolvimento" (topo deste arquivo): toda feature nova pro profissional exige atualizar os dois lugares (`.md` + `SYSTEM_PROMPT`) e redeployar — não é automático.
+
+**4. Botão "Copiar convite" em `alunos.html`** — resolve a lacuna identificada na sessão anterior (a `landing-aluno.html` existia mas não tinha nenhum jeito de o profissional pegar o link de dentro do app). Colocado ao lado do campo de WhatsApp no painel de nota/status de cada aluno (`data-role="copy-invite"`) — copia a URL fixa (`https://meuprotocolo.app/landing-aluno.html`) pro clipboard, com toast confirmando. Testado, funcionando.
 
 ### ✅ Implementado: landing do aluno + Financeiro no app do aluno e do profissional + bug da nav + banner de versão (2026-07-24)
 

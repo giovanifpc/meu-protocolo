@@ -17,7 +17,7 @@
 <script src="support-widget.js" defer></script>
 <script src="assistant-hints.js" defer></script>
 <script src="whats-new.js" defer></script>
-<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch((e) => console.error('Falha ao registrar service worker:', e));</script>
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch((e) => console.error('Falha ao registrar service worker:', e)); let __swReloaded = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (__swReloaded) return; __swReloaded = true; window.location.reload(); }); }</script>
 <style>
   :root {
     --bg:#F8F9FA; --primary:#2D6BE4; --accent:#1E8C64; --accent-dim:#146B4D; --text:#1E2A3A;
@@ -64,6 +64,19 @@
   .logo-preview span { font-size:9px; color:var(--faint); text-align:center; padding:4px; line-height:1.3; }
   .logo-actions { display:flex; flex-direction:column; gap:6px; }
   .qr-note { font-size:12px; color:var(--muted); background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin:12px 0; }
+  .qr-hint { font-size:12.5px; color:var(--muted); margin:0 0 10px; line-height:1.5; }
+  .crop-overlay { position:fixed; inset:0; z-index:600; background:rgba(15,20,28,.6); display:none; align-items:center; justify-content:center; padding:24px; }
+  .crop-overlay.show { display:flex; }
+  .crop-card { width:100%; max-width:340px; background:var(--card); border-radius:var(--radius-lg); padding:22px; box-shadow:var(--shadow-card); }
+  .crop-card h3 { font-size:16px; font-weight:800; margin:0 0 4px; text-align:center; }
+  .crop-hint { font-size:12px; color:var(--muted); text-align:center; margin-bottom:14px; }
+  .crop-stage { width:240px; height:240px; margin:0 auto; position:relative; overflow:hidden; border-radius:12px; background:#0f141c; touch-action:none; cursor:grab; }
+  .crop-stage:active { cursor:grabbing; }
+  .crop-stage img { position:absolute; top:0; left:0; transform-origin:0 0; user-select:none; -webkit-user-drag:none; pointer-events:none; }
+  .crop-zoom-row { margin-top:16px; }
+  .crop-zoom-row input[type=range] { width:100%; accent-color:var(--primary); }
+  .crop-actions { display:flex; gap:10px; margin-top:16px; }
+  .crop-actions .btn { flex:1; }
   .revenue-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:10px; }
   .revenue-stat { background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:14px 12px; text-align:center; }
   .revenue-stat .rv-num { font-size:21px; font-weight:800; color:var(--text); line-height:1.1; }
@@ -121,6 +134,7 @@
         <div class="qr-note">Use um QR Pix <strong>estático, sem valor fixo</strong> — o mesmo QR serve pra todos os seus alunos, já que o app mostra a mensalidade de cada um em texto ao lado. QRs com valor fixo geram cobrança errada pra quem paga um valor diferente.</div>
         <div class="field">
           <label>QR code Pix</label>
+          <p class="qr-hint">Tire um print de tela do QR code gerado pelo app do seu banco e envie aqui — no próximo passo você ajusta o enquadramento antes de salvar.</p>
           <div class="logo-row">
             <div class="logo-preview" id="qrPreviewWrap">
               <img id="qrPreviewImg" style="display:none;" alt="">
@@ -183,6 +197,23 @@
   </div>
 </div>
 
+<div class="crop-overlay" id="qrCropOverlay">
+  <div class="crop-card">
+    <h3>Ajustar QR code</h3>
+    <div class="crop-hint">Arraste e use o zoom pra deixar o QR code dentro do quadro de corte</div>
+    <div class="crop-stage" id="qrCropStage">
+      <img id="qrCropImg" alt="">
+    </div>
+    <div class="crop-zoom-row">
+      <input type="range" id="qrCropZoomInput" min="100" max="300" value="100">
+    </div>
+    <div class="crop-actions">
+      <button class="btn secondary" id="qrCropCancelBtn" type="button">Cancelar</button>
+      <button class="btn" id="qrCropConfirmBtn" type="button">Usar imagem</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';
@@ -240,11 +271,95 @@
     const file = e.target.files[0];
     e.target.value = '';
     if (!file) return;
-    pendingQrBlob = file;
-    removeQrRequested = false;
-    if (pendingQrPreviewUrl) URL.revokeObjectURL(pendingQrPreviewUrl);
-    pendingQrPreviewUrl = URL.createObjectURL(file);
-    setQrPreview(pendingQrPreviewUrl);
+    openQrCrop(file);
+  });
+
+  // Crop do QR — mesma mecânica de arrastar/zoom já usada no crop de logo
+  // (perfil.html), sempre quadrado (sem toggle de formato: um QR recortado
+  // em círculo perde os padrões de canto e fica ilegível). Motivo de existir:
+  // o profissional tende a subir o print de tela inteiro do app do banco,
+  // não só o QR — o quadro de corte resolve isso sem precisar de outro app.
+  const qrCropState = { natW: 0, natH: 0, baseScale: 1, scale: 1, offsetX: 0, offsetY: 0, dragging: false, pointerId: null, lastX: 0, lastY: 0, objectUrl: null };
+  const QR_CROP_STAGE = 240;
+
+  function openQrCrop(file) {
+    if (qrCropState.objectUrl) URL.revokeObjectURL(qrCropState.objectUrl);
+    qrCropState.objectUrl = URL.createObjectURL(file);
+    const img = $('qrCropImg');
+    img.onload = () => {
+      qrCropState.natW = img.naturalWidth;
+      qrCropState.natH = img.naturalHeight;
+      qrCropState.baseScale = QR_CROP_STAGE / Math.min(qrCropState.natW, qrCropState.natH);
+      qrCropState.scale = qrCropState.baseScale;
+      qrCropState.offsetX = (QR_CROP_STAGE - qrCropState.natW * qrCropState.scale) / 2;
+      qrCropState.offsetY = (QR_CROP_STAGE - qrCropState.natH * qrCropState.scale) / 2;
+      $('qrCropZoomInput').value = 100;
+      renderQrCropTransform();
+      $('qrCropOverlay').classList.add('show');
+    };
+    img.src = qrCropState.objectUrl;
+  }
+  function clampQrCropOffsets() {
+    const w = qrCropState.natW * qrCropState.scale, h = qrCropState.natH * qrCropState.scale;
+    qrCropState.offsetX = Math.min(0, Math.max(QR_CROP_STAGE - w, qrCropState.offsetX));
+    qrCropState.offsetY = Math.min(0, Math.max(QR_CROP_STAGE - h, qrCropState.offsetY));
+  }
+  function renderQrCropTransform() {
+    clampQrCropOffsets();
+    const img = $('qrCropImg');
+    img.style.width = (qrCropState.natW * qrCropState.scale) + 'px';
+    img.style.height = (qrCropState.natH * qrCropState.scale) + 'px';
+    img.style.transform = `translate(${qrCropState.offsetX}px,${qrCropState.offsetY}px)`;
+  }
+  const qrCropStageEl = $('qrCropStage');
+  qrCropStageEl.addEventListener('pointerdown', (e) => {
+    qrCropState.dragging = true;
+    qrCropState.pointerId = e.pointerId;
+    qrCropState.lastX = e.clientX;
+    qrCropState.lastY = e.clientY;
+    qrCropStageEl.setPointerCapture(e.pointerId);
+  });
+  qrCropStageEl.addEventListener('pointermove', (e) => {
+    if (!qrCropState.dragging || e.pointerId !== qrCropState.pointerId) return;
+    qrCropState.offsetX += e.clientX - qrCropState.lastX;
+    qrCropState.offsetY += e.clientY - qrCropState.lastY;
+    qrCropState.lastX = e.clientX;
+    qrCropState.lastY = e.clientY;
+    renderQrCropTransform();
+  });
+  ['pointerup', 'pointercancel'].forEach((ev) => qrCropStageEl.addEventListener(ev, () => { qrCropState.dragging = false; }));
+  $('qrCropZoomInput').addEventListener('input', (e) => {
+    const oldScale = qrCropState.scale;
+    const newScale = qrCropState.baseScale * (Number(e.target.value) / 100);
+    const cx = (QR_CROP_STAGE / 2 - qrCropState.offsetX) / oldScale;
+    const cy = (QR_CROP_STAGE / 2 - qrCropState.offsetY) / oldScale;
+    qrCropState.scale = newScale;
+    qrCropState.offsetX = QR_CROP_STAGE / 2 - cx * newScale;
+    qrCropState.offsetY = QR_CROP_STAGE / 2 - cy * newScale;
+    renderQrCropTransform();
+  });
+  function closeQrCrop() {
+    $('qrCropOverlay').classList.remove('show');
+    if (qrCropState.objectUrl) { URL.revokeObjectURL(qrCropState.objectUrl); qrCropState.objectUrl = null; }
+  }
+  $('qrCropCancelBtn').addEventListener('click', closeQrCrop);
+  $('qrCropConfirmBtn').addEventListener('click', () => {
+    const OUT = 500;
+    const canvas = document.createElement('canvas');
+    canvas.width = OUT; canvas.height = OUT;
+    const ctx = canvas.getContext('2d');
+    const sx = -qrCropState.offsetX / qrCropState.scale;
+    const sy = -qrCropState.offsetY / qrCropState.scale;
+    const sSize = QR_CROP_STAGE / qrCropState.scale;
+    ctx.drawImage($('qrCropImg'), sx, sy, sSize, sSize, 0, 0, OUT, OUT);
+    canvas.toBlob((blob) => {
+      pendingQrBlob = blob;
+      removeQrRequested = false;
+      if (pendingQrPreviewUrl) URL.revokeObjectURL(pendingQrPreviewUrl);
+      pendingQrPreviewUrl = URL.createObjectURL(blob);
+      setQrPreview(pendingQrPreviewUrl);
+      closeQrCrop();
+    }, 'image/png');
   });
 
   $('removeQrBtn').addEventListener('click', () => {

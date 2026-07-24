@@ -161,6 +161,15 @@
     const { data: isStudent, error: stuErr } = await supa.rpc('is_student_email', { check_email: email });
     if (stuErr) console.error('is_student_email falhou:', stuErr.message);
     if (isStudent) {
+      // Status 'inativo' é controle de acesso de verdade, escolhido pelo
+      // próprio profissional (aba Alunos) — bloqueia aqui, antes mesmo de
+      // chegar em aluno.html (que também confere de novo no boot, caso a
+      // sessão já esteja aberta quando o profissional desativar).
+      const { data: student } = await supa.from('students').select('status').eq('email', email).maybeSingle();
+      if (student?.status === 'inativo') {
+        showMsg('Seu acesso foi interrompido. Fale com seu personal trainer.', 'error');
+        return;
+      }
       window.location.href = 'aluno.html';
       return;
     }

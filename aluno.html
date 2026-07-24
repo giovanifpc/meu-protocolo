@@ -978,6 +978,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   applyTheme('azul', getEffectiveThemeMode());
 
   let student = null;
+  let accessBlocked = false; // true quando status='inativo' — trava troca de tela mesmo pelo menu lateral, não só a Início
   let protocol = null;
   let history = [];
   let exerciseVideos = {};
@@ -1012,6 +1013,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   }
   function hideNav() { $('bottomNav').style.display = 'none'; }
   function goTab(tab) {
+    if (accessBlocked) return;
     skipRest();
     $('bottomNav').style.display = 'flex';
     $('navHome').classList.toggle('active', tab === 'home');
@@ -1027,6 +1029,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   function goHome() { goTab('home'); }
 
   function openSettings() {
+    if (accessBlocked) return;
     hideNav();
     showScreen('settings');
     updateThemeModeControl();
@@ -1047,6 +1050,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   }
 
   async function openFinanceiro() {
+    if (accessBlocked) return;
     hideNav();
     showScreen('financeiro');
     const enabled = !!student.professionals?.payment_info_enabled;
@@ -1171,6 +1175,19 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     if (!st) { renderHomeError('Não encontramos seu cadastro. Fale com seu personal trainer.'); return; }
     student = st;
 
+    // Defesa em profundidade: login.html já bloqueia um login novo com
+    // status 'inativo', mas uma sessão já aberta continua com JWT válido
+    // até expirar — esta checagem cobre o caso do profissional desativar o
+    // aluno enquanto ele já está com o app aberto/instalado.
+    if (student.status === 'inativo') {
+      accessBlocked = true;
+      hideNav();
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      $('home').classList.add('active');
+      $('homeContent').innerHTML = `<div class="empty-state"><div class="es-ico">${ICONS.warning}</div><div class="es-txt">Acesso interrompido.<br>Fale com seu personal trainer.</div></div><button class="btn btn-ghost" style="margin-top:18px;" onclick="doLogout()">Sair</button>`;
+      return;
+    }
+
     currentColorPreset = COLOR_PRESETS[student.professionals?.color_preset] ? student.professionals.color_preset : 'azul';
     applyTheme(currentColorPreset, getEffectiveThemeMode());
 
@@ -1283,6 +1300,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   }
 
   async function openNotifications() {
+    if (accessBlocked) return;
     showScreen('notifications');
     renderNotifications();
     const unreadIds = notifications.filter(n => !n.read_at).map(n => n.id);
@@ -1317,6 +1335,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   }
 
   async function openChat() {
+    if (accessBlocked) return;
     hideNav();
     showScreen('chat');
     await loadAndRenderChat();

@@ -224,10 +224,7 @@
     }
 
     const studentIds = students.map(s => s.id);
-    const [{ data: history }, { data: notes }] = await Promise.all([
-      supa.from('training_history').select('student_id, completed_at').in('student_id', studentIds).order('completed_at', { ascending: false }),
-      supa.from('student_notes').select('student_id, status').eq('professional_id', professional.id),
-    ]);
+    const { data: history } = await supa.from('training_history').select('student_id, completed_at').in('student_id', studentIds).order('completed_at', { ascending: false });
 
     const sevenDaysAgo = Date.now() - 7 * 86400000;
     const weekCount = (history || []).filter(h => new Date(h.completed_at).getTime() >= sevenDaysAgo).length;
@@ -237,10 +234,9 @@
     (history || []).forEach(h => {
       if (!lastByStudent[h.student_id]) lastByStudent[h.student_id] = h.completed_at;
     });
-    const statusByStudent = {};
-    (notes || []).forEach(n => { statusByStudent[n.student_id] = n.status; });
 
-    const activeStudents = students.filter(s => (statusByStudent[s.id] || 'ativo') === 'ativo');
+    // status agora vem direto de students (supabase_42_student_status_gating.sql)
+    const activeStudents = students.filter(s => s.status === 'ativo');
 
     const adherenceAlerts = activeStudents.map(s => {
       const last = lastByStudent[s.id];

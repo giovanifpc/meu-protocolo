@@ -50,6 +50,7 @@
   .notes-panel textarea { min-height:70px; resize:vertical; }
   .notes-sub-label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin:10px 0 6px; }
   .notes-sub-label:first-child { margin-top:0; }
+  .status-hint { font-size:11.5px; color:var(--muted); line-height:1.4; margin-bottom:8px; }
   .avatar-preview { width:56px; height:56px; border-radius:50%; background:var(--primary); color:#fff; font-size:20px; font-weight:800; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:12px; }
   .avatar-preview img { width:100%; height:100%; object-fit:cover; display:block; }
   .billing-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
@@ -223,12 +224,12 @@
     (notes || []).forEach(n => { notesByStudent[n.student_id] = n; });
 
     list.innerHTML = data.map(s => {
-      const note = notesByStudent[s.id] || { status: 'ativo', nota: '' };
+      const note = notesByStudent[s.id] || { nota: '' };
       return `
       <div class="student-item">
         <div class="student-row">
           <div class="student-name-row">
-            <span class="status-dot ${note.status}" title="${STATUS_LABELS[note.status]}"></span>
+            <span class="status-dot ${s.status}" title="${STATUS_LABELS[s.status]}"></span>
             <div>
               <div class="student-name">${escapeHtml(s.nome)}</div>
               <div class="student-email">${escapeHtml(s.email)}</div>
@@ -251,8 +252,9 @@
         <div class="notes-panel" id="notesPanel-${s.id}">
           <div class="avatar-preview" id="avatarPreview-${s.id}">${escapeHtml((s.nome || '?').trim().charAt(0).toUpperCase())}</div>
           <div class="notes-sub-label">Status e nota privada</div>
-          <select data-role="note-status" data-student-id="${s.id}">
-            ${Object.entries(STATUS_LABELS).map(([v, l]) => `<option value="${v}" ${note.status === v ? 'selected' : ''}>${l}</option>`).join('')}
+          <div class="status-hint">Inativo bloqueia o acesso do aluno de verdade — ele vê um aviso pra falar com você e não consegue mais usar o app. Pausado é só organização sua, não bloqueia nada.</div>
+          <select data-role="note-status" data-student-id="${s.id}" data-prev-status="${s.status}">
+            ${Object.entries(STATUS_LABELS).map(([v, l]) => `<option value="${v}" ${s.status === v ? 'selected' : ''}>${l}</option>`).join('')}
           </select>
           <textarea data-role="note-text" data-student-id="${s.id}" placeholder="Nota privada sobre esse aluno (só você vê)...">${escapeHtml(note.nota || '')}</textarea>
           <button class="btn small" style="padding:7px 12px;font-size:12px;" data-role="save-note" data-student-id="${s.id}">Salvar nota</button>
@@ -270,7 +272,7 @@
           <button class="btn small secondary" style="padding:7px 12px;font-size:12px;margin-right:6px;" data-role="save-billing" data-student-id="${s.id}">Salvar WhatsApp/mensalidade</button>
           <button class="btn small secondary" style="padding:7px 12px;font-size:12px;" data-role="mark-paid" data-student-id="${s.id}">Marcar pago hoje</button>
 
-          <div class="danger-zone" id="dangerZone-${s.id}" style="display:${note.status === 'inativo' ? 'block' : 'none'};">
+          <div class="danger-zone" id="dangerZone-${s.id}" style="display:${s.status === 'inativo' ? 'block' : 'none'};">
             <div id="deleteStep1-${s.id}">
               <button class="btn danger" style="padding:7px 12px;font-size:12px;" data-role="open-delete" data-student-id="${s.id}">Excluir aluno</button>
             </div>
@@ -321,10 +323,7 @@
       btn.addEventListener('click', () => sendInvite(btn.dataset.studentId, btn.dataset.name));
     });
     list.querySelectorAll('[data-role="note-status"]').forEach(sel => {
-      sel.addEventListener('change', () => {
-        const studentId = sel.dataset.studentId;
-        $('dangerZone-' + studentId).style.display = sel.value === 'inativo' ? 'block' : 'none';
-      });
+      sel.addEventListener('change', () => updateStudentStatus(sel));
     });
     list.querySelectorAll('[data-role="open-delete"]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -432,11 +431,10 @@
   function todayISO() { return new Date().toISOString().slice(0, 10); }
 
   async function saveNote(studentId) {
-    const status = document.querySelector(`[data-role="note-status"][data-student-id="${studentId}"]`).value;
     const nota = document.querySelector(`[data-role="note-text"][data-student-id="${studentId}"]`).value.trim();
     const existing = notesByStudent[studentId];
 
-    const payload = { professional_id: professional.id, student_id: studentId, status, nota };
+    const payload = { professional_id: professional.id, student_id: studentId, nota };
     const result = existing
       ? await supa.from('student_notes').update(payload).eq('id', existing.id)
       : await supa.from('student_notes').insert(payload);
@@ -444,6 +442,27 @@
     if (result.error) { toast('Erro ao salvar: ' + result.error.message); return; }
     toast('Nota salva.');
     await loadStudents();
+  }
+
+  // Status agora é controle de acesso de verdade (não só organização) —
+  // salva na hora, sem esperar o botão "Salvar nota", pra nunca dar a
+  // impressão de que "Inativo" já bloqueou o aluno quando na real ainda
+  // não foi salvo.
+  async function updateStudentStatus(sel) {
+    const studentId = sel.dataset.studentId;
+    const newStatus = sel.value;
+    const previousStatus = sel.dataset.prevStatus || 'ativo';
+    sel.disabled = true;
+    const { error } = await supa.from('students').update({ status: newStatus }).eq('id', studentId);
+    sel.disabled = false;
+    if (error) {
+      sel.value = previousStatus;
+      toast('Erro ao salvar status: ' + error.message);
+      return;
+    }
+    sel.dataset.prevStatus = newStatus;
+    $('dangerZone-' + studentId).style.display = newStatus === 'inativo' ? 'block' : 'none';
+    toast(newStatus === 'inativo' ? 'Acesso do aluno bloqueado — ele vê um aviso pra falar com você.' : 'Status atualizado.');
   }
 
   $('addStudentBtn').addEventListener('click', async () => {

@@ -17,6 +17,7 @@
 <script src="support-widget.js" defer></script>
 <script src="assistant-hints.js" defer></script>
 <script src="whats-new.js" defer></script>
+<script src="help-banner.js" defer></script>
 <script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch((e) => console.error('Falha ao registrar service worker:', e)); let __swReloaded = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (__swReloaded) return; __swReloaded = true; window.location.reload(); }); }</script>
 <style>
   :root {
@@ -97,7 +98,7 @@
     </div>
 
     <div class="card" id="aiCard" style="display:none;">
-      <h2>Interpretação com IA</h2>
+      <h2>Interpretação com IA<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('O que a interpretação cobre', 'Cobre adesão/consistência do aluno, sinais de alerta de bem-estar (água/sono), evolução física/carga, e uma sugestão prática de próximo passo.<br><br>É baseada nos dados reais já registrados (treino, check-ins, avaliações) — a aritmética é sempre calculada primeiro, a IA só interpreta e escreve o texto.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></h2>
       <div id="aiLock" class="msg" style="display:none;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;">Interpretação automática dos dados do aluno é exclusiva do plano Elite. <a href="perfil.html#planCard" style="color:var(--primary);font-weight:700;">Fazer upgrade</a></div>
       <div id="aiIdle">
         <p style="font-size:13px;color:var(--muted);margin:0 0 12px;">Gera uma leitura em linguagem natural cruzando adesão, evolução física/carga e sinais de água/sono do aluno.</p>

@@ -17,6 +17,7 @@
 <script src="support-widget.js" defer></script>
 <script src="assistant-hints.js" defer></script>
 <script src="whats-new.js" defer></script>
+<script src="help-banner.js" defer></script>
 <script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch((e) => console.error('Falha ao registrar service worker:', e)); let __swReloaded = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (__swReloaded) return; __swReloaded = true; window.location.reload(); }); }</script>
 <style>
   :root {
@@ -107,7 +108,7 @@
 
   <main>
     <div class="card">
-      <h2>Adicionar aluno</h2>
+      <h2>Adicionar aluno<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Como funciona o cadastro de aluno', 'Só nome e e-mail são obrigatórios — o resto (WhatsApp, mensalidade) é opcional e pode ser preenchido depois no painel do aluno.<br><br>O WhatsApp alimenta o botão <strong>Enviar convite</strong> e os alertas de mensalidade atrasada na Início.<br><br>Cadastrar aqui não avisa o aluno sozinho — depois de cadastrar, use <strong>Enviar convite</strong> pra mandar o link de primeiro acesso.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></h2>
       <div class="field">
         <label>Nome</label>
         <input type="text" id="newStudentName" placeholder="Nome do aluno">
@@ -251,7 +252,7 @@
         </div>
         <div class="notes-panel" id="notesPanel-${s.id}">
           <div class="avatar-preview" id="avatarPreview-${s.id}">${escapeHtml((s.nome || '?').trim().charAt(0).toUpperCase())}</div>
-          <div class="notes-sub-label">Status e nota privada</div>
+          <div class="notes-sub-label">Status e nota privada<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('O que cada status faz', '<strong>Ativo</strong> é o normal, sem restrição.<br><br><strong>Pausado</strong> é só uma marcação sua — não muda nada pro aluno, ele continua acessando o app normalmente; útil pra organizar quem está temporariamente fora sem perder o controle.<br><br><strong>Inativo</strong> bloqueia o acesso de verdade — o aluno vê um aviso pra falar com você e não consegue mais usar o app, mas os dados dele continuam guardados até você decidir excluir.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></div>
           <div class="status-hint">Inativo bloqueia o acesso do aluno de verdade — ele vê um aviso pra falar com você e não consegue mais usar o app. Pausado é só organização sua, não bloqueia nada.</div>
           <select data-role="note-status" data-student-id="${s.id}" data-prev-status="${s.status}">
             ${Object.entries(STATUS_LABELS).map(([v, l]) => `<option value="${v}" ${s.status === v ? 'selected' : ''}>${l}</option>`).join('')}

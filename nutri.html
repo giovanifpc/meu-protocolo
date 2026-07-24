@@ -17,6 +17,7 @@
 <script src="support-widget.js" defer></script>
 <script src="assistant-hints.js" defer></script>
 <script src="whats-new.js" defer></script>
+<script src="help-banner.js" defer></script>
 <script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch((e) => console.error('Falha ao registrar service worker:', e)); let __swReloaded = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (__swReloaded) return; __swReloaded = true; window.location.reload(); }); }</script>
 <style>
   :root {
@@ -100,7 +101,7 @@
 
     <div id="editorArea" style="display:none;">
       <div class="card">
-        <h2>Orientação atual</h2>
+        <h2>Orientação atual<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('O que colocar aqui', 'Sem parceria com nutricionista: use só o campo de texto pra uma orientação básica (hidratação, evitar ultraprocessado, priorizar proteína magra) — já tem valor sem ser um plano formal.<br><br>Com parceria: suba o PDF que o nutricionista parceiro preparou, e use o texto pra resumir os pontos principais.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></h2>
         <div class="field">
           <textarea id="orientacaoInput" placeholder="Ex: Beber 2L de água por dia, priorizar proteína nas refeições principais, evitar açúcar refinado à noite..."></textarea>
         </div>

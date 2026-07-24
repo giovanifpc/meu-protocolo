@@ -17,6 +17,7 @@
 <script src="support-widget.js" defer></script>
 <script src="assistant-hints.js" defer></script>
 <script src="whats-new.js" defer></script>
+<script src="help-banner.js" defer></script>
 <script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch((e) => console.error('Falha ao registrar service worker:', e)); let __swReloaded = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (__swReloaded) return; __swReloaded = true; window.location.reload(); }); }</script>
 <style>
   :root {
@@ -170,7 +171,7 @@
 
         <div class="section-sub">Dobras cutâneas (adipômetro)</div>
         <div class="field">
-          <label>Protocolo usado</label>
+          <label>Protocolo usado<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Qual protocolo escolher', '<ul><li><strong>Pollock 3</strong>: 3 dobras, mais rápido, boa margem de erro pra maioria dos casos.</li><li><strong>Pollock 7</strong>: 7 dobras, mais preciso, leva mais tempo.</li><li><strong>Faulkner 4</strong>: 4 pontos fixos, não muda por sexo.</li><li><strong>Guedes 3</strong>: 3 dobras, fórmula brasileira, alternativa ao Pollock 3.</li></ul><p>Os pontos de medida mudam conforme o protocolo e o sexo do aluno — a tela já indica quais dobras pedir depois de escolher.</p>')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></label>
           <select id="protocoloInput">
             <option value="">Nenhum (não medir dobras nesta avaliação)</option>
             <option value="pollock3">Pollock 3 dobras</option>
@@ -182,7 +183,7 @@
         <div class="row three" id="skinfoldGrid"></div>
         <div class="result-box" id="skinfoldResult" style="display:none;"></div>
 
-        <div class="section-sub">Bioimpedância (digitar os valores do visor da balança)</div>
+        <div class="section-sub">Bioimpedância (digitar os valores do visor da balança)<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Onde medir cada ponto', '<p><strong>Perimetria</strong> (fita métrica, sem esticar) — meça sempre do mesmo lado do corpo: braço relaxado e contraído, antebraço na maior circunferência, tórax na altura dos mamilos, cintura na menor circunferência (geralmente na altura do umbigo), abdômen na altura do umbigo, quadril na maior circunferência dos glúteos, coxa proximal (rente ao glúteo) e medial, panturrilha na maior circunferência.</p><p><strong>Bioimpedância</strong> — digite os valores exatamente como aparecem no visor da balança (peso, percentual de gordura, massa magra, água corporal, taxa metabólica basal, conforme o modelo); o aparelho já calcula, o app só registra pra comparar com avaliações anteriores. Peça pro aluno medir em jejum, sem exercício nas últimas 4h e hidratado normalmente, pra manter os números comparáveis entre avaliações.</p>')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></div>
         <div class="row two" id="bioGrid"></div>
 
         <div class="section-sub">Perimetria (cm)</div>

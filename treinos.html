@@ -17,6 +17,7 @@
 <script src="support-widget.js" defer></script>
 <script src="assistant-hints.js" defer></script>
 <script src="whats-new.js" defer></script>
+<script src="help-banner.js" defer></script>
 <script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch((e) => console.error('Falha ao registrar service worker:', e)); let __swReloaded = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (__swReloaded) return; __swReloaded = true; window.location.reload(); }); }</script>
 <style>
   :root {
@@ -86,7 +87,7 @@
   .ex-name-col { font-weight:600; flex:1 1 100%; margin-bottom:4px; }
   .video-link-btn { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; margin-left:6px; padding:0; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--faint); cursor:pointer; vertical-align:-6px; }
   .video-link-btn.linked { background:#E7F7F1; border-color:var(--accent); color:var(--accent-dim); }
-  .tecnica-chip { display:inline-block; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.3px; color:var(--primary); background:rgba(45,107,228,.1); padding:2px 8px; border-radius:6px; margin-bottom:4px; }
+  .tecnica-chip { display:inline-block; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.3px; color:var(--primary); background:rgba(45,107,228,.1); padding:2px 8px; border-radius:6px; margin-bottom:4px; border:none; cursor:pointer; font-family:var(--font); }
   .ex-note { font-size:11.5px; color:var(--muted); flex:1 1 100%; margin:-2px 0 4px; }
   .ex-fields { display:flex; align-items:center; gap:4px; }
   .ex-field-input { width:44px; padding:5px 4px; text-align:center; border:1px solid var(--line); border-radius:6px; font-size:12px; font-family:var(--font); }
@@ -213,7 +214,7 @@
     <div id="aiWizardArea" style="display:none;">
       <div class="card">
         <span class="wizard-back" id="wizardBackBtn">‹ Voltar</span>
-        <h2 style="margin-top:4px;">Criar treino com IA</h2>
+        <h2 style="margin-top:4px;">Criar treino com IA<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Como a IA monta o treino', 'Ela já lê a anamnese do aluno (lesões, restrições, histórico) automaticamente, sem você precisar redigitar nada.<br><br>O resultado sempre cai na tela de edição normal pra revisar/ajustar antes de publicar — nada é publicado sozinho.<br><br>A progressão semana a semana continua sendo calculada de forma determinística, não é a IA inventando número — só a escolha de exercícios/técnica é dela.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></h2>
 
         <div id="wizardAnamneseArea"></div>
 
@@ -237,7 +238,7 @@
 
         <div class="periodization-row">
           <div class="field" style="margin-bottom:0;">
-            <label>Periodização</label>
+            <label>Periodização<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="openPeriodizacaoHelp(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></label>
             <select id="wizardPeriodizacaoSelect">
               <option value="manual">Nenhuma (manual)</option>
               <option value="linear" selected>Linear</option>
@@ -300,7 +301,7 @@
           </div>
           <div class="periodization-row">
             <div class="field" style="margin-bottom:0;">
-              <label>Periodização</label>
+              <label>Periodização<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="openPeriodizacaoHelp(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></label>
               <select id="periodizacaoSelect">
                 <option value="manual">Nenhuma (manual)</option>
                 <option value="linear">Linear</option>
@@ -1244,8 +1245,38 @@
     toast('Periodização aplicada — confira e ajuste as semanas se quiser.');
   });
 
+  const TECNICA_HELP_BODY = '<ul>' +
+    '<li><strong>Drop-Set</strong>: reduz a carga e continua sem descanso ao falhar.</li>' +
+    '<li><strong>Rest-Pause</strong>: pausa curta de 10-15s no meio da série pra continuar com a mesma carga.</li>' +
+    '<li><strong>Cluster</strong>: divide a série em mini-blocos com descanso curtinho entre eles.</li>' +
+    '<li><strong>Myo-Reps</strong>: uma série de ativação seguida de várias mini-séries curtas.</li>' +
+    '<li><strong>Pirâmide Crescente/Decrescente</strong>: carga sobe ou desce a cada série.</li>' +
+    '<li><strong>Super Slow</strong>: execução bem mais lenta que o normal.</li>' +
+    '<li><strong>Bi-Set/Tri-Set</strong>: 2 ou 3 exercícios seguidos sem descanso entre eles.</li>' +
+    '<li><strong>Negativo</strong>: foco na fase excêntrica/descida do movimento, geralmente com ajuda de um parceiro.</li>' +
+  '</ul>';
+  function openTecnicaHelp(e) {
+    e.stopPropagation();
+    window.showHelpBanner('Técnicas de intensificação', TECNICA_HELP_BODY);
+  }
+  window.openTecnicaHelp = openTecnicaHelp;
+
+  const PERIODIZACAO_HELP_BODY = '<ul>' +
+    '<li><strong>Linear</strong>: carga sobe e volume desce de forma previsível, semana a semana.</li>' +
+    '<li><strong>Ondulatória diária</strong>: varia por treino do loop — A pesado, B moderado, C leve —, não por semana.</li>' +
+    '<li><strong>Ondulatória semanal</strong>: varia semana a semana num padrão ondulado, não sempre crescente.</li>' +
+    '<li><strong>Em blocos</strong>: fases distintas, ex: volume depois intensidade.</li>' +
+    '<li><strong>Reversa</strong>: começa leve/alto volume e termina pesado/baixo volume, o inverso do linear.</li>' +
+    '<li><strong>Manual</strong>: você decide sozinho, sem progressão automática.</li>' +
+  '</ul>';
+  function openPeriodizacaoHelp(e) {
+    e.stopPropagation();
+    window.showHelpBanner('As 6 técnicas de periodização', PERIODIZACAO_HELP_BODY);
+  }
+  window.openPeriodizacaoHelp = openPeriodizacaoHelp;
+
   function renderTecnicaAndNote(ex) {
-    const chip = ex.tecnica ? `<span class="tecnica-chip">${escapeHtml(ex.tecnica)}</span><br>` : '';
+    const chip = ex.tecnica ? `<button type="button" class="tecnica-chip" onclick="openTecnicaHelp(event)">${escapeHtml(ex.tecnica)}</button><br>` : '';
     const note = ex.note ? `<div class="ex-note">${escapeHtml(ex.note)}</div>` : '';
     return chip + note;
   }

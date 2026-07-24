@@ -286,7 +286,11 @@ create or replace function master_generate_recovery_codes()
 returns text[]
 language plpgsql
 security definer
-set search_path = public
+-- "extensions" no search_path é necessário porque o Supabase instala o
+-- pgcrypto (gen_random_bytes/digest) nesse schema, não em "public" — sem
+-- isso, "function gen_random_bytes(integer) does not exist" (bug real
+-- encontrado em produção, 2026-07-24, mesma sessão do bug do DELETE acima).
+set search_path = public, extensions
 as $$
 declare
   v_codes text[] := '{}';
@@ -328,7 +332,7 @@ create or replace function master_verify_recovery_code(p_code text)
 returns boolean
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_hash text;

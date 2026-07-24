@@ -1,19 +1,33 @@
-// Widget flutuante de suporte via IA (Fase C, item 9) — incluído via
-// <script src="support-widget.js" defer> nas 7 telas do painel do
-// profissional (index/alunos/treinos/avaliacoes/nutri/perfil/relatorios).
-// Autocontido de propósito: cria o próprio client Supabase (mesmo padrão
-// de duplicar SUPABASE_URL/ANON_KEY que cada página já usa) em vez de
-// depender do `supa` global de cada página — assim não importa a ordem
-// de carregamento nem a estrutura de cada arquivo.
+// Widget de suporte via IA (Fase C, item 9) — incluído via
+// <script src="support-widget.js" defer> nas 8 telas do painel do
+// profissional e em aluno.html (desde 2026-07-24, ver support-chat/index.ts
+// pro branch de aluno na Edge Function). Autocontido de propósito: cria o
+// próprio client Supabase (mesmo padrão de duplicar SUPABASE_URL/ANON_KEY
+// que cada página já usa) em vez de depender do `supa` global de cada
+// página — assim não importa a ordem de carregamento nem a estrutura de
+// cada arquivo.
 //
 // Reusa os tokens de design (--primary, --card-grad, --radius-lg etc.) já
 // definidos no :root de cada página — não redefine paleta, só injeta a UI.
-
+//
+// Ícone flutuante (FAB) — opcional dos dois lados, por motivos diferentes
+// (2026-07-24):
+//   - Página define `window.SUPPORT_WIDGET_NO_FAB = true` ANTES deste script
+//     (aluno.html faz isso) → nunca cria o botão flutuante. O painel/chat
+//     continua existindo, acessível só via `window.openSupportChat()` — é
+//     o que o item "Tirar dúvidas" do menu lateral do aluno chama.
+//   - Sem essa flag (painel do profissional), o botão é criado mas fica
+//     escondido até confirmar `professionals.support_fab_enabled` (default
+//     true) — desligável em Configurações. Mesmo assim, o menu lateral do
+//     profissional também ganhou "Tirar dúvidas" chamando a mesma função,
+//     então desligar o ícone nunca tira o acesso ao chat, só some com o
+//     botão flutuante.
 (function () {
   const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';
   const STORAGE_KEY = 'mp_support_chat_v1';
   const CONV_ID_KEY = 'mp_support_conversation_id';
+  const NO_FAB = window.SUPPORT_WIDGET_NO_FAB === true;
 
   function escapeHtml(s) {
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -55,19 +69,23 @@
   `;
   document.head.appendChild(style);
 
-  const fab = document.createElement('button');
-  fab.id = 'supportFab';
-  fab.type = 'button';
-  fab.setAttribute('aria-label', 'Suporte');
-  // Imagem de verdade (não SVG recriado) — o usuário mandou o ícone exato
-  // (robô com headset de atendente) e pediu pra usar o arquivo original,
-  // não uma recriação aproximada. Arquivo já vem com fundo azul sólido
-  // (mesmo tom do --primary), por isso preenche o botão inteiro
-  // (object-fit:cover + border-radius:50%) em vez de sobrar espaço em
-  // branco como no ícone SVG anterior.
-  fab.innerHTML = '<img src="icons/support-bot.png" alt="Suporte">';
-  if (document.querySelector('.bottom-nav')) fab.classList.add('has-nav');
-  document.body.appendChild(fab);
+  let fab = null;
+  if (!NO_FAB) {
+    fab = document.createElement('button');
+    fab.id = 'supportFab';
+    fab.type = 'button';
+    fab.setAttribute('aria-label', 'Suporte');
+    // Imagem de verdade (não SVG recriado) — o usuário mandou o ícone exato
+    // (robô com headset de atendente) e pediu pra usar o arquivo original,
+    // não uma recriação aproximada. Arquivo já vem com fundo azul sólido
+    // (mesmo tom do --primary), por isso preenche o botão inteiro
+    // (object-fit:cover + border-radius:50%) em vez de sobrar espaço em
+    // branco como no ícone SVG anterior.
+    fab.innerHTML = '<img src="icons/support-bot.png" alt="Suporte">';
+    if (document.querySelector('.bottom-nav')) fab.classList.add('has-nav');
+    fab.style.display = 'none'; // só aparece depois de confirmar support_fab_enabled abaixo
+    document.body.appendChild(fab);
+  }
 
   const overlay = document.createElement('div');
   overlay.id = 'supportOverlay';
@@ -136,7 +154,27 @@
   }
   function closePanel() { overlay.classList.remove('show'); }
 
-  fab.addEventListener('click', openPanel);
+  // Exposto sempre (com ou sem FAB) — é o que o item "Tirar dúvidas" do
+  // menu lateral (aluno e profissional) chama pra abrir o mesmo chat.
+  window.openSupportChat = openPanel;
+
+  if (fab) {
+    fab.addEventListener('click', openPanel);
+    // Só mostra o ícone depois de confirmar a preferência salva
+    // (professionals.support_fab_enabled, default true) — não bloqueia o
+    // resto do widget nem trava a página se a query falhar.
+    (async () => {
+      try {
+        const { data: { session } } = await supa.auth.getSession();
+        if (!session) { fab.style.display = ''; return; }
+        const { data } = await supa.from('professionals').select('support_fab_enabled').eq('email', session.user.email).maybeSingle();
+        const enabled = !data || data.support_fab_enabled !== false;
+        fab.style.display = enabled ? '' : 'none';
+      } catch {
+        fab.style.display = '';
+      }
+    })();
+  }
   overlay.querySelector('#supportCloseBtn').addEventListener('click', closePanel);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) closePanel(); });
 

@@ -90,6 +90,33 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### 📐 Escopo desenhado, aguardando implementação: landing do aluno + Financeiro no app do aluno (2026-07-23)
+
+Pedido do usuário: desenhar o escopo de 2 features novas antes de construir, pra deixar pronto pra próxima sessão de dev (não confundir com o checklist de deploy logo abaixo — isso aqui é código que ainda não existe). As 3 decisões em aberto foram fechadas com o usuário antes de escrever o escopo final (perguntas feitas via `AskUserQuestion`, todas as 3 respostas foram a opção recomendada).
+
+**1. `landing-aluno.html` (nova página, mesmo padrão de `landing.html`)**
+- Estática, sem Supabase/JS de app — mesma técnica da landing do profissional (CSP restrita, sem `unsafe-inline`, só o loader do Sentry via `<script src>`).
+- **Genérica, sem personalização por profissional** (decisão fechada) — não tenta mostrar nome/logo de quem convidou, evita precisar de uma RPC nova de leitura pública antes do login. Se um dia fizer sentido personalizar (ex: `?pro=codigo` puxando nome/logo), é trabalho novo, não construir agora.
+- Conteúdo: boas-vindas explicando que o personal trainer convidou o aluno pro Meu Protocolo, lista curta (mesmo estilo `.list-card`/`.list-row` da landing do profissional, sem parágrafo longo por item) do que o aluno vai poder fazer — ver o treino prescrito, acompanhar evolução/avaliação física, orientação nutricional, falar com o personal, suporte por IA 24/7 — e botão "Entrar" pra `login.html` (mesmo fluxo OTP de sempre, `shouldCreateUser:true` já cobre primeiro acesso).
+- **Não renomear `landing.html`** (já é a landing do profissional, já pode estar sendo compartilhada) — o novo arquivo é `landing-aluno.html`, nome próprio.
+- Uso previsto: o profissional passa a mandar esse link (em vez do link cru de `login.html`) pro aluno novo, mesma lógica que motivou a landing do profissional.
+
+**2. "Financeiro" no menu lateral do aluno — status de mensalidade + Pix**
+
+Menos trabalho de schema do que parece — quase tudo já existe:
+- `students.mensalidade_valor`/`mensalidade_dia_vencimento`/`ultimo_pagamento_em` **já existem** (pacote de comodidades, `supabase_12_engagement.sql`) e o aluno **já pode ler a própria linha** (policy `"student reads own row"` em `students` não restringe coluna) — zero RLS nova precisa pra isso.
+- A fórmula de "em dia/em atraso" **já está escrita** em `index.html` (`computeDueInfo(s)`) — portar a mesma função pro `aluno.html` garante que profissional e aluno nunca vejam status divergente pro mesmo aluno.
+- **Individualização do valor resolvida sem gateway de pagamento** (decisão fechada, confirmando a ideia que o próprio usuário propôs): o profissional cadastra **um** QR Pix **estático, sem valor fixo** (gerado no próprio banco dele) + a chave Pix em texto (copia-e-cola) — os dois servem pra qualquer aluno, porque o valor não fica embutido. O app mostra o valor da mensalidade daquele aluno específico como texto ao lado (`mensalidade_valor`, que já é por aluno), o aluno lê e digita na hora de pagar. **Rejeitado**: link de provedor de pagamento (Mercado Pago/PagSeguro) — normalmente vem com valor fixo embutido, reintroduziria o problema de individualização que o QR sem valor já resolve de graça.
+- **Schema novo** (migration a criar, ex. `supabase_38_student_payment_info.sql`):
+  - `professionals.payment_info_enabled boolean not null default false` — opt-in, mesmo padrão de `ranking_enabled` (`supabase_26_ranking.sql`); aba só aparece pro aluno se o profissional ligar.
+  - `professionals.pix_key_text text` — chave/código Pix copia-e-cola, texto livre.
+  - QR code da Pix: **reaproveitar o bucket `professional-logos` já existente** (mesma RLS: profissional CRUD, aluno só lê — `supabase_27_branding.sql`), path novo determinístico `{professional_id}/pix-qr.png`. Não precisa de bucket novo nem de policy de storage nova.
+- **`perfil.html`**: novo card (nome sugerido "Recebimento dos alunos") com toggle `payment_info_enabled`, upload do QR (reaproveitar exatamente o padrão de `openLogoCrop`/`LOGO_BUCKET` já implementado no upload de logo, só apontando pro path novo) e campo de texto pra `pix_key_text`. Vale um aviso na própria UI lembrando o profissional de gerar um QR **sem valor fixo** — não dá pra validar isso automaticamente a partir da imagem, é só orientação.
+- **`aluno.html`**: novo item "Financeiro" no drawer lateral (`#sideDrawer`, entre Nutri e Perfil — ícone estilo Feather, ex. cifrão/carteira) e nova tela cheia `#financeiro` (mesmo padrão de `#settings`/`#notifications`, com botão de voltar). Sem `professional.payment_info_enabled`, mostra estado vazio orientando a falar direto com o profissional. Com ele ligado: status em dia/atrasado (cor verde/vermelha de alerta, nunca a cor do preset — mesma regra já usada em outros indicadores de sucesso/erro do app), valor + data de vencimento, QR (signed URL) + chave Pix com botão de copiar. **View-only** (decisão fechada) — quem confirma pagamento continua sendo só o profissional em `alunos.html`, sem criar fluxo novo de "aluno avisa que pagou".
+- Sem RLS nova pro aluno ler `professionals.payment_info_enabled`/`pix_key_text` — a policy `"student reads own professional"` (`supabase_02_students.sql`) já dá select na linha inteira de `professionals`, os campos novos vêm de graça.
+
+**Ainda não iniciado** — isto é só o desenho do escopo, pra próxima sessão de dev construir de verdade (schema, UI dos dois lados, upload do QR). Nenhuma linha de código nova foi escrita pra essas duas features ainda.
+
 ### ⏳ Checklist pra próxima sessão do PC (deixado pronto em 2026-07-23)
 
 Tudo abaixo depende de rodar localmente (SQL/deploy de function não funcionam numa sessão remota, ver "Limitação de rede" mais abaixo) ou de navegador de verdade (colar conteúdo no painel do Supabase, ver imagem renderizada). Nenhum item é urgente pro dia a dia atual (Cliente 0 continua funcionando normal sem nada disso) — mas todos são baixo esforço e destravam validação real do que foi construído hoje.

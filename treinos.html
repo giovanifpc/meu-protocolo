@@ -190,6 +190,16 @@
           <button class="btn secondary small" id="deleteTemplateBtn" type="button">Excluir modelo selecionado</button>
         </div>
       </div>
+      <div id="draftsArea" style="display:none; margin-top:12px; padding-top:12px; border-top:1px dashed var(--line);">
+        <div class="field" style="margin-bottom:8px;">
+          <label>Rascunhos anteriores deste aluno<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('O que são esses rascunhos', 'Toda vez que você cria um treino novo por cima de um já existente, o anterior não é apagado — ele vira um rascunho aqui, pra caso queira retomar ou comparar depois.<br><br>Abrir um rascunho carrega ele na tela de edição normal (nada é publicado sozinho). Apagar remove ele de vez, sem confirmação de volta.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></label>
+          <select id="draftsSelect"></select>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn secondary small" id="openDraftBtn" type="button">Abrir rascunho</button>
+          <button class="btn danger small" id="deleteDraftBtn" type="button">Apagar rascunho</button>
+        </div>
+      </div>
     </div>
 
     <div id="creationButtons" style="display:none;">
@@ -636,6 +646,72 @@
   }
 
   let templates = [];
+  let drafts = [];
+
+  // Toda vez que um protocolo novo é criado por cima de um existente, o
+  // anterior é rebaixado pra status='rascunho' (demoteIfPublished) mas
+  // continua como uma linha própria em training_protocols — sem isso, ele
+  // fica órfão no banco, sem nenhum jeito de ver/reabrir/apagar. Dropdown
+  // (não lista) de propósito, mesmo padrão já usado em "Aplicar modelo da
+  // biblioteca" — não deve ocupar espaço vertical permanente na tela.
+  async function loadDrafts(studentId) {
+    const { data, error } = await supa
+      .from('training_protocols')
+      .select('id, titulo, created_at')
+      .eq('student_id', studentId)
+      .eq('status', 'rascunho')
+      .order('created_at', { ascending: false });
+    if (error) { drafts = []; return; }
+    const currentId = currentProtocol && currentProtocol.id;
+    drafts = (data || []).filter(d => d.id !== currentId);
+  }
+
+  function renderDraftsArea() {
+    const area = $('draftsArea');
+    if (!drafts.length) { area.style.display = 'none'; return; }
+    const select = $('draftsSelect');
+    select.innerHTML = drafts.map(d => {
+      const data = new Date(d.created_at).toLocaleDateString('pt-BR');
+      return `<option value="${d.id}">${escapeHtml(d.titulo || 'Protocolo de treino')} — ${data}</option>`;
+    }).join('');
+    area.style.display = 'block';
+  }
+
+  async function updateDraftsArea(studentId) {
+    await loadDrafts(studentId);
+    renderDraftsArea();
+  }
+
+  $('openDraftBtn').addEventListener('click', async () => {
+    const id = $('draftsSelect').value;
+    const draft = drafts.find(d => d.id === id);
+    if (!draft) return;
+    const { data, error } = await supa.from('training_protocols').select('*').eq('id', id).maybeSingle();
+    if (error || !data) { toast('Erro ao abrir rascunho.'); return; }
+    creationMode = null;
+    creationConfirmed = false;
+    stashedProtocol = null;
+    headerEditOpen = false;
+    currentProtocol = data;
+    currentProtocol.workouts = (data.workouts || []).map(w => ({ ...w, _uid: uid() }));
+    viewMode = 'edit';
+    renderProtocol();
+    showViewMode();
+    updateCreationButtonsActiveState();
+    await updateDraftsArea(currentProtocol.student_id);
+    toast('Rascunho aberto — edite e publique quando quiser.');
+  });
+
+  $('deleteDraftBtn').addEventListener('click', async () => {
+    const id = $('draftsSelect').value;
+    const draft = drafts.find(d => d.id === id);
+    if (!draft) return;
+    if (!confirm(`Apagar o rascunho "${draft.titulo || 'Protocolo de treino'}"? Isso não pode ser desfeito.`)) return;
+    const { error } = await supa.from('training_protocols').delete().eq('id', id);
+    if (error) { toast('Erro ao apagar: ' + error.message); return; }
+    toast('Rascunho apagado.');
+    await updateDraftsArea(currentProtocol.student_id);
+  });
 
   async function loadTemplates() {
     const { data, error } = await supa
@@ -896,6 +972,7 @@
     if (!studentId) {
       $('builderArea').style.display = 'none';
       $('duplicateArea').style.display = 'none';
+      $('draftsArea').style.display = 'none';
       $('creationButtons').style.display = 'none';
       $('aiWizardArea').style.display = 'none';
       $('creationEmptyState').style.display = 'none';
@@ -937,6 +1014,7 @@
     $('creationButtons').style.display = 'block';
     showViewMode();
     updateCreationButtonsActiveState();
+    await updateDraftsArea(studentId);
   }
 
   function hasMeaningfulContentFor(protocol) {
@@ -1511,6 +1589,12 @@
       duracao_semanas: currentProtocol.duracao_semanas || null,
       workouts: stripInternalFields(currentProtocol.workouts),
       publicado_em: status === 'publicado' ? new Date().toISOString() : currentProtocol.publicado_em || null,
+      // Reabrir um rascunho antigo (openDraftBtn) e salvar precisa fazer ele
+      // voltar a ser "o" protocolo do aluno — loadOrCreateProtocol/
+      // loadProtocolsByStudent sempre pegam o mais recente por created_at,
+      // então sem isso o rascunho reaberto nunca reapareceria sozinho da
+      // próxima vez que a tela for aberta pra esse aluno.
+      created_at: new Date().toISOString(),
     };
 
     let result;
@@ -1538,6 +1622,7 @@
       updateCreationButtonsActiveState();
     }
     renderProtocol();
+    await updateDraftsArea(currentProtocol.student_id);
     toast(status === 'publicado' ? 'Protocolo publicado para o aluno.' : 'Rascunho salvo.');
     window.__checkAssistantHint && window.__checkAssistantHint();
   }

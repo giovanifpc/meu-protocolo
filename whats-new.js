@@ -7,11 +7,12 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.3.0',
+      version: '1.4.0',
       items: [
         'Novos ícones de "?" em Alunos, Treinos, Avaliação, Nutri, Relatórios e Financeiro — explicam na hora os pontos mais técnicos (status do aluno, periodização, técnicas de intensificação, protocolos de avaliação, como a Receita é calculada) sem precisar sair da tela.',
         'Corrigido: o título do treino (ex: "Treino A — peito e tríceps") não fica mais escondido atrás do botão "Trocar exercícios" quando o nome é longo.',
-        'Corrigido: o botão de vincular vídeo do YouTube agora aparece em praticamente todos os exercícios gerados por IA ou trocados — antes só aparecia em um ou dois por grupo, porque o sistema exigia um nome idêntico ao da biblioteca pra reconhecer o exercício.'
+        'Corrigido: o botão de vincular vídeo do YouTube agora aparece em praticamente todos os exercícios gerados por IA ou trocados — antes só aparecia em um ou dois por grupo, porque o sistema exigia um nome idêntico ao da biblioteca pra reconhecer o exercício.',
+        'Novo: ao criar um treino novo por cima de um existente, o anterior agora fica acessível num dropdown "Rascunhos anteriores deste aluno" (reabrir ou apagar) — antes ele só virava rascunho invisível, sem nenhum jeito de recuperar.'
       ]
     },
     aluno: {

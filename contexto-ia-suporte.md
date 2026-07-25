@@ -100,6 +100,8 @@ Dois jeitos de montar o treino de um aluno:
 
 Um protocolo tem status **rascunho** (só o profissional vê) ou **publicado** (o aluno já enxerga e pode treinar).
 
+Ao criar um treino novo por cima de um já existente, o anterior não é apagado — vira um rascunho guardado num dropdown "Rascunhos anteriores deste aluno" (acima dos botões de criar), com opção de reabrir (volta pra edição normal) ou apagar de vez.
+
 ### 5.6 App do aluno
 
 O aluno usa um app separado, instalável na tela inicial do celular (PWA). Ele vê o próximo treino do seu ciclo, executa marcando séries feitas (com carga e reps), tem timer de descanso automático, e ao final vê um resumo com avaliação de humor. Também acompanha evolução de carga (gráfico), histórico de treinos, avaliação física (se o profissional já registrou alguma) e orientação nutricional. Ganha "conquistas" (badges) por marcos como primeiro treino, sequência de semanas treinando, etc.

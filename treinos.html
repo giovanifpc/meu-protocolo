@@ -75,7 +75,7 @@
   .btn:disabled { opacity:.5; cursor:not-allowed; }
   .workout-block { background:var(--card-grad); border:1px solid rgba(20,30,45,.04); box-shadow:var(--shadow-card); border-radius:var(--radius); padding:14px; margin-bottom:12px; }
   .workout-block-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px; }
-  .workout-block-header input { font-weight:700; font-size:14px; border:none; background:transparent; padding:4px 0; flex:1; min-width:0; }
+  .workout-block-header input { font-weight:700; font-size:14px; border:none; background:transparent; padding:4px 0; flex:1; min-width:150px; }
   .workout-block-header input:focus { outline:none; border-bottom:1px solid var(--primary); }
   .weekday-picker { display:flex; gap:4px; margin-bottom:12px; flex-wrap:wrap; }
   .wd-btn { padding:5px 8px; border-radius:6px; border:1px solid var(--line); background:var(--bg); color:var(--muted); font-size:11px; font-weight:700; cursor:pointer; font-family:var(--font); }
@@ -835,7 +835,7 @@
   }
 
   async function matchExerciseByName(nome) {
-    const { data } = await supa.rpc('search_exercise_library', { q: nome });
+    const { data } = await supa.rpc('match_exercise_library', { q: nome });
     return (data && data[0]) || null;
   }
 

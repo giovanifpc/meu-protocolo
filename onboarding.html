@@ -118,6 +118,15 @@
     const { data: { session } } = await supa.auth.getSession();
     if (!session) { window.location.href = 'login.html'; return; }
 
+    // Nunca deixar o e-mail do painel master cair no cadastro de profissional
+    // — login.html já trata esse e-mail à parte, mas uma sessão dele pode
+    // acabar chegando aqui direto (ex: aba com sessão antiga recarregando,
+    // localStorage compartilhado entre abas do mesmo navegador). Sem essa
+    // trava, o upsert abaixo criaria um profissional "fantasma" pro e-mail
+    // master, inacessível depois pra sempre (login.html sempre redireciona
+    // esse e-mail pro master.html antes de checar a tabela professionals).
+    if (session.user.email === 'meuprotocolo1@gmail.com') { window.location.href = 'master.html'; return; }
+
     // Se já existe conta pro e-mail (ex: sessão anterior criou o registro mas
     // não completou o cadastro do cartão), pula direto pro passo certo em vez
     // de mostrar o formulário de nome de novo.
@@ -152,6 +161,7 @@
 
     const { data: { session } } = await supa.auth.getSession();
     const email = session.user.email;
+    if (email === 'meuprotocolo1@gmail.com') { window.location.href = 'master.html'; return; }
     const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
     // upsert (não insert): se a linha já existir pro e-mail, atualiza em vez de

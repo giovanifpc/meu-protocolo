@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://drive.google.com https://*.supabase.co; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co https://o4511757250199552.ingest.us.sentry.io; object-src 'none'; base-uri 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://drive.google.com https://*.supabase.co; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co https://o4511757250199552.ingest.us.sentry.io; object-src 'none'; base-uri 'self';">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" href="icons/favicon-32-v2.png">
 <link rel="manifest" href="manifest-painel.json">
@@ -101,7 +101,11 @@
   .photo-slot { text-align:center; }
   .photo-slot img, .photo-slot .ph-placeholder { width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:10px; background:var(--bg); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:11px; }
   .photo-slot label { display:block; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; margin:6px 0 4px; }
-  .photo-slot input[type=file] { font-size:10px; width:100%; }
+  .photo-slot .photo-pick-btn { display:block; width:100%; padding:6px 4px; font-size:11px; border-radius:8px; background:var(--bg); border:1px solid var(--line); color:var(--text); font-family:var(--font); font-weight:700; cursor:pointer; }
+  .photo-slot input[type=file] { display:none; }
+  .photo-slot .ph-status { font-size:10px; margin-top:4px; min-height:12px; }
+  .photo-slot .ph-status.pending { color:var(--primary); }
+  .photo-slot .ph-status.error { color:var(--danger); }
   .evo-stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
   .evo-stat { background:var(--bg); border-radius:10px; padding:10px 12px; }
   .evo-stat .es-num { font-size:18px; font-weight:700; }
@@ -522,7 +526,7 @@
   }
 
   $('newAssessmentBtn').addEventListener('click', () => openAssessment(null));
-  $('cancelFormBtn').addEventListener('click', () => { $('formArea').style.display = 'none'; });
+  $('cancelFormBtn').addEventListener('click', () => { clearPendingPhotoData(); $('formArea').style.display = 'none'; });
 
   function openAssessment(id) {
     currentAssessment = id ? assessments.find(a => a.id === id) : {
@@ -647,22 +651,114 @@
       </div>`).join('');
   }
 
+  const MAX_PHOTO_DIM = 1600;
+  const PHOTO_JPEG_QUALITY = 0.85;
+  let pendingPhotoData = {}; // tipo -> { blob, previewUrl }
+
+  function clearPendingPhotoData() {
+    Object.values(pendingPhotoData).forEach(p => { if (p.previewUrl) URL.revokeObjectURL(p.previewUrl); });
+    pendingPhotoData = {};
+  }
+
+  const existingPhotoUrlCache = {}; // path -> signed url
+
+  function renderPhotoSlot(slot) {
+    const el = document.querySelector(`.photo-slot[data-tipo="${slot.key}"]`);
+    if (!el) return;
+    const fotos = currentAssessment.fotos || [];
+    const existing = fotos.find(f => f.tipo === slot.key);
+    const pending = pendingPhotoData[slot.key];
+    const preview = el.querySelector('.ph-preview');
+    if (pending) {
+      preview.innerHTML = `<img src="${pending.previewUrl}" alt="${slot.label}">`;
+    } else if (existing) {
+      preview.innerHTML = '<div class="ph-placeholder">Carregando…</div>';
+      const cached = existingPhotoUrlCache[existing.path];
+      const applyUrl = (url) => { if (document.querySelector(`.photo-slot[data-tipo="${slot.key}"] .ph-preview`)) preview.innerHTML = `<img src="${url}" alt="${slot.label}">`; };
+      if (cached) {
+        applyUrl(cached);
+      } else {
+        supa.storage.from('assessment-photos').createSignedUrl(existing.path, 3600).then(({ data, error }) => {
+          if (error || !data) { preview.innerHTML = '<div class="ph-placeholder">Erro ao carregar</div>'; return; }
+          existingPhotoUrlCache[existing.path] = data.signedUrl;
+          applyUrl(data.signedUrl);
+        });
+      }
+    } else {
+      preview.innerHTML = '<div class="ph-placeholder">Sem foto</div>';
+    }
+    const statusEl = el.querySelector('.ph-status');
+    if (pending) { statusEl.textContent = 'Nova foto pronta pra salvar'; statusEl.className = 'ph-status pending'; }
+    else { statusEl.textContent = ''; statusEl.className = 'ph-status'; }
+    const viewBtn = el.querySelector('.view-photo-btn');
+    if (viewBtn) viewBtn.style.display = (existing && !pending) ? 'block' : 'none';
+    const pickBtn = el.querySelector('.photo-pick-btn');
+    if (pickBtn) pickBtn.textContent = (existing || pending) ? 'Trocar foto' : 'Escolher foto';
+  }
+
+  function processPhotoFile(tipo, file) {
+    const el = document.querySelector(`.photo-slot[data-tipo="${tipo}"] .ph-status`);
+    if (el) { el.textContent = 'Processando foto...'; el.className = 'ph-status pending'; }
+    const img = new Image();
+    const objUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objUrl);
+      let { width: w, height: h } = img;
+      if (w > MAX_PHOTO_DIM || h > MAX_PHOTO_DIM) {
+        const scale = MAX_PHOTO_DIM / Math.max(w, h);
+        w = Math.round(w * scale);
+        h = Math.round(h * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          if (el) { el.textContent = 'Não foi possível processar essa imagem. Tente outro arquivo.'; el.className = 'ph-status error'; }
+          return;
+        }
+        if (pendingPhotoData[tipo]) URL.revokeObjectURL(pendingPhotoData[tipo].previewUrl);
+        pendingPhotoData[tipo] = { blob, previewUrl: URL.createObjectURL(blob) };
+        renderPhotoSlot(PHOTO_SLOTS.find(s => s.key === tipo));
+      }, 'image/jpeg', PHOTO_JPEG_QUALITY);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objUrl);
+      if (el) { el.textContent = 'Esse arquivo não pôde ser aberto como imagem (formatos aceitos: JPEG, PNG, WEBP — foto HEIC do iPhone pode não funcionar, tente exportar como JPEG).'; el.className = 'ph-status error'; }
+    };
+    img.src = objUrl;
+  }
+
   function renderPhotoSlots() {
     const wrap = $('photoSlots');
-    const fotos = currentAssessment.fotos || [];
-    wrap.innerHTML = PHOTO_SLOTS.map(slot => {
-      const existing = fotos.find(f => f.tipo === slot.key);
-      return `
+    clearPendingPhotoData();
+    wrap.innerHTML = PHOTO_SLOTS.map(slot => `
         <div class="photo-slot" data-tipo="${slot.key}">
-          <div class="ph-preview">${existing ? '<div class="ph-placeholder"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:4px"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>enviada</div>' : '<div class="ph-placeholder">Sem foto</div>'}</div>
+          <div class="ph-preview"></div>
           <label>${slot.label}</label>
-          <input type="file" accept="image/*" class="photo-input" data-tipo="${slot.key}">
-          ${existing ? `<button type="button" class="btn secondary small view-photo-btn" data-path="${existing.path}" style="margin-top:4px;width:100%;">Ver</button>` : ''}
-        </div>`;
-    }).join('');
+          <button type="button" class="photo-pick-btn" data-tipo="${slot.key}">Escolher foto</button>
+          <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,.heic,.jpg,.jpeg,.png,.webp" class="photo-input" data-tipo="${slot.key}" style="display:none;">
+          <div class="ph-status"></div>
+          <button type="button" class="btn secondary small view-photo-btn" style="margin-top:4px;width:100%;display:none;">Ver</button>
+        </div>`).join('');
+    PHOTO_SLOTS.forEach(slot => renderPhotoSlot(slot));
+    wrap.querySelectorAll('.photo-pick-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        wrap.querySelector(`.photo-input[data-tipo="${btn.dataset.tipo}"]`).click();
+      });
+    });
+    wrap.querySelectorAll('.photo-input').forEach(inp => {
+      inp.addEventListener('change', () => {
+        const file = inp.files[0];
+        if (file) processPhotoFile(inp.dataset.tipo, file);
+      });
+    });
     wrap.querySelectorAll('.view-photo-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
-        const { data, error } = await supa.storage.from('assessment-photos').createSignedUrl(btn.dataset.path, 300);
+        const tipo = btn.closest('.photo-slot').dataset.tipo;
+        const existing = (currentAssessment.fotos || []).find(f => f.tipo === tipo);
+        if (!existing) return;
+        const { data, error } = await supa.storage.from('assessment-photos').createSignedUrl(existing.path, 300);
         if (error) { toast('Erro ao abrir foto: ' + error.message); return; }
         window.open(data.signedUrl, '_blank');
       });
@@ -702,20 +798,24 @@
 
   async function uploadPendingPhotos(assessmentId) {
     const fotos = (currentAssessment.fotos || []).slice();
-    const fileInputs = document.querySelectorAll('.photo-input');
-    for (const inp of fileInputs) {
-      const file = inp.files[0];
-      if (!file) continue;
-      const tipo = inp.dataset.tipo;
-      const path = `${currentStudentId}/${assessmentId}/${tipo}-${Date.now()}.${file.name.split('.').pop()}`;
-      const { error } = await supa.storage.from('assessment-photos').upload(path, file);
-      if (error) { toast(`Erro ao enviar foto (${tipo}): ` + error.message); continue; }
+    const failures = [];
+    for (const tipo of Object.keys(pendingPhotoData)) {
+      const { blob } = pendingPhotoData[tipo];
+      const path = `${currentStudentId}/${assessmentId}/${tipo}-${Date.now()}.jpg`;
+      let uploadError = null;
+      try {
+        const { error } = await supa.storage.from('assessment-photos').upload(path, blob, { contentType: 'image/jpeg' });
+        uploadError = error;
+      } catch (e) {
+        uploadError = e;
+      }
+      if (uploadError) { failures.push(`${tipo}: ${uploadError.message || uploadError}`); continue; }
       const old = fotos.find(f => f.tipo === tipo);
       if (old) await supa.storage.from('assessment-photos').remove([old.path]);
       const idx = fotos.findIndex(f => f.tipo === tipo);
       if (idx >= 0) fotos[idx] = { tipo, path }; else fotos.push({ tipo, path });
     }
-    return fotos;
+    return { fotos, failures };
   }
 
   async function saveAssessment(finalize) {
@@ -739,14 +839,23 @@
     }
     currentAssessment = data;
 
-    const fotos = await uploadPendingPhotos(data.id);
+    const hadPending = Object.keys(pendingPhotoData).length > 0;
+    const { fotos, failures } = await uploadPendingPhotos(data.id);
     if (fotos.length) {
       const { data: updated, error: fotoErr } = await supa.from('physical_assessments').update({ fotos }).eq('id', data.id).select().single();
       if (!fotoErr) currentAssessment = updated;
     }
+    clearPendingPhotoData();
 
     btn.disabled = false;
-    toast(finalize ? 'Avaliação finalizada.' : 'Rascunho salvo.');
+    if (failures.length) {
+      $('formMsg').textContent = 'Avaliação salva, mas ' + failures.length + ' foto(s) não subiram: ' + failures.join('; ') + '. O resto foi salvo — tente escolher essa(s) foto(s) de novo.';
+      $('formMsg').className = 'msg error';
+      toast('Avaliação salva, mas houve erro no envio de foto — veja o aviso no formulário.');
+      renderPhotoSlots();
+      return;
+    }
+    toast(finalize ? 'Avaliação finalizada.' : (hadPending ? 'Rascunho salvo, foto(s) enviada(s).' : 'Rascunho salvo.'));
     $('formArea').style.display = 'none';
     await loadAssessments();
   }

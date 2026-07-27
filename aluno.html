@@ -317,6 +317,8 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .hist-meta{font-size:12px;color:var(--muted);margin-top:8px;display:flex;gap:16px;flex-wrap:wrap}
 .hist-meta-ico{display:inline-flex;align-items:center;gap:4px}
 .hist-meta-ico svg{width:13px;height:13px;flex-shrink:0}
+.hist-photos{display:flex;gap:8px;margin-top:10px}
+.hist-photos img{width:52px;height:68px;object-fit:cover;border-radius:8px;border:1px solid var(--card-border);cursor:pointer}
 
 .load-chart-card{background:var(--card-grad);border:1px solid var(--card-border);box-shadow:var(--shadow-card);border-radius:var(--radius);padding:16px;margin-bottom:18px}
 .lcc-title{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--primary);margin-bottom:10px}
@@ -1770,14 +1772,29 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       const partes = [];
       if (a.peso_kg != null) partes.push(`${a.peso_kg}kg`);
       if (pct != null) partes.push(`${pct.toFixed(1)}% gordura`);
+      const fotos = a.fotos || [];
       return `
         <div class="hist-item">
           <div class="hist-top">
             <span class="hist-date">${d.toLocaleDateString('pt-BR')}</span>
           </div>
           <div class="hist-meta"><span>${partes.join(' · ') || 'Sem dados de composição'}</span></div>
+          ${fotos.length ? `<div class="hist-photos" data-assessment-id="${a.id}"></div>` : ''}
         </div>`;
     }).join('');
+    assessments.forEach(a => { if ((a.fotos || []).length) loadAssessmentPhotos(a); });
+  }
+
+  async function loadAssessmentPhotos(a) {
+    const wrap = document.querySelector(`.hist-photos[data-assessment-id="${a.id}"]`);
+    if (!wrap) return;
+    const urls = await Promise.all((a.fotos || []).map(async (f) => {
+      const { data, error } = await supa.storage.from('assessment-photos').createSignedUrl(f.path, 3600);
+      return error ? null : { tipo: f.tipo, url: data.signedUrl };
+    }));
+    const wrapNow = document.querySelector(`.hist-photos[data-assessment-id="${a.id}"]`);
+    if (!wrapNow) return;
+    wrapNow.innerHTML = urls.filter(Boolean).map(u => `<img src="${u.url}" alt="${escapeHtml(u.tipo)}" onclick="window.open('${u.url}','_blank')">`).join('');
   }
 
   function renderAssessmentChart(container, data) {

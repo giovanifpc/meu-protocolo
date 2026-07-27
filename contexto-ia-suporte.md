@@ -112,7 +112,7 @@ Desde 2026-07-27, no primeiro acesso (antes de responder a anamnese de saúde), 
 
 ### 5.7 Avaliação física
 
-O profissional registra medidas (dobras cutâneas, bioimpedância, perimetria, fotos) periodicamente — o app calcula % de gordura e mostra evolução comparando com a avaliação anterior. É tudo digitado manualmente pelo profissional (nenhuma balança do mercado tem integração direta).
+O profissional registra medidas (dobras cutâneas, bioimpedância, perimetria, fotos) periodicamente — o app calcula % de gordura e mostra evolução comparando com a avaliação anterior. É tudo digitado manualmente pelo profissional (nenhuma balança do mercado tem integração direta). Fotos: ao escolher, aparece um preview na hora (a foto é comprimida automaticamente antes de subir, então funciona mesmo com foto grande de câmera de celular); formatos aceitos são JPEG/PNG/WEBP — se a foto vier em HEIC (comum em iPhone) e o app avisar que não conseguiu abrir, oriente exportar/converter pra JPEG antes de tentar de novo. As fotos aparecem em miniatura tanto no painel do profissional quanto na tela de Avaliação física do aluno.
 
 ### 5.8 Nutrição
 

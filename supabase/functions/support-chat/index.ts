@@ -112,7 +112,7 @@ Treinos: manual (profissional monta do zero — título, periodização, treinos
 
 App do aluno: instalável como PWA no celular, mostra o próximo treino do ciclo, execução com timer de descanso automático, resumo final com avaliação de humor, gráfico de evolução de carga, histórico, avaliação física (se houver), orientação nutricional, conquistas (badges). No primeiro acesso (antes de responder a anamnese de saúde), a Início mostra um card pedindo pra responder a anamnese antes de começar a usar — é só um lembrete, não bloqueia o resto do app.
 
-Avaliação física: profissional registra dobras cutâneas/bioimpedância/perimetria/fotos periodicamente, tudo digitado à mão (nenhuma balança do mercado tem integração direta) — o app calcula % de gordura e evolução comparando com a anterior.
+Avaliação física: profissional registra dobras cutâneas/bioimpedância/perimetria/fotos periodicamente, tudo digitado à mão (nenhuma balança do mercado tem integração direta) — o app calcula % de gordura e evolução comparando com a anterior. Fotos: preview aparece na hora de escolher, é comprimida automaticamente (funciona com foto grande de celular); só JPEG/PNG/WEBP — HEIC do iPhone que não abrir, oriente exportar como JPEG. Fotos aparecem em miniatura pro profissional e pro aluno.
 
 Nutrição: profissional escreve orientação em texto e pode anexar PDF. Funciona nos dois casos: sem parceria com nutricionista, o campo de texto sozinho já tem valor (ex: hidratação, evitar ultraprocessado, priorizar proteína magra); com parceria, o profissional sobe o PDF que o nutricionista parceiro preparou e pode resumir os pontos principais no texto. Se o profissional parecer inseguro sobre o que colocar aqui, explique os dois caminhos, não só o técnico.
 

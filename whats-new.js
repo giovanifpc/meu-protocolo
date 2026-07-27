@@ -7,16 +7,19 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.5.0',
+      version: '1.5.1',
       items: [
+        'Corrigido: upload de fotos de avaliação física, que às vezes não subia sem mostrar nenhum erro.',
+        'Fotos de avaliação física agora aparecem como miniatura de verdade (antes só mostrava "enviada").',
         'Novo: sino de notificações fixo no topo de toda tela, com histórico de mensagem nova de aluno e aluno que respondeu a anamnese.',
         '"Sair" saiu do topo (onde sumia em algumas telas) e agora fica dentro do menu ☰ lateral, igual nas 9 telas do painel.',
         'Novo: ao cadastrar um aluno, aparece um banner com o WhatsApp preenchido e um botão "Enviar convite" — dá pra mandar na hora ou fechar e enviar depois.'
       ]
     },
     aluno: {
-      version: '1.2.0',
+      version: '1.2.1',
       items: [
+        'Novo: as fotos da sua avaliação física agora aparecem na tela de Avaliação física.',
         'Nova aba "Financeiro" no menu lateral — veja o status da sua mensalidade e o Pix do seu personal, quando disponibilizado.',
         'Novo: um card na Início lembra de responder a anamnese de saúde antes de começar a usar o app, se ainda não tiver respondido.'
       ]

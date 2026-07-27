@@ -986,6 +986,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   let nutritionGuidance = null;
   let assessments = [];
   let anamnese = null;
+  let anamneseNeedsAttention = false;
   let notifications = [];
   let chatThreadMessages = [];
   let chatUnreadCount = 0;
@@ -1274,6 +1275,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       .eq('student_id', student.id)
       .maybeSingle();
     anamnese = anamneseData || { student_id: student.id, objetivo: '', historico_medico: '', lesoes: '', cirurgias: '', medicamentos: '', fumante: false, restricoes: '', observacoes: '' };
+    anamneseNeedsAttention = !anamneseData || !anamneseData.respondido_em;
 
     const { data: notifs } = await supa
       .from('student_notifications')
@@ -1458,6 +1460,26 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   /* ---- HISTÓRICO ---- */
   let historySubTab = 'carga';
 
+  // Card de boas-vindas + diretriz de anamnese, persistente na Início até o
+  // aluno responder pela 1ª vez (respondido_em preenchido) — não bloqueia o
+  // resto do app, só fica sempre visível ali até ser respondida, e some
+  // sozinho (anamneseNeedsAttention=false) assim que salvar.
+  function anamneseBannerHtml() {
+    if (!anamneseNeedsAttention) return '';
+    return `
+      <div class="card">
+        <div class="section-label" style="margin-top:0">Bem-vindo(a) ao Meu Protocolo!</div>
+        <p style="margin:0 0 12px;font-size:13.5px;color:var(--muted);line-height:1.5">Antes de começar a usar o app, responda sua anamnese de saúde — é assim que seu personal monta um treino seguro pra você.</p>
+        <button class="btn btn-primary" style="width:100%" onclick="goToAnamnese()">Responder anamnese</button>
+      </div>
+    `;
+  }
+
+  function goToAnamnese() {
+    goTab('profile');
+    requestAnimationFrame(() => { document.querySelector('.anamnese-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  }
+
   function buildHomeDashboard() {
     const container = $('homeContent');
     const proName = student.professionals?.display_name || 'Meu Protocolo';
@@ -1496,6 +1518,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     `;
     container.innerHTML = `
       ${heroHtml}
+      ${anamneseBannerHtml()}
       <div class="section-label" style="margin-top:0">Hoje</div>
       ${statGridHtml()}
       ${todayWorkoutHeroHtml()}
@@ -2072,6 +2095,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     $('saveAnamneseBtn').disabled = false;
     if (error) { $('anamneseMsg').textContent = 'Erro ao salvar: ' + error.message; return; }
     anamnese = data;
+    anamneseNeedsAttention = false;
     $('anamneseMsg').textContent = 'Salvo com sucesso.';
     toast('Anamnese salva.');
   });

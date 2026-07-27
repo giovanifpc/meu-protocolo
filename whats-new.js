@@ -7,18 +7,18 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.4.0',
+      version: '1.5.0',
       items: [
-        'Novos ícones de "?" em Alunos, Treinos, Avaliação, Nutri, Relatórios e Financeiro — explicam na hora os pontos mais técnicos (status do aluno, periodização, técnicas de intensificação, protocolos de avaliação, como a Receita é calculada) sem precisar sair da tela.',
-        'Corrigido: o título do treino (ex: "Treino A — peito e tríceps") não fica mais escondido atrás do botão "Trocar exercícios" quando o nome é longo.',
-        'Corrigido: o botão de vincular vídeo do YouTube agora aparece em praticamente todos os exercícios gerados por IA ou trocados — antes só aparecia em um ou dois por grupo, porque o sistema exigia um nome idêntico ao da biblioteca pra reconhecer o exercício.',
-        'Novo: ao criar um treino novo por cima de um existente, o anterior agora fica acessível num dropdown "Rascunhos anteriores deste aluno" (reabrir ou apagar) — antes ele só virava rascunho invisível, sem nenhum jeito de recuperar.'
+        'Novo: sino de notificações fixo no topo de toda tela, com histórico de mensagem nova de aluno e aluno que respondeu a anamnese.',
+        '"Sair" saiu do topo (onde sumia em algumas telas) e agora fica dentro do menu ☰ lateral, igual nas 9 telas do painel.',
+        'Novo: ao cadastrar um aluno, aparece um banner com o WhatsApp preenchido e um botão "Enviar convite" — dá pra mandar na hora ou fechar e enviar depois.'
       ]
     },
     aluno: {
-      version: '1.1.0',
+      version: '1.2.0',
       items: [
-        'Nova aba "Financeiro" no menu lateral — veja o status da sua mensalidade e o Pix do seu personal, quando disponibilizado.'
+        'Nova aba "Financeiro" no menu lateral — veja o status da sua mensalidade e o Pix do seu personal, quando disponibilizado.',
+        'Novo: um card na Início lembra de responder a anamnese de saúde antes de começar a usar o app, se ainda não tiver respondido.'
       ]
     }
   };

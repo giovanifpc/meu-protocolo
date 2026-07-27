@@ -88,6 +88,8 @@ Cada aluno tem: nome, e-mail, telefone (opcional), valor e dia de vencimento da 
 
 O app **não processa pagamento de aluno pra profissional** — só ajuda o profissional a lembrar quem está com mensalidade atrasada, com um botão pronto pra abrir o WhatsApp com mensagem sugerida. O dinheiro nunca passa pelo Meu Protocolo nessa relação. Desde 2026-07-24 o profissional também pode exibir o próprio QR/chave Pix pro aluno dentro do app (ver 5.12) — isso não muda esse fato, é só mais fácil o aluno ver o Pix sem precisar pedir por fora.
 
+Ao cadastrar um aluno novo (desde 2026-07-27), aparece um banner com o WhatsApp preenchido e um botão "Enviar convite" — clicar abre o WhatsApp já com o link e a mensagem prontos; dá pra fechar e mandar depois também (o mesmo botão "Enviar convite" continua disponível na lista de alunos a qualquer momento).
+
 ### 5.5 Treinos
 
 Dois jeitos de montar o treino de um aluno:
@@ -105,6 +107,8 @@ Ao criar um treino novo por cima de um já existente, o anterior não é apagado
 ### 5.6 App do aluno
 
 O aluno usa um app separado, instalável na tela inicial do celular (PWA). Ele vê o próximo treino do seu ciclo, executa marcando séries feitas (com carga e reps), tem timer de descanso automático, e ao final vê um resumo com avaliação de humor. Também acompanha evolução de carga (gráfico), histórico de treinos, avaliação física (se o profissional já registrou alguma) e orientação nutricional. Ganha "conquistas" (badges) por marcos como primeiro treino, sequência de semanas treinando, etc.
+
+Desde 2026-07-27, no primeiro acesso (antes de responder a anamnese de saúde), a Início mostra um card de boas-vindas pedindo pra responder a anamnese antes de começar a usar o app — não bloqueia o resto do app, é só um lembrete que fica ali até o aluno responder.
 
 ### 5.7 Avaliação física
 
@@ -146,6 +150,10 @@ O profissional pode colar um link do próprio canal do YouTube num exercício da
 ### 5.15 Programa de indicação (adicionado 2026-07-21/22)
 
 Cada profissional tem um link próprio de indicação, em Configurações ("Indique um amigo"). Quando outra pessoa se cadastra por esse link e vira cliente pagante de verdade (depois do trial dela), quem indicou ganha 1 mês grátis, aplicado automaticamente na cobrança seguinte. Só quem indica é recompensado — o indicado não ganha nada por ter sido indicado.
+
+### 5.16 Sino de notificações e menu (adicionado 2026-07-27)
+
+O painel do profissional tem um sino fixo no topo de toda tela (ao lado do menu ☰), com histórico de eventos: mensagem nova de um aluno, aluno que respondeu a anamnese pela primeira vez. "Sair" saiu do topo e agora fica dentro do menu ☰ (lateral), junto dos outros atalhos.
 
 ---
 

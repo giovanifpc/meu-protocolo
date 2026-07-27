@@ -17,6 +17,7 @@
 <script src="support-widget.js" defer></script>
 <script src="assistant-hints.js" defer></script>
 <script src="whats-new.js" defer></script>
+<script src="notif-bell.js" defer></script>
 <script src="help-banner.js" defer></script>
 <script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch((e) => console.error('Falha ao registrar service worker:', e)); let __swReloaded = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (__swReloaded) return; __swReloaded = true; window.location.reload(); }); }</script>
 <style>
@@ -73,6 +74,11 @@
   .btn-icon svg { width:15px; height:15px; }
   .msg { font-size:13px; margin-top:8px; }
   .msg.error { color:var(--danger); }
+  .invite-banner{display:none;align-items:center;justify-content:space-between;gap:10px;background:rgba(30,140,100,.08);border:1px solid rgba(30,140,100,.25);border-radius:var(--radius);padding:12px 14px;margin-top:10px}
+  .invite-banner-text{font-size:13px;color:var(--text);line-height:1.4}
+  .invite-banner-text strong{display:block;color:var(--accent-dim);font-size:12px;margin-bottom:2px}
+  .invite-banner-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+  .invite-banner-close{background:none;border:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:4px}
   .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:#23263a; color:#fff; padding:10px 18px; border-radius:10px; font-size:13px; z-index:999; }
   .bottom-nav { position:fixed; bottom:0; left:0; right:0; max-width:720px; margin:0 auto; height:64px; background:var(--card); border-top:1px solid var(--line); display:flex; z-index:60; }
   .nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; color:var(--faint); text-decoration:none; font-family:var(--font); padding-top:6px; }
@@ -103,7 +109,7 @@
 <body>
   <header>
     <h1>Alunos</h1>
-    <div class="header-actions"><button class="btn secondary" id="logoutBtn">Sair</button><button class="menu-btn" onclick="openDrawer()" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button></div>
+    <div class="header-actions"><span id="notifBellSlot"></span><button class="menu-btn" onclick="openDrawer()" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button></div>
   </header>
 
   <main>
@@ -130,6 +136,13 @@
       </div>
       <button class="btn" id="addStudentBtn">Adicionar aluno</button>
       <div class="msg error" id="addStudentMsg"></div>
+      <div class="invite-banner" id="inviteBanner">
+        <div class="invite-banner-text"><strong>Aluno cadastrado!</strong><span id="inviteBannerDetail"></span></div>
+        <div class="invite-banner-actions">
+          <button class="btn small" id="inviteBannerSendBtn" type="button">Enviar convite</button>
+          <button class="invite-banner-close" id="inviteBannerCloseBtn" type="button" aria-label="Fechar">×</button>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -160,6 +173,7 @@
     <a class="drawer-item" href="financeiro.html"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>Financeiro</a>
     <button class="drawer-item" onclick="closeDrawer(); window.openSupportChat && window.openSupportChat();" type="button"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>Tirar dúvidas</button>
     <a class="drawer-item" href="perfil.html"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.7.36 1.15 1.03 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>Config</a>
+    <button class="drawer-item" id="drawerLogoutBtn" type="button"><span class="di-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>Sair</button>
   </div>
 </div>
 
@@ -170,6 +184,7 @@
   const $ = (id) => document.getElementById(id);
   function openDrawer() { $('drawerOverlay').classList.add('show'); $('sideDrawer').classList.add('show'); }
   function closeDrawer() { $('drawerOverlay').classList.remove('show'); $('sideDrawer').classList.remove('show'); }
+  $('drawerLogoutBtn').addEventListener('click', async () => { await supa.auth.signOut(); window.location.href = 'login.html'; });
 
   let professional = null;
 
@@ -484,14 +499,14 @@
     const mensalidadeDia = $('newStudentMensalidadeDia').value ? Number($('newStudentMensalidadeDia').value) : null;
 
     $('addStudentBtn').disabled = true;
-    const { error } = await supa.from('students').insert({
+    const { data: newStudent, error } = await supa.from('students').insert({
       professional_id: professional.id,
       nome,
       email,
       telefone,
       mensalidade_valor: mensalidadeValor,
       mensalidade_dia_vencimento: mensalidadeDia,
-    });
+    }).select().single();
     $('addStudentBtn').disabled = false;
     if (error) {
       $('addStudentMsg').textContent = 'Erro: ' + error.message;
@@ -502,17 +517,25 @@
     $('newStudentTelefone').value = '';
     $('newStudentMensalidadeValor').value = '';
     $('newStudentMensalidadeDia').value = '';
-    toast('Aluno adicionado.');
     await loadStudents();
+    showInviteBanner(newStudent.id, nome, telefone);
     window.__checkAssistantHint && window.__checkAssistantHint();
   });
 
-  $('logoutBtn').addEventListener('click', async () => {
-    await supa.auth.signOut();
-    window.location.href = 'login.html';
-  });
+  // Substitui o toast antigo "Aluno criado" — dá pra fechar e mandar o
+  // convite depois (pelo botão "Enviar convite" que já existe na lista) ou
+  // já disparar na hora, reaproveitando o mesmo sendInvite() de lá.
+  function showInviteBanner(studentId, nome, telefone) {
+    $('inviteBannerDetail').textContent = telefone
+      ? `WhatsApp: ${telefone}`
+      : 'Sem WhatsApp cadastrado — o convite vai como link pra copiar.';
+    $('inviteBannerSendBtn').onclick = () => { sendInvite(studentId, nome); hideInviteBanner(); };
+    $('inviteBanner').style.display = 'flex';
+  }
+  function hideInviteBanner() { $('inviteBanner').style.display = 'none'; }
+  $('inviteBannerCloseBtn').addEventListener('click', hideInviteBanner);
 
-  boot();
+    boot();
 </script>
 </body>
 </html>

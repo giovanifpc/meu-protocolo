@@ -44,6 +44,9 @@
     .notif-item .ni-body { font-size:12.5px; color:var(--muted,#63707F); margin-bottom:4px; line-height:1.4; }
     .notif-item .ni-date { font-size:11px; color:var(--muted,#63707F); }
     #notifPanelEmpty { padding:26px 16px; text-align:center; font-size:13px; color:var(--muted,#63707F); }
+    #notifPanelFooter { padding:10px 12px; border-top:1px solid var(--line,#E9EBEF); }
+    #notifPushBtn { width:100%; background:none; border:1px solid var(--line,#E9EBEF); border-radius:10px; padding:9px 10px; font-size:12.5px; font-weight:700; color:var(--primary,#2D6BE4); cursor:pointer; font-family:inherit; }
+    #notifPushBtn:disabled { color:var(--muted,#63707F); cursor:default; }
   `;
   document.head.appendChild(style);
 
@@ -58,7 +61,7 @@
   overlay.id = 'notifOverlay';
   const panel = document.createElement('div');
   panel.id = 'notifPanel';
-  panel.innerHTML = `<div id="notifPanelHeader">Notificações</div><div id="notifPanelList"></div>`;
+  panel.innerHTML = `<div id="notifPanelHeader">Notificações</div><div id="notifPanelList"></div><div id="notifPanelFooter"><button id="notifPushBtn" type="button">Ativar notificações push</button></div>`;
   overlay.appendChild(panel);
   document.body.appendChild(overlay);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) closePanel(); });
@@ -116,5 +119,70 @@
     overlay.classList.contains('show') ? closePanel() : openPanel();
   });
 
+  // Push nativo pro profissional (2026-07-28) — o aluno já tinha isso desde
+  // 2026-07-09, mas o lado do profissional nunca foi construído (o sino em si,
+  // criado em 2026-07-27, sempre ficou só in-app). Mesma técnica exata do
+  // aluno.html, só que a inscrição salva professional_id em vez de student_id
+  // (supabase_48_professional_push.sql).
+  const VAPID_PUBLIC_KEY = 'BP6SZRed7WGYwXtJfB-aXKJaBPc0WG9LKH4YL9-KqaOm721XEvmzuXsx6eRITUaWiOQOahVb9yZHb44H_bNol0I';
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+  }
+
+  let professionalId = null;
+  async function getProfessionalId() {
+    if (professionalId) return professionalId;
+    const { data: { user } } = await supa.auth.getUser();
+    if (!user) return null;
+    const { data } = await supa.from('professionals').select('id').eq('email', user.email).maybeSingle();
+    professionalId = data ? data.id : null;
+    return professionalId;
+  }
+
+  const pushBtn = document.getElementById('notifPushBtn');
+
+  async function updatePushButtonState() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      pushBtn.textContent = 'Notificações não suportadas neste navegador';
+      pushBtn.disabled = true;
+      return;
+    }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    pushBtn.textContent = sub ? 'Notificações push ativadas ✓' : 'Ativar notificações push';
+  }
+
+  pushBtn.addEventListener('click', async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return;
+
+    const proId = await getProfessionalId();
+    if (!proId) return;
+
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+    }
+    const json = sub.toJSON();
+    const { error } = await supa.from('push_subscriptions').upsert({
+      professional_id: proId,
+      endpoint: json.endpoint,
+      p256dh: json.keys.p256dh,
+      auth: json.keys.auth,
+    }, { onConflict: 'professional_id,endpoint' });
+    if (error) { console.error('Erro ao ativar notificações push:', error.message); return; }
+    updatePushButtonState();
+  });
+
+  updatePushButtonState();
   loadNotifications();
 })();

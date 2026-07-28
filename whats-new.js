@@ -7,8 +7,9 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.7.0',
+      version: '1.8.0',
       items: [
+        'Novo: notificações push no sino ficam disponíveis também pra você, não só pro aluno — ative em Notificações, dentro do sino.',
         'Novo: crie exercícios que não estão na biblioteca, direto na busca ao montar um treino — fica só na sua conta, nunca compartilhado com outros profissionais.',
         'Novo: vincule uma imagem própria (além do vídeo do YouTube) a qualquer exercício, com recorte quadrado ou paisagem.',
         'Novo: "Comparativos" em Avaliação física — escolha 2 avaliações e o app monta sozinho as fotos lado a lado e a tabela de variação de medidas; publique quando quiser que o aluno veja.',
@@ -43,46 +44,58 @@
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  // Virou modal flutuante em tela cheia (2026-07-28) — antes era uma faixa fixa
+  // no topo, com pouco espaço pra texto e sem rolagem. Mesmo padrão visual do
+  // help-banner.js (overlay escuro + card centralizado com scroll interno),
+  // agora com espaço de sobra pra changelog longo e um botão de fechar bem
+  // visível, não só um × pequeno no canto.
   function injectStyle() {
     var style = document.createElement('style');
     style.textContent = [
-      '#whatsNewBanner{position:fixed;top:0;left:0;right:0;z-index:650;',
-      'background:var(--card,#fff);border-bottom:1px solid var(--line,#E9EBEF);',
-      'box-shadow:0 6px 20px rgba(20,30,45,.10);',
-      'padding:calc(env(safe-area-inset-top) + 14px) 16px 14px;',
-      'font-family:var(--font,"Inter",sans-serif);color:var(--text,#1E2A3A);',
-      'transform:translateY(-100%);transition:transform .3s cubic-bezier(.2,.8,.2,1);}',
-      '#whatsNewBanner.show{transform:translateY(0)}',
-      '#whatsNewBanner .wn-inner{max-width:720px;margin:0 auto;display:flex;align-items:flex-start;gap:12px}',
-      '#whatsNewBanner .wn-body{flex:1;min-width:0}',
-      '#whatsNewBanner .wn-title{font-weight:700;font-size:14px;margin-bottom:6px}',
-      '#whatsNewBanner .wn-list{margin:0;padding-left:18px;font-size:13px;color:var(--muted,#63707F);line-height:1.5}',
-      '#whatsNewBanner .wn-list li{margin-bottom:3px}',
-      '#whatsNewBanner .wn-close{background:none;border:none;font-size:22px;line-height:1;',
-      'color:var(--muted,#63707F);cursor:pointer;padding:2px 6px;flex-shrink:0}'
+      '#whatsNewOverlay{position:fixed;inset:0;z-index:650;background:rgba(15,20,28,.6);',
+      'display:none;align-items:center;justify-content:center;padding:24px;',
+      'opacity:0;transition:opacity .2s ease;}',
+      '#whatsNewOverlay.show{display:flex;opacity:1}',
+      '#whatsNewCard{width:100%;max-width:420px;max-height:80vh;display:flex;flex-direction:column;',
+      'background:var(--card,#fff);border-radius:var(--radius-lg,18px);',
+      'box-shadow:0 20px 50px -12px rgba(20,30,45,.35);',
+      'font-family:var(--font,"Inter",sans-serif);color:var(--text,#1E2A3A);}',
+      '#whatsNewCard .wn-header{padding:22px 22px 4px;flex-shrink:0}',
+      '#whatsNewCard .wn-title{font-weight:800;font-size:17px}',
+      '#whatsNewCard .wn-list-wrap{overflow-y:auto;padding:10px 22px;flex:1}',
+      '#whatsNewCard .wn-list{margin:0;padding-left:18px;font-size:13.5px;color:var(--muted,#63707F);line-height:1.6}',
+      '#whatsNewCard .wn-list li{margin-bottom:8px}',
+      '#whatsNewCard .wn-list li:last-child{margin-bottom:0}',
+      '#whatsNewCard .wn-footer{padding:14px 22px 22px;flex-shrink:0}',
+      '#whatsNewCard .wn-close{display:block;width:100%;background:var(--primary,#2D6BE4);color:#fff;',
+      'border:none;border-radius:var(--radius,10px);padding:12px;font-size:14px;font-weight:700;',
+      'font-family:inherit;cursor:pointer}'
     ].join('');
     document.head.appendChild(style);
   }
 
   function render() {
     injectStyle();
-    var el = document.createElement('div');
-    el.id = 'whatsNewBanner';
-    el.innerHTML =
-      '<div class="wn-inner">' +
-        '<div class="wn-body">' +
-          '<div class="wn-title">Novidades desta atualização</div>' +
-          '<ul class="wn-list">' + entry.items.map(function (t) { return '<li>' + escapeHtml(t) + '</li>'; }).join('') + '</ul>' +
-        '</div>' +
-        '<button class="wn-close" aria-label="Fechar">&times;</button>' +
+    var overlay = document.createElement('div');
+    overlay.id = 'whatsNewOverlay';
+    overlay.innerHTML =
+      '<div id="whatsNewCard">' +
+        '<div class="wn-header"><div class="wn-title">Novidades desta atualização</div></div>' +
+        '<div class="wn-list-wrap"><ul class="wn-list">' +
+          entry.items.map(function (t) { return '<li>' + escapeHtml(t) + '</li>'; }).join('') +
+        '</ul></div>' +
+        '<div class="wn-footer"><button class="wn-close" type="button">Entendi</button></div>' +
       '</div>';
-    document.body.appendChild(el);
-    requestAnimationFrame(function () { el.classList.add('show'); });
-    el.querySelector('.wn-close').addEventListener('click', function () {
-      el.classList.remove('show');
+    document.body.appendChild(overlay);
+    requestAnimationFrame(function () { overlay.classList.add('show'); });
+
+    function close() {
+      overlay.classList.remove('show');
       try { localStorage.setItem(STORAGE_KEY, entry.version); } catch (e) {}
-      setTimeout(function () { el.remove(); }, 320);
-    });
+      setTimeout(function () { overlay.remove(); }, 220);
+    }
+    overlay.querySelector('.wn-close').addEventListener('click', close);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
   }
 
   if (document.body) render();

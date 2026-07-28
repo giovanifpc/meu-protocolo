@@ -7,7 +7,7 @@
 // percebe que este arquivo mudou (e reativa um SW novo) se os BYTES dele
 // mudarem — por isso, sempre que uma mudança valer a pena forçar o
 // recarregamento de abas já abertas, bump este número junto do deploy.
-const CACHE_NAME = 'meu-protocolo-v9';
+const CACHE_NAME = 'meu-protocolo-v10';
 const PRECACHE_URLS = ['/aluno.html', '/manifest.json', '/icons/icon-192-v2.png', '/icons/icon-512-v2.png'];
 
 self.addEventListener('install', (event) => {
@@ -41,25 +41,30 @@ self.addEventListener('fetch', (event) => {
 });
 
 self.addEventListener('push', (event) => {
-  let data = { title: 'Meu Protocolo', body: '' };
-  try { data = event.data.json(); } catch { /* payload sem JSON, mantém default */ }
+  // url decide pra onde o clique leva — o mesmo SW atende aluno.html e as 9
+  // páginas do painel do profissional (2026-07-28), então não dá mais pra
+  // supor que todo push é sempre pro app do aluno.
+  let data = { title: 'Meu Protocolo', body: '', url: 'aluno.html' };
+  try { data = { ...data, ...event.data.json() }; } catch { /* payload sem JSON, mantém default */ }
   event.waitUntil(
     self.registration.showNotification(data.title || 'Meu Protocolo', {
       body: data.body || '',
       icon: 'icons/icon-192-v2.png',
       badge: 'icons/icon-192-v2.png',
+      data: { url: data.url || 'aluno.html' },
     })
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
+  const targetUrl = (event.notification.data && event.notification.data.url) || 'aluno.html';
   event.notification.close();
   event.waitUntil(
     self.clients.matchAll({ type: 'window' }).then((clients) => {
       for (const client of clients) {
-        if (client.url.includes('aluno.html') && 'focus' in client) return client.focus();
+        if (client.url.includes(targetUrl) && 'focus' in client) return client.focus();
       }
-      if (self.clients.openWindow) return self.clients.openWindow('aluno.html');
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
     })
   );
 });

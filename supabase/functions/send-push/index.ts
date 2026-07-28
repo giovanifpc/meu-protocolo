@@ -1,9 +1,13 @@
-// Envia push notification pro aluno (lembrete de treino, reengajamento por
-// baixa adesão). Chamado pelo painel do profissional com o JWT normal — a
-// leitura de `students` passa pela RLS do chamador (confirma que o aluno é
-// dele); a leitura/limpeza de `push_subscriptions` usa service role porque
-// essa tabela não tem policy de leitura pro profissional (só o aluno
-// gerencia a própria inscrição).
+// Envia push notification — pro aluno (lembrete de treino, reengajamento por
+// baixa adesão) OU pro profissional (2026-07-28, ex: aviso de cobrança da
+// própria assinatura). Manda exatamente um dos dois: student_id ou
+// professional_id. No caminho do aluno, quem chama é o profissional (a
+// leitura de `students` via RLS do chamador confirma que o aluno é dele); no
+// caminho do profissional, é sempre auto-notificação — a leitura de
+// `professionals` via RLS do chamador confirma que o alvo é ele mesmo (não dá
+// pra um profissional mandar push pra outro). A leitura/escrita de
+// `push_subscriptions` usa service role porque essa tabela não tem policy de
+// leitura agregada (só cada um gerencia a própria inscrição).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import * as webpush from 'jsr:@negrel/webpush';
 
@@ -51,23 +55,41 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supaCaller.auth.getUser();
     if (!user) throw new Error('Sessão inválida.');
 
-    const { student_id, title, body } = await req.json();
-    if (!student_id || !title) throw new Error('student_id e title são obrigatórios.');
-
-    const { data: student, error: studentErr } = await supaCaller
-      .from('students').select('id').eq('id', student_id).maybeSingle();
-    if (studentErr || !student) throw new Error('Aluno não encontrado ou sem permissão pra notificá-lo.');
+    const { student_id, professional_id, title, body, url } = await req.json();
+    if (!title) throw new Error('title é obrigatório.');
+    if (!student_id && !professional_id) throw new Error('Informe student_id ou professional_id.');
+    if (student_id && professional_id) throw new Error('Informe apenas um: student_id ou professional_id.');
 
     const supaAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // grava o registro sempre, independente de o aluno ter push ativado —
-    // é o que aparece na tela de Notificações dentro do próprio app.
-    await supaAdmin.from('student_notifications').insert({ student_id, title, body: body || null });
+    let subsColumn: 'student_id' | 'professional_id';
+    let subsValue: string;
+    let defaultUrl: string;
+
+    if (student_id) {
+      const { data: student, error: studentErr } = await supaCaller
+        .from('students').select('id').eq('id', student_id).maybeSingle();
+      if (studentErr || !student) throw new Error('Aluno não encontrado ou sem permissão pra notificá-lo.');
+      // grava o registro sempre, independente de o aluno ter push ativado —
+      // é o que aparece na tela de Notificações dentro do próprio app.
+      await supaAdmin.from('student_notifications').insert({ student_id, title, body: body || null });
+      subsColumn = 'student_id';
+      subsValue = student_id;
+      defaultUrl = 'aluno.html';
+    } else {
+      const { data: pro, error: proErr } = await supaCaller
+        .from('professionals').select('id').eq('id', professional_id).maybeSingle();
+      if (proErr || !pro) throw new Error('Profissional não encontrado ou sem permissão pra notificá-lo.');
+      await supaAdmin.from('professional_notifications').insert({ professional_id, title, body: body || null });
+      subsColumn = 'professional_id';
+      subsValue = professional_id;
+      defaultUrl = 'index.html';
+    }
 
     const { data: subs, error: subsErr } = await supaAdmin
-      .from('push_subscriptions').select('*').eq('student_id', student_id);
+      .from('push_subscriptions').select('*').eq(subsColumn, subsValue);
     if (subsErr) throw new Error('Erro ao buscar inscrições de notificação: ' + subsErr.message);
-    if (!subs || !subs.length) return jsonResponse({ sent: 0, message: 'Esse aluno ainda não ativou notificações no app — mas a mensagem já ficou registrada pra ele ver dentro do app.' });
+    if (!subs || !subs.length) return jsonResponse({ sent: 0, message: 'Ainda não ativou notificações push neste aparelho — mas a mensagem já ficou registrada pra ver dentro do app.' });
 
     const appServer = await getAppServer();
     let sent = 0;
@@ -78,7 +100,7 @@ Deno.serve(async (req) => {
           endpoint: sub.endpoint,
           keys: { p256dh: sub.p256dh, auth: sub.auth },
         });
-        await subscriber.pushTextMessage(JSON.stringify({ title, body: body || '' }), {});
+        await subscriber.pushTextMessage(JSON.stringify({ title, body: body || '', url: url || defaultUrl }), {});
         sent++;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

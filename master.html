@@ -56,6 +56,10 @@
   .conv-name { font-weight:700; }
   .conv-meta { font-size:11px; color:var(--muted); white-space:nowrap; }
   .conv-preview { font-size:12px; color:var(--muted); margin-top:2px; max-width:520px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .conv-owner { font-size:11px; color:var(--muted); margin-top:1px; }
+  .conv-badge { display:inline-block; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; padding:1px 6px; border-radius:6px; margin-right:6px; vertical-align:middle; }
+  .conv-badge-profissional { background:rgba(45,107,228,.12); color:#1a4faa; }
+  .conv-badge-aluno { background:rgba(30,140,100,.14); color:#146b4d; }
   .conv-transcript { display:none; margin-top:10px; padding:10px 12px; background:var(--bg); border-radius:10px; font-size:12.5px; max-height:340px; overflow-y:auto; }
   .conv-transcript.open { display:block; }
   .conv-msg { margin-bottom:10px; white-space:pre-wrap; line-height:1.4; }
@@ -140,7 +144,11 @@
     </div>
 
     <div class="card">
-      <h2>Conversas de suporte (últimos 30 dias)</h2>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <h2 style="margin:0;">Conversas de suporte (últimos 30 dias)</h2>
+        <button class="btn small" id="downloadSupportLogBtn" type="button">Baixar log completo (.txt)</button>
+      </div>
+      <p class="revenue-note">Inclui as conversas do profissional e as do aluno com o suporte, identificadas por tipo — pra aluno, mostra também de qual profissional é aquele aluno.</p>
       <div id="supportConvList"><div class="msg">Carregando...</div></div>
     </div>
     </div>
@@ -269,10 +277,11 @@
     return tr;
   }
 
-  function renderConvTranscript(box, msgs) {
+  function renderConvTranscript(box, msgs, tipo) {
+    const userLabel = tipo === 'aluno' ? 'Aluno' : 'Profissional';
     box.innerHTML = (msgs || []).map((m) => `
       <div class="conv-msg">
-        <div class="who">${m.role === 'user' ? 'Profissional' : 'IA'}</div>
+        <div class="who">${m.role === 'user' ? userLabel : 'IA'}</div>
         ${escapeHtml(m.content)}
       </div>`).join('') || '<div class="msg">Sem mensagens.</div>';
   }
@@ -290,17 +299,22 @@
       return;
     }
 
-    el.innerHTML = data.map((c, i) => `
+    el.innerHTML = data.map((c, i) => {
+      const isAluno = c.tipo === 'aluno';
+      const badge = isAluno ? 'Aluno' : 'Profissional';
+      return `
       <div class="conv-item">
-        <div class="conv-row" data-role="toggle-conv" data-idx="${i}" data-id="${c.conversation_id}">
+        <div class="conv-row" data-role="toggle-conv" data-idx="${i}" data-id="${c.conversation_id}" data-tipo="${c.tipo}">
           <div>
-            <div class="conv-name">${escapeHtml(c.professional_nome)}</div>
+            <div class="conv-name"><span class="conv-badge conv-badge-${c.tipo}">${badge}</span> ${escapeHtml(c.nome)}</div>
+            ${isAluno ? `<div class="conv-owner">personal: ${escapeHtml(c.professional_nome)}</div>` : ''}
             <div class="conv-preview">${escapeHtml(c.preview || '')}</div>
           </div>
           <div class="conv-meta">${c.message_count} msg(s) · ${new Date(c.last_message_at).toLocaleString('pt-BR')}</div>
         </div>
         <div class="conv-transcript" id="convTranscript-${i}"></div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
 
     el.querySelectorAll('[data-role="toggle-conv"]').forEach((row) => {
       row.addEventListener('click', async () => {
@@ -310,17 +324,94 @@
         if (wasOpen || box.dataset.loaded) return;
 
         box.innerHTML = '<div class="msg">Carregando...</div>';
-        const { data: msgs, error: msgErr } = await supa.rpc('master_get_support_conversation', { conv_id: row.dataset.id });
+        const { data: msgs, error: msgErr } = await supa.rpc('master_get_support_conversation', { conv_id: row.dataset.id, p_tipo: row.dataset.tipo });
         if (msgErr) {
           console.error('Falha ao carregar transcript:', msgErr.message);
           box.innerHTML = `<div class="msg error">Erro: ${escapeHtml(msgErr.message)}</div>`;
           return;
         }
-        renderConvTranscript(box, msgs);
+        renderConvTranscript(box, msgs, row.dataset.tipo);
         box.dataset.loaded = '1';
       });
     });
   }
+
+  function formatDateBr(d) {
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  // Agrupa por data (mais recente primeiro) e, dentro de cada data, por
+  // participante (profissional ou aluno) — é literalmente o corte que o
+  // Giovani pediu pra já vir pronto no arquivo, sem ele ter que reorganizar
+  // antes de colar num resumo.
+  async function downloadSupportLog() {
+    const btn = $('downloadSupportLogBtn');
+    btn.disabled = true;
+    btn.textContent = 'Gerando...';
+    const { data, error } = await supa.rpc('master_export_support_log');
+    btn.disabled = false;
+    btn.textContent = 'Baixar log completo (.txt)';
+    if (error) {
+      console.error('Falha ao gerar log de suporte:', error.message);
+      alert('Erro ao gerar o log: ' + error.message);
+      return;
+    }
+    if (!data || !data.length) {
+      alert('Nenhuma conversa de suporte nos últimos 30 dias.');
+      return;
+    }
+
+    const byDate = new Map();
+    data.forEach((m) => {
+      const dia = formatDateBr(new Date(m.created_at));
+      if (!byDate.has(dia)) byDate.set(dia, new Map());
+      const byUser = byDate.get(dia);
+      const chave = m.conversation_id;
+      if (!byUser.has(chave)) {
+        byUser.set(chave, {
+          tipo: m.tipo,
+          nome: m.nome,
+          professional_nome: m.professional_nome,
+          msgs: [],
+        });
+      }
+      byUser.get(chave).msgs.push(m);
+    });
+
+    const linhas = [];
+    linhas.push('LOG DE CONVERSAS DE SUPORTE — ÚLTIMOS 30 DIAS');
+    linhas.push('Gerado em ' + new Date().toLocaleString('pt-BR'));
+    linhas.push('='.repeat(60));
+
+    Array.from(byDate.keys()).forEach((dia) => {
+      linhas.push('');
+      linhas.push('# ' + dia);
+      linhas.push('-'.repeat(60));
+      const conversas = byDate.get(dia);
+      Array.from(conversas.values()).forEach((conv) => {
+        const cabecalho = conv.tipo === 'aluno'
+          ? `[ALUNO] ${conv.nome} (personal: ${conv.professional_nome})`
+          : `[PROFISSIONAL] ${conv.nome}`;
+        linhas.push('');
+        linhas.push(cabecalho);
+        conv.msgs.forEach((m) => {
+          const hora = new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          const quem = m.role === 'user' ? (conv.tipo === 'aluno' ? 'Aluno' : 'Profissional') : 'IA';
+          linhas.push(`  ${hora} — ${quem}: ${m.content}`);
+        });
+      });
+    });
+
+    const blob = new Blob([linhas.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `suporte-log-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  $('downloadSupportLogBtn').addEventListener('click', downloadSupportLog);
 
   async function loadProfessionals() {
     const { data: rows, error } = await supa.rpc('master_list_professionals');

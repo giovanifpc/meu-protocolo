@@ -45,6 +45,7 @@
   .status-deletado { background:#EDEFF2; color:var(--muted); }
   .msg { font-size:12px; margin-top:4px; }
   .msg.error { color:var(--danger); }
+  #supportLogAgeWarning { margin:10px 0; padding:10px 14px; border-radius:10px; font-size:13px; background:rgba(191,80,16,.08); border:1px solid rgba(191,80,16,.25); color:#7a3d10; }
   .msg.ok { color:var(--accent); }
   .row-save { display:flex; align-items:center; gap:6px; }
   #loadingMsg, #emptyMsg { padding:40px; text-align:center; color:var(--muted); font-size:14px; }
@@ -149,6 +150,7 @@
         <button class="btn small" id="downloadSupportLogBtn" type="button">Baixar log completo (.txt)</button>
       </div>
       <p class="revenue-note">Inclui as conversas do profissional e as do aluno com o suporte, identificadas por tipo — pra aluno, mostra também de qual profissional é aquele aluno.</p>
+      <div id="supportLogAgeWarning" style="display:none;"></div>
       <div id="supportConvList"><div class="msg">Carregando...</div></div>
     </div>
     </div>
@@ -286,14 +288,36 @@
       </div>`).join('') || '<div class="msg">Sem mensagens.</div>';
   }
 
+  // Aviso simples pra não esquecer de baixar o log antes do expurgo
+  // automático de 30 dias (2026-07-28) — sem tabela/RPC nova, calcula a
+  // idade da conversa mais antiga a partir do que a lista já traz
+  // (started_at de cada conversa). Avisa quando faltam 7 dias ou menos.
+  function updateSupportLogAgeWarning(conversations) {
+    const box = $('supportLogAgeWarning');
+    if (!conversations || !conversations.length) { box.style.display = 'none'; return; }
+    const oldestMs = conversations.reduce((min, c) => {
+      const t = new Date(c.started_at).getTime();
+      return t < min ? t : min;
+    }, Infinity);
+    const daysOld = Math.floor((Date.now() - oldestMs) / 86400000);
+    const daysRemaining = 30 - daysOld;
+    if (daysRemaining > 7) { box.style.display = 'none'; return; }
+    box.style.display = 'block';
+    box.textContent = daysRemaining <= 0
+      ? 'Atenção: já existe conversa de suporte no limite (ou passando) dos 30 dias — pode ter sido apagada pelo expurgo automático. Baixe o log com mais frequência pra não perder histórico.'
+      : `Atenção: a conversa mais antiga do log tem ${daysOld} dia(s) — o expurgo automático apaga com 30 dias. Restam ${daysRemaining} dia(s). Baixe o log completo antes de perder esse período.`;
+  }
+
   async function loadSupportConversations() {
     const { data, error } = await supa.rpc('master_list_support_conversations');
     const el = $('supportConvList');
     if (error) {
       console.error('Falha ao carregar conversas de suporte:', error.message);
       el.innerHTML = `<div class="msg error">Erro ao carregar: ${escapeHtml(error.message)}</div>`;
+      $('supportLogAgeWarning').style.display = 'none';
       return;
     }
+    updateSupportLogAgeWarning(data);
     if (!data || !data.length) {
       el.innerHTML = '<div class="msg">Nenhuma conversa nos últimos 30 dias.</div>';
       return;

@@ -1263,10 +1263,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 
     const { data: videos } = await supa
       .from('professional_exercise_videos')
-      .select('exercise_id, youtube_url')
+      .select('exercise_id, youtube_url, image_path')
       .eq('professional_id', student.professional_id);
     exerciseVideos = {};
-    (videos || []).forEach(v => { exerciseVideos[v.exercise_id] = v.youtube_url; });
+    (videos || []).forEach(v => { exerciseVideos[v.exercise_id] = { youtube_url: v.youtube_url, image_path: v.image_path }; });
 
     const { data: guidance } = await supa
       .from('nutrition_guidance')
@@ -2476,13 +2476,35 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 
   /* ---- Vídeo próprio do profissional (YouTube), quando vinculado ao exercício ---- */
   function youtubeIdFor(ex) {
-    const url = ex.exercise_id ? exerciseVideos[ex.exercise_id] : null;
+    const url = ex.exercise_id ? (exerciseVideos[ex.exercise_id] && exerciseVideos[ex.exercise_id].youtube_url) : null;
     if (!url) return null;
     const m = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/);
     return m ? m[1] : null;
   }
   function youtubeEmbedMarkup(videoId) {
     return `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}" title="Vídeo de execução" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%;height:100%;border:0;"></iframe>`;
+  }
+
+  /* ---- Imagem própria do profissional, quando vinculada ao exercício ----
+     Prioridade de mídia: vídeo do YouTube > imagem própria > GIF da
+     biblioteca > placeholder. Diferente do vídeo/GIF (URLs resolvíveis na
+     hora), a imagem própria mora num bucket privado — precisa de signed URL
+     assíncrona, então o HTML inicial sempre sai com um placeholder e é
+     substituído depois que a URL resolve. */
+  const exerciseImageUrlCache = {}; // path -> signed url
+  function customImagePathFor(ex) {
+    return ex.exercise_id ? (exerciseVideos[ex.exercise_id] && exerciseVideos[ex.exercise_id].image_path) : null;
+  }
+  async function resolveCustomExerciseImage(path, targetSelector) {
+    let url = exerciseImageUrlCache[path];
+    if (!url) {
+      const { data, error } = await supa.storage.from('exercise-media').createSignedUrl(path, 3600);
+      if (error || !data) return;
+      url = data.signedUrl;
+      exerciseImageUrlCache[path] = url;
+    }
+    const el = document.querySelector(targetSelector);
+    if (el) el.innerHTML = mediaImgMarkup(url, '', el.innerHTML);
   }
 
   /* ---- MÍDIA DE EXERCÍCIO (fallback entre variações do link do Drive) ---- */
@@ -2539,7 +2561,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       if (isCardioExercise(ex)) return `
         <div class="ex-list-item">
           <div class="ex-li-num">${i+1}</div>
-          <div class="ex-thumb">${mediaThumb(ex)}</div>
+          <div class="ex-thumb" data-thumb-idx="${i}">${mediaThumb(ex)}</div>
           <div class="ex-li-info">
             <div class="eli-name">${escapeHtml(ex.nome)}</div>
             <div class="eli-sets">Cardio · meta ${exerciseTargetMinutes(ex) || 30} min</div>
@@ -2548,19 +2570,25 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       const cfg = exerciseWeekConfig(ex); return `
       <div class="ex-list-item">
         <div class="ex-li-num">${i+1}</div>
-        <div class="ex-thumb">${mediaThumb(ex)}</div>
+        <div class="ex-thumb" data-thumb-idx="${i}">${mediaThumb(ex)}</div>
         <div class="ex-li-info">
           <div class="eli-name">${escapeHtml(ex.nome)}</div>
           <div class="eli-sets">${cfg.sets}x${escapeHtml(String(cfg.reps))}${cfg.nota ? ' · ' + escapeHtml(cfg.nota) : ''} · descanso ${cfg.rest}s</div>
         </div>
       </div>
     `; }).join('');
+    w.exercises.forEach((ex, i) => {
+      if (isCardioExercise(ex) || youtubeIdFor(ex)) return;
+      const imgPath = customImagePathFor(ex);
+      if (imgPath) resolveCustomExerciseImage(imgPath, `.ex-thumb[data-thumb-idx="${i}"]`);
+    });
     showScreen('overview');
   }
   function mediaThumb(ex) {
     if (isCardioExercise(ex)) return `<span class="ph">${ICONS.activity}</span>`;
     const ytId = youtubeIdFor(ex);
     if (ytId) return mediaImgMarkup(`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`, '', `<span class="ph">${ICONS.dumbbell}</span>`);
+    if (customImagePathFor(ex)) return `<span class="ph">${ICONS.dumbbell}</span>`;
     if (ex.media) return mediaImgMarkup(ex.media, '', `<span class="ph">${ICONS.dumbbell}</span>`);
     return `<span class="ph">${ICONS.dumbbell}</span>`;
   }
@@ -2624,11 +2652,14 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     const cfg = exerciseWeekConfig(ex);
 
     const ytId = youtubeIdFor(ex);
+    const customImgPath = !ytId ? customImagePathFor(ex) : null;
     const media = ytId
       ? youtubeEmbedMarkup(ytId)
-      : ex.media
-        ? mediaImgMarkup(ex.media, ex.nome, `<div class="media-ph"><span class="ph-ico">${ICONS.dumbbell}</span>Vídeo indisponível.</div>`)
-        : `<div class="media-ph"><span class="ph-ico">${ICONS.dumbbell}</span>Vídeo em breve.</div>`;
+      : customImgPath
+        ? `<div class="media-ph"><span class="ph-ico">${ICONS.dumbbell}</span>Carregando…</div>`
+        : ex.media
+          ? mediaImgMarkup(ex.media, ex.nome, `<div class="media-ph"><span class="ph-ico">${ICONS.dumbbell}</span>Vídeo indisponível.</div>`)
+          : `<div class="media-ph"><span class="ph-ico">${ICONS.dumbbell}</span>Vídeo em breve.</div>`;
 
     const setsHtml = sd.sets.map((set,si) => `
       <div class="set-row ${set.done?'done':''}" id="setRow${si}">
@@ -2649,6 +2680,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       <div class="sets-head"><span class="sh-title">Séries</span><span class="sh-target">Meta: ${cfg.sets}x${escapeHtml(String(cfg.reps))}${cfg.nota ? ' · ' + escapeHtml(cfg.nota) : ''} · descanso ${cfg.rest}s</span></div>
       ${setsHtml}
       ${noteHtml}`;
+    if (customImgPath) resolveCustomExerciseImage(customImgPath, '.exec-media');
 
     $('prevBtn').style.visibility = i === 0 ? 'hidden' : 'visible';
     $('nextBtn').textContent = i === w.exercises.length - 1 ? 'Finalizar treino' : 'Próximo';

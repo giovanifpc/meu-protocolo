@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://drive.google.com https://*.supabase.co; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co https://o4511757250199552.ingest.us.sentry.io; object-src 'none'; base-uri 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://drive.google.com https://*.supabase.co; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co https://o4511757250199552.ingest.us.sentry.io; object-src 'none'; base-uri 'self';">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" href="icons/favicon-32-v2.png">
 <link rel="manifest" href="manifest-painel.json">
@@ -151,6 +151,31 @@
   .anamnese-context .ac-lbl { font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
   .anamnese-context .ac-alert { color:var(--danger); font-weight:700; }
   .wizard-back { display:inline-block; margin-bottom:12px; color:var(--muted); font-size:13px; font-weight:700; cursor:pointer; }
+
+  .search-result-item { display:flex; align-items:center; gap:6px; }
+  .search-result-item .sri-main { flex:1; min-width:0; padding:9px 0; cursor:pointer; }
+  .search-result-item.search-create-item { color:var(--primary); font-weight:700; cursor:pointer; border-top:1px solid var(--line); }
+  .sri-icon-btn { flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; padding:0; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--faint); cursor:pointer; }
+  .sri-icon-btn svg { width:13px; height:13px; }
+  .ex-media-img-row { display:flex; gap:10px; align-items:flex-start; }
+  .ex-media-img-preview { width:70px; height:70px; border-radius:10px; background:var(--bg); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; }
+  .ex-media-img-preview img { width:100%; height:100%; object-fit:contain; }
+  .ex-media-img-preview .ph-placeholder { color:var(--muted); font-size:10px; text-align:center; padding:4px; }
+  .ex-media-img-actions { display:flex; flex-direction:column; gap:6px; }
+
+  .crop-overlay { position:fixed; inset:0; z-index:600; background:rgba(15,20,28,.6); display:none; align-items:center; justify-content:center; padding:24px; }
+  .crop-overlay.show { display:flex; }
+  .crop-card { width:100%; max-width:340px; background:var(--card); border-radius:var(--radius-lg); padding:22px; box-shadow:0 20px 44px -14px rgba(20,30,45,.3); }
+  .crop-card h3 { font-size:16px; font-weight:800; margin:0 0 4px; text-align:center; }
+  .shape-btn { flex:1; border:none; background:none; padding:7px; border-radius:7px; font-size:12px; font-weight:700; font-family:var(--font); color:var(--muted); cursor:pointer; }
+  .shape-btn.active { background:var(--primary); color:#fff; }
+  .shape-toggle { display:flex; gap:4px; background:var(--bg); border-radius:9px; padding:3px; margin-bottom:14px; }
+  .crop-stage-wrap { display:flex; justify-content:center; }
+  .crop-stage { position:relative; overflow:hidden; border-radius:12px; background:#0f141c; touch-action:none; cursor:grab; }
+  .crop-stage:active { cursor:grabbing; }
+  .crop-stage img { position:absolute; top:0; left:0; transform-origin:0 0; user-select:none; -webkit-user-drag:none; pointer-events:none; }
+  .crop-zoom-row { margin-top:16px; }
+  .crop-zoom-row input[type=range] { width:100%; accent-color:var(--primary); }
 </style>
 </head>
 <body>
@@ -422,17 +447,72 @@
 
   <div class="modal-overlay" id="videoModalOverlay">
     <div class="modal-card">
-      <h3>Vídeo de execução</h3>
-      <p>Cole o link do YouTube com você executando <strong id="videoModalExName"></strong>. Vale pra todos os seus alunos que tiverem esse exercício em algum treino — substitui o GIF da biblioteca só pra eles.</p>
+      <h3>Mídia de execução</h3>
+      <p>Vídeo do YouTube e/ou imagem própria com <strong id="videoModalExName"></strong>. Vale pra todos os seus alunos que tiverem esse exercício em algum treino — substitui o GIF da biblioteca só pra eles.</p>
       <div class="field">
-        <label>Link do YouTube</label>
+        <label>Link do YouTube (opcional)</label>
         <input type="url" id="videoUrlInput" placeholder="https://www.youtube.com/watch?v=...">
+      </div>
+      <div class="field">
+        <label>Imagem própria (opcional)</label>
+        <div class="ex-media-img-row">
+          <div class="ex-media-img-preview" id="exMediaImgPreview"><div class="ph-placeholder">Sem imagem</div></div>
+          <div class="ex-media-img-actions">
+            <button type="button" class="btn secondary small" id="exMediaImgPickBtn">Escolher imagem</button>
+            <button type="button" class="btn secondary small" id="exMediaImgRemoveBtn" style="display:none;color:var(--danger);">Remover imagem</button>
+            <input type="file" id="exMediaImgInput" accept="image/jpeg,image/png,image/gif,image/heic,.heic,.jpg,.jpeg,.png,.gif" style="display:none;">
+          </div>
+        </div>
+        <div id="exMediaImgStatus" class="msg" style="font-size:11px;margin-top:4px;"></div>
       </div>
       <div id="videoModalMsg" class="msg" style="display:none;font-size:12px;color:var(--danger);margin:-8px 0 12px;"></div>
       <div class="modal-actions">
         <button class="btn" id="videoModalSaveBtn" type="button">Salvar</button>
-        <button class="btn danger" id="videoModalRemoveBtn" type="button" style="display:none;">Remover vínculo</button>
         <button class="btn secondary" id="videoModalCancelBtn" type="button">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="crop-overlay" id="exMediaCropOverlay">
+    <div class="crop-card">
+      <h3>Recortar imagem</h3>
+      <div class="shape-toggle" id="exMediaCropShapeToggle">
+        <button class="shape-btn active" data-shape="square" type="button">Quadrado</button>
+        <button class="shape-btn" data-shape="landscape" type="button">Paisagem</button>
+      </div>
+      <div class="crop-stage-wrap">
+        <div class="crop-stage" id="exMediaCropStage">
+          <img id="exMediaCropImg" alt="">
+        </div>
+      </div>
+      <div class="crop-zoom-row">
+        <input type="range" id="exMediaCropZoomInput" min="100" max="300" value="100">
+      </div>
+      <div class="modal-actions" style="margin-top:16px;">
+        <button class="btn" id="exMediaCropConfirmBtn" type="button">Usar imagem</button>
+        <button class="btn secondary" id="exMediaCropCancelBtn" type="button">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="customExerciseModalOverlay">
+    <div class="modal-card">
+      <h3 id="customExerciseModalTitle">Criar exercício novo</h3>
+      <p id="customExerciseModalHint">Esse exercício fica só na sua conta — nunca aparece pra outros profissionais.</p>
+      <div id="customExerciseDuplicateHint" class="msg" style="display:none;font-size:12px;color:var(--muted);background:var(--bg);border-radius:8px;padding:8px 10px;margin:-8px 0 12px;"></div>
+      <div class="field">
+        <label>Nome</label>
+        <input type="text" id="customExerciseNomeInput" placeholder="Ex: Supino reto com halteres">
+      </div>
+      <div class="field">
+        <label>Grupo muscular</label>
+        <select id="customExerciseGrupoInput"></select>
+      </div>
+      <div id="customExerciseModalMsg" class="msg" style="display:none;font-size:12px;color:var(--danger);margin:-8px 0 12px;"></div>
+      <div class="modal-actions">
+        <button class="btn" id="customExerciseSaveBtn" type="button">Criar</button>
+        <button class="btn danger" id="customExerciseDeleteBtn" type="button" style="display:none;">Excluir exercício</button>
+        <button class="btn secondary" id="customExerciseCancelBtn" type="button">Cancelar</button>
       </div>
     </div>
   </div>
@@ -616,10 +696,10 @@
   let exerciseVideos = {};
 
   async function loadExerciseVideos() {
-    const { data, error } = await supa.from('professional_exercise_videos').select('exercise_id, youtube_url').eq('professional_id', professional.id);
+    const { data, error } = await supa.from('professional_exercise_videos').select('exercise_id, youtube_url, image_path').eq('professional_id', professional.id);
     if (error || !data) return;
     exerciseVideos = {};
-    data.forEach(v => { exerciseVideos[v.exercise_id] = v.youtube_url; });
+    data.forEach(v => { exerciseVideos[v.exercise_id] = { youtube_url: v.youtube_url, image_path: v.image_path }; });
   }
 
   async function loadStudents() {
@@ -1171,64 +1251,371 @@
   });
 
   let pendingVideoExerciseId = null;
+  let pendingExMediaImageBlob = null;
+  let pendingExMediaImagePreviewUrl = null;
+  let pendingExMediaImageRemoval = false;
+  const exerciseImageUrlCache = {}; // path -> signed url
 
   function extractYoutubeId(url) {
     const m = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/);
     return m ? m[1] : null;
   }
 
+  function resetExMediaImageState() {
+    if (pendingExMediaImagePreviewUrl) URL.revokeObjectURL(pendingExMediaImagePreviewUrl);
+    pendingExMediaImageBlob = null;
+    pendingExMediaImagePreviewUrl = null;
+    pendingExMediaImageRemoval = false;
+  }
+
   function openVideoModal(exerciseId, exerciseNome) {
     pendingVideoExerciseId = exerciseId;
+    resetExMediaImageState();
+    const existing = exerciseVideos[exerciseId] || {};
     $('videoModalExName').textContent = exerciseNome;
-    $('videoUrlInput').value = exerciseVideos[exerciseId] || '';
+    $('videoUrlInput').value = existing.youtube_url || '';
     $('videoModalMsg').style.display = 'none';
-    $('videoModalRemoveBtn').style.display = exerciseVideos[exerciseId] ? 'block' : 'none';
+    $('exMediaImgStatus').textContent = '';
+    $('exMediaImgRemoveBtn').style.display = existing.image_path ? 'inline-block' : 'none';
+    if (existing.image_path) {
+      $('exMediaImgPreview').innerHTML = '<div class="ph-placeholder">Carregando…</div>';
+      resolveExerciseImagePreview(existing.image_path, exerciseId);
+    } else {
+      $('exMediaImgPreview').innerHTML = '<div class="ph-placeholder">Sem imagem</div>';
+    }
     $('videoModalOverlay').classList.add('show');
+  }
+
+  async function resolveExerciseImagePreview(path, forExerciseId) {
+    let url = exerciseImageUrlCache[path];
+    if (!url) {
+      const { data, error } = await supa.storage.from('exercise-media').createSignedUrl(path, 3600);
+      if (error || !data) { $('exMediaImgPreview').innerHTML = '<div class="ph-placeholder">Erro ao carregar</div>'; return; }
+      url = data.signedUrl;
+      exerciseImageUrlCache[path] = url;
+    }
+    if (pendingVideoExerciseId === forExerciseId && !pendingExMediaImageBlob) {
+      $('exMediaImgPreview').innerHTML = `<img src="${url}" alt="">`;
+    }
   }
 
   $('videoModalCancelBtn').addEventListener('click', () => {
     pendingVideoExerciseId = null;
+    resetExMediaImageState();
     $('videoModalOverlay').classList.remove('show');
+  });
+
+  $('exMediaImgPickBtn').addEventListener('click', () => $('exMediaImgInput').click());
+
+  $('exMediaImgInput').addEventListener('change', () => {
+    const file = $('exMediaImgInput').files[0];
+    $('exMediaImgInput').value = '';
+    if (!file) return;
+    if (file.type === 'image/gif') {
+      // GIF sobe direto, sem crop — recorte por canvas destruiria a animação.
+      if (file.size > 2 * 1024 * 1024) {
+        $('exMediaImgStatus').textContent = 'GIF maior que 2MB — escolha um arquivo menor.';
+        $('exMediaImgStatus').style.color = 'var(--danger)';
+        return;
+      }
+      if (pendingExMediaImagePreviewUrl) URL.revokeObjectURL(pendingExMediaImagePreviewUrl);
+      pendingExMediaImageBlob = file;
+      pendingExMediaImagePreviewUrl = URL.createObjectURL(file);
+      pendingExMediaImageRemoval = false;
+      $('exMediaImgPreview').innerHTML = `<img src="${pendingExMediaImagePreviewUrl}" alt="">`;
+      $('exMediaImgRemoveBtn').style.display = 'inline-block';
+      $('exMediaImgStatus').textContent = 'GIF pronto pra salvar.';
+      $('exMediaImgStatus').style.color = 'var(--muted)';
+      return;
+    }
+    openExMediaImageCrop(file);
+  });
+
+  $('exMediaImgRemoveBtn').addEventListener('click', () => {
+    resetExMediaImageState();
+    pendingExMediaImageRemoval = true;
+    $('exMediaImgPreview').innerHTML = '<div class="ph-placeholder">Sem imagem</div>';
+    $('exMediaImgRemoveBtn').style.display = 'none';
+    $('exMediaImgStatus').textContent = 'Imagem será removida ao salvar.';
+    $('exMediaImgStatus').style.color = 'var(--danger)';
   });
 
   $('videoModalSaveBtn').addEventListener('click', async () => {
     const url = $('videoUrlInput').value.trim();
-    if (!extractYoutubeId(url)) {
+    if (url && !extractYoutubeId(url)) {
       $('videoModalMsg').textContent = 'Link do YouTube inválido — cole a URL completa do vídeo.';
       $('videoModalMsg').style.display = 'block';
       return;
     }
-    const { error } = await supa.from('professional_exercise_videos').upsert({
-      professional_id: professional.id,
-      exercise_id: pendingVideoExerciseId,
-      youtube_url: url,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'professional_id,exercise_id' });
-    if (error) {
-      $('videoModalMsg').textContent = 'Erro ao salvar: ' + error.message;
-      $('videoModalMsg').style.display = 'block';
-      return;
+    const existing = exerciseVideos[pendingVideoExerciseId] || {};
+    let imagePath = pendingExMediaImageRemoval ? null : (existing.image_path || null);
+
+    if (pendingExMediaImageBlob) {
+      const ext = pendingExMediaImageBlob.type === 'image/gif' ? 'gif' : 'jpg';
+      const path = `${professional.id}/${pendingVideoExerciseId}.${ext}`;
+      const { error: upErr } = await supa.storage.from('exercise-media').upload(path, pendingExMediaImageBlob, { upsert: true, contentType: pendingExMediaImageBlob.type || 'image/jpeg' });
+      if (upErr) {
+        $('videoModalMsg').textContent = 'Erro ao enviar imagem: ' + upErr.message;
+        $('videoModalMsg').style.display = 'block';
+        return;
+      }
+      if (existing.image_path && existing.image_path !== path) {
+        await supa.storage.from('exercise-media').remove([existing.image_path]);
+      }
+      imagePath = path;
+    } else if (pendingExMediaImageRemoval && existing.image_path) {
+      await supa.storage.from('exercise-media').remove([existing.image_path]);
     }
-    exerciseVideos[pendingVideoExerciseId] = url;
+
+    if (!url && !imagePath) {
+      if (existing.youtube_url || existing.image_path) {
+        await supa.from('professional_exercise_videos').delete()
+          .eq('professional_id', professional.id).eq('exercise_id', pendingVideoExerciseId);
+      }
+      delete exerciseVideos[pendingVideoExerciseId];
+    } else {
+      const { error } = await supa.from('professional_exercise_videos').upsert({
+        professional_id: professional.id,
+        exercise_id: pendingVideoExerciseId,
+        youtube_url: url || null,
+        image_path: imagePath,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'professional_id,exercise_id' });
+      if (error) {
+        $('videoModalMsg').textContent = 'Erro ao salvar: ' + error.message;
+        $('videoModalMsg').style.display = 'block';
+        return;
+      }
+      exerciseVideos[pendingVideoExerciseId] = { youtube_url: url || null, image_path: imagePath };
+    }
     pendingVideoExerciseId = null;
+    resetExMediaImageState();
     $('videoModalOverlay').classList.remove('show');
     renderWorkouts();
-    toast('Vídeo vinculado.');
+    toast('Mídia salva.');
   });
 
-  $('videoModalRemoveBtn').addEventListener('click', async () => {
-    const { error } = await supa.from('professional_exercise_videos').delete()
-      .eq('professional_id', professional.id).eq('exercise_id', pendingVideoExerciseId);
-    if (error) {
-      $('videoModalMsg').textContent = 'Erro ao remover: ' + error.message;
-      $('videoModalMsg').style.display = 'block';
+  // Crop de imagem de exercício — mesma mecânica de arrastar/zoom já usada
+  // no crop de logo do profissional, com formatos diferentes (aqui é
+  // Quadrado/Paisagem, lá é Quadrado/Círculo — a saída muda de proporção,
+  // não só de máscara, então o próprio "palco" de recorte muda de tamanho).
+  const exMediaCropState = { natW: 0, natH: 0, baseScale: 1, scale: 1, offsetX: 0, offsetY: 0, dragging: false, pointerId: null, lastX: 0, lastY: 0, objectUrl: null, shape: 'square' };
+  const EX_CROP_DIMS = { square: { w: 240, h: 240 }, landscape: { w: 300, h: 169 } };
+
+  function exMediaStageDims() { return EX_CROP_DIMS[exMediaCropState.shape]; }
+
+  function exMediaApplyStageSize() {
+    const { w, h } = exMediaStageDims();
+    $('exMediaCropStage').style.width = w + 'px';
+    $('exMediaCropStage').style.height = h + 'px';
+  }
+
+  function exMediaRecenterCrop() {
+    const { w: stageW, h: stageH } = exMediaStageDims();
+    exMediaCropState.baseScale = Math.max(stageW / exMediaCropState.natW, stageH / exMediaCropState.natH);
+    exMediaCropState.scale = exMediaCropState.baseScale;
+    exMediaCropState.offsetX = (stageW - exMediaCropState.natW * exMediaCropState.scale) / 2;
+    exMediaCropState.offsetY = (stageH - exMediaCropState.natH * exMediaCropState.scale) / 2;
+    $('exMediaCropZoomInput').value = 100;
+  }
+
+  function openExMediaImageCrop(file) {
+    if (exMediaCropState.objectUrl) URL.revokeObjectURL(exMediaCropState.objectUrl);
+    exMediaCropState.objectUrl = URL.createObjectURL(file);
+    exMediaCropState.shape = 'square';
+    $('exMediaCropShapeToggle').querySelectorAll('.shape-btn').forEach(b => b.classList.toggle('active', b.dataset.shape === 'square'));
+    const img = $('exMediaCropImg');
+    img.onload = () => {
+      exMediaCropState.natW = img.naturalWidth;
+      exMediaCropState.natH = img.naturalHeight;
+      exMediaApplyStageSize();
+      exMediaRecenterCrop();
+      exMediaRenderCropTransform();
+      $('exMediaCropOverlay').classList.add('show');
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(exMediaCropState.objectUrl);
+      exMediaCropState.objectUrl = null;
+      $('exMediaImgStatus').textContent = 'Esse arquivo não pôde ser aberto como imagem (formatos aceitos: JPEG, PNG, GIF — HEIC do iPhone pode não funcionar, tente exportar como JPEG).';
+      $('exMediaImgStatus').style.color = 'var(--danger)';
+    };
+    img.src = exMediaCropState.objectUrl;
+  }
+
+  function exMediaClampCropOffsets() {
+    const { w: stageW, h: stageH } = exMediaStageDims();
+    const w = exMediaCropState.natW * exMediaCropState.scale, h = exMediaCropState.natH * exMediaCropState.scale;
+    exMediaCropState.offsetX = Math.min(0, Math.max(stageW - w, exMediaCropState.offsetX));
+    exMediaCropState.offsetY = Math.min(0, Math.max(stageH - h, exMediaCropState.offsetY));
+  }
+  function exMediaRenderCropTransform() {
+    exMediaClampCropOffsets();
+    const img = $('exMediaCropImg');
+    img.style.width = (exMediaCropState.natW * exMediaCropState.scale) + 'px';
+    img.style.height = (exMediaCropState.natH * exMediaCropState.scale) + 'px';
+    img.style.transform = `translate(${exMediaCropState.offsetX}px,${exMediaCropState.offsetY}px)`;
+  }
+  const exMediaCropStageEl = $('exMediaCropStage');
+  exMediaCropStageEl.addEventListener('pointerdown', (e) => {
+    exMediaCropState.dragging = true;
+    exMediaCropState.pointerId = e.pointerId;
+    exMediaCropState.lastX = e.clientX;
+    exMediaCropState.lastY = e.clientY;
+    exMediaCropStageEl.setPointerCapture(e.pointerId);
+  });
+  exMediaCropStageEl.addEventListener('pointermove', (e) => {
+    if (!exMediaCropState.dragging || e.pointerId !== exMediaCropState.pointerId) return;
+    exMediaCropState.offsetX += e.clientX - exMediaCropState.lastX;
+    exMediaCropState.offsetY += e.clientY - exMediaCropState.lastY;
+    exMediaCropState.lastX = e.clientX;
+    exMediaCropState.lastY = e.clientY;
+    exMediaRenderCropTransform();
+  });
+  ['pointerup', 'pointercancel'].forEach(ev => exMediaCropStageEl.addEventListener(ev, () => { exMediaCropState.dragging = false; }));
+  $('exMediaCropZoomInput').addEventListener('input', (e) => {
+    const oldScale = exMediaCropState.scale;
+    const { w: stageW, h: stageH } = exMediaStageDims();
+    const newScale = exMediaCropState.baseScale * (Number(e.target.value) / 100);
+    const cx = (stageW / 2 - exMediaCropState.offsetX) / oldScale;
+    const cy = (stageH / 2 - exMediaCropState.offsetY) / oldScale;
+    exMediaCropState.scale = newScale;
+    exMediaCropState.offsetX = stageW / 2 - cx * newScale;
+    exMediaCropState.offsetY = stageH / 2 - cy * newScale;
+    exMediaRenderCropTransform();
+  });
+  $('exMediaCropShapeToggle').querySelectorAll('.shape-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      exMediaCropState.shape = btn.dataset.shape;
+      $('exMediaCropShapeToggle').querySelectorAll('.shape-btn').forEach(b => b.classList.toggle('active', b === btn));
+      exMediaApplyStageSize();
+      exMediaRecenterCrop();
+      exMediaRenderCropTransform();
+    });
+  });
+  function closeExMediaImageCrop() {
+    $('exMediaCropOverlay').classList.remove('show');
+    if (exMediaCropState.objectUrl) { URL.revokeObjectURL(exMediaCropState.objectUrl); exMediaCropState.objectUrl = null; }
+  }
+  $('exMediaCropCancelBtn').addEventListener('click', closeExMediaImageCrop);
+  $('exMediaCropConfirmBtn').addEventListener('click', () => {
+    const shape = exMediaCropState.shape;
+    const outW = 480, outH = shape === 'landscape' ? 270 : 480;
+    const { w: stageW, h: stageH } = exMediaStageDims();
+    const canvas = document.createElement('canvas');
+    canvas.width = outW; canvas.height = outH;
+    const ctx = canvas.getContext('2d');
+    const sx = -exMediaCropState.offsetX / exMediaCropState.scale;
+    const sy = -exMediaCropState.offsetY / exMediaCropState.scale;
+    const sW = stageW / exMediaCropState.scale;
+    const sH = stageH / exMediaCropState.scale;
+    ctx.drawImage($('exMediaCropImg'), sx, sy, sW, sH, 0, 0, outW, outH);
+    canvas.toBlob((blob) => {
+      if (pendingExMediaImagePreviewUrl) URL.revokeObjectURL(pendingExMediaImagePreviewUrl);
+      pendingExMediaImageBlob = blob;
+      pendingExMediaImagePreviewUrl = URL.createObjectURL(blob);
+      pendingExMediaImageRemoval = false;
+      $('exMediaImgPreview').innerHTML = `<img src="${pendingExMediaImagePreviewUrl}" alt="">`;
+      $('exMediaImgRemoveBtn').style.display = 'inline-block';
+      $('exMediaImgStatus').textContent = 'Imagem pronta pra salvar.';
+      $('exMediaImgStatus').style.color = 'var(--muted)';
+      closeExMediaImageCrop();
+    }, 'image/jpeg', 0.85);
+  });
+
+  // Criar/editar/apagar exercício personalizado — nunca compartilhado entre
+  // profissionais (created_by_professional_id sempre preenchido no que o
+  // profissional cria, nulo só nos ~1550 semeados originalmente).
+  let pendingCustomExercise = null; // { mode, workoutId, resultsBox, query, grupoFilter, exerciseId }
+
+  function populateCustomExerciseGrupoSelect(selected) {
+    const sel = $('customExerciseGrupoInput');
+    sel.innerHTML = '<option value="">Selecione...</option>' + muscleGroups.map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('');
+    sel.value = selected || '';
+  }
+
+  async function checkCustomExerciseDuplicate(query) {
+    $('customExerciseDuplicateHint').style.display = 'none';
+    if (!query) return;
+    const { data } = await supa.rpc('match_exercise_library', { q: query });
+    const match = data && data[0];
+    if (match && match.nome.toLowerCase() !== query.toLowerCase()) {
+      $('customExerciseDuplicateHint').innerHTML = `Já existe algo parecido: <strong>${escapeHtml(match.nome)}</strong>${match.grupo_muscular ? ' (' + escapeHtml(match.grupo_muscular) + ')' : ''}. Pode continuar se for mesmo diferente.`;
+      $('customExerciseDuplicateHint').style.display = 'block';
+    }
+  }
+
+  function openCustomExerciseModal(mode, seed, workoutId, resultsBox, query, grupoFilter) {
+    pendingCustomExercise = { mode, workoutId, resultsBox, query, grupoFilter, exerciseId: mode === 'edit' ? seed.exercise_id : null };
+    $('customExerciseModalTitle').textContent = mode === 'edit' ? 'Editar exercício' : 'Criar exercício novo';
+    $('customExerciseNomeInput').value = seed.nome || '';
+    populateCustomExerciseGrupoSelect(seed.grupo_muscular);
+    $('customExerciseSaveBtn').textContent = mode === 'edit' ? 'Salvar alterações' : 'Criar';
+    $('customExerciseDeleteBtn').style.display = mode === 'edit' ? 'inline-block' : 'none';
+    $('customExerciseModalMsg').style.display = 'none';
+    $('customExerciseDuplicateHint').style.display = 'none';
+    $('customExerciseModalOverlay').classList.add('show');
+    if (mode === 'create') checkCustomExerciseDuplicate(query);
+  }
+
+  $('customExerciseCancelBtn').addEventListener('click', () => {
+    pendingCustomExercise = null;
+    $('customExerciseModalOverlay').classList.remove('show');
+  });
+
+  $('customExerciseSaveBtn').addEventListener('click', async () => {
+    if (!pendingCustomExercise) return;
+    const nome = $('customExerciseNomeInput').value.trim();
+    const grupo = $('customExerciseGrupoInput').value;
+    if (!nome) {
+      $('customExerciseModalMsg').textContent = 'Digite o nome do exercício.';
+      $('customExerciseModalMsg').style.display = 'block';
       return;
     }
-    delete exerciseVideos[pendingVideoExerciseId];
-    pendingVideoExerciseId = null;
-    $('videoModalOverlay').classList.remove('show');
-    renderWorkouts();
-    toast('Vínculo removido.');
+    const { mode, workoutId, resultsBox, exerciseId, query, grupoFilter } = pendingCustomExercise;
+    if (mode === 'create') {
+      const { data, error } = await supa.rpc('create_custom_exercise', { p_nome: nome, p_grupo_muscular: grupo || null });
+      if (error) {
+        $('customExerciseModalMsg').textContent = 'Erro ao criar: ' + error.message;
+        $('customExerciseModalMsg').style.display = 'block';
+        return;
+      }
+      if (grupo && !muscleGroups.includes(grupo)) { muscleGroups.push(grupo); muscleGroups.sort(); }
+      addExerciseToWorkout(workoutId, data);
+      resultsBox.style.display = 'none';
+      pendingCustomExercise = null;
+      $('customExerciseModalOverlay').classList.remove('show');
+      toast('Exercício criado e adicionado ao treino.');
+    } else {
+      const { error } = await supa.from('exercise_library').update({ nome, grupo_muscular: grupo || null }).eq('exercise_id', exerciseId);
+      if (error) {
+        $('customExerciseModalMsg').textContent = 'Erro ao salvar: ' + error.message;
+        $('customExerciseModalMsg').style.display = 'block';
+        return;
+      }
+      pendingCustomExercise = null;
+      $('customExerciseModalOverlay').classList.remove('show');
+      toast('Exercício atualizado.');
+      searchExercises(query, grupoFilter, workoutId, resultsBox);
+    }
+  });
+
+  $('customExerciseDeleteBtn').addEventListener('click', async () => {
+    if (!pendingCustomExercise || !pendingCustomExercise.exerciseId) return;
+    if (!confirm('Excluir esse exercício? Ele não vai mais aparecer nas suas buscas. Treinos que já usam ele não são afetados.')) return;
+    const { exerciseId, workoutId, resultsBox, query, grupoFilter } = pendingCustomExercise;
+    const media = exerciseVideos[exerciseId];
+    if (media && media.image_path) await supa.storage.from('exercise-media').remove([media.image_path]);
+    const { error } = await supa.from('exercise_library').delete().eq('exercise_id', exerciseId);
+    if (error) {
+      $('customExerciseModalMsg').textContent = 'Erro ao excluir: ' + error.message;
+      $('customExerciseModalMsg').style.display = 'block';
+      return;
+    }
+    delete exerciseVideos[exerciseId];
+    pendingCustomExercise = null;
+    $('customExerciseModalOverlay').classList.remove('show');
+    toast('Exercício excluído.');
+    searchExercises(query, grupoFilter, workoutId, resultsBox);
   });
 
   $('cardioModalConfirmBtn').addEventListener('click', () => {
@@ -1364,8 +1751,9 @@
 
   function renderVideoIconBtn(ex) {
     if (!ex.exercise_id) return '';
-    const linked = !!exerciseVideos[ex.exercise_id];
-    const title = linked ? 'Vídeo do YouTube vinculado — editar' : 'Vincular vídeo do YouTube';
+    const media = exerciseVideos[ex.exercise_id];
+    const linked = !!(media && (media.youtube_url || media.image_path));
+    const title = linked ? 'Vídeo/imagem vinculados — editar' : 'Vincular vídeo ou imagem próprios';
     return `<button type="button" class="video-link-btn ${linked ? 'linked' : ''}" data-role="video-link" data-exercise-id="${ex.exercise_id}" data-exercise-nome="${escapeHtml(ex.nome)}" title="${title}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></button>`;
   }
 
@@ -1535,25 +1923,41 @@
     const { data, error } = await supa.rpc('search_exercise_library', { q: query });
     if (error) { console.error(error.message); return; }
     const filtered = grupoFilter ? (data || []).filter(ex => ex.grupo_muscular === grupoFilter) : (data || []);
-    if (!filtered.length) {
-      resultsBox.innerHTML = '<div class="search-result-item">Nenhum exercício encontrado.</div>';
-      resultsBox.style.display = 'block';
-      return;
-    }
-    resultsBox.innerHTML = filtered.map(ex => `
-      <div class="search-result-item" data-exercise-id="${ex.exercise_id}">
-        ${escapeHtml(ex.nome)}
-        <div class="grupo">${escapeHtml(ex.grupo_muscular || '')}</div>
-      </div>
-    `).join('');
+    const editIconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+    const createRowHtml = `<div class="search-result-item search-create-item" data-role="create-exercise">+ Criar exercício novo: "${escapeHtml(query)}"</div>`;
+
+    const resultsHtml = filtered.length
+      ? filtered.map(ex => `
+        <div class="search-result-item">
+          <div class="sri-main" data-exercise-id="${ex.exercise_id}">
+            ${escapeHtml(ex.nome)}
+            <div class="grupo">${escapeHtml(ex.grupo_muscular || '')}</div>
+          </div>
+          ${ex.created_by_professional_id ? `<button type="button" class="sri-icon-btn" data-role="edit-custom-exercise" data-exercise-id="${ex.exercise_id}" title="Editar exercício">${editIconSvg}</button>` : ''}
+        </div>
+      `).join('')
+      : '<div class="search-result-item">Nenhum exercício encontrado.</div>';
+
+    resultsBox.innerHTML = resultsHtml + createRowHtml;
     resultsBox.style.display = 'block';
 
-    resultsBox.querySelectorAll('.search-result-item[data-exercise-id]').forEach(item => {
+    resultsBox.querySelectorAll('.sri-main[data-exercise-id]').forEach(item => {
       item.addEventListener('click', () => {
         const ex = filtered.find(x => String(x.exercise_id) === item.dataset.exerciseId);
         addExerciseToWorkout(workoutId, ex);
         resultsBox.style.display = 'none';
       });
+    });
+    resultsBox.querySelectorAll('[data-role="edit-custom-exercise"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const ex = filtered.find(x => String(x.exercise_id) === btn.dataset.exerciseId);
+        if (ex) openCustomExerciseModal('edit', ex, workoutId, resultsBox, query, grupoFilter);
+      });
+    });
+    const createBtn = resultsBox.querySelector('[data-role="create-exercise"]');
+    if (createBtn) createBtn.addEventListener('click', () => {
+      openCustomExerciseModal('create', { nome: query, grupo_muscular: grupoFilter || '' }, workoutId, resultsBox, query, grupoFilter);
     });
   }
 

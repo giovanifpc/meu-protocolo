@@ -145,9 +145,9 @@ Recurso opcional (o profissional liga em "Financeiro", no menu lateral do painel
 
 Recurso opcional (o profissional liga em Configurações). Quando ligado, os alunos de um mesmo profissional veem um placar mensal entre si — pontos por treino concluído, medalha desbloqueada, recorde pessoal de carga — com nome abreviado (nunca o nome completo de outro aluno). O placar reseta todo mês.
 
-### 5.14 Vídeo de execução dos exercícios (adicionado 2026-07-19)
+### 5.14 Vídeo e imagem de execução dos exercícios (adicionado 2026-07-19, imagem própria adicionada 2026-07-27)
 
-O profissional pode colar um link do próprio canal do YouTube num exercício da biblioteca (dentro da tela de montar treino) — o aluno vê esse vídeo direto na tela de execução daquele exercício, no lugar do GIF padrão. É sempre link do YouTube, não upload de arquivo de vídeo.
+O profissional pode colar um link do próprio canal do YouTube num exercício da biblioteca (dentro da tela de montar treino) — o aluno vê esse vídeo direto na tela de execução daquele exercício, no lugar do GIF padrão. É sempre link do YouTube, não upload de arquivo de vídeo. Desde 2026-07-27, o profissional também pode subir uma **imagem própria** pro exercício (foto ou print, JPG/PNG/GIF até 2MB) — se ele subir imagem SEM vídeo, o aluno vê a imagem; com os dois, o vídeo tem prioridade. JPG/PNG passam por um recorte (quadrado ou paisagem, o profissional escolhe); GIF sobe sem recorte, pra não perder a animação. Essa mídia (vídeo/imagem) é sempre privada — vale só pros alunos daquele profissional, nunca aparece pra outro profissional nem para os alunos dele.
 
 ### 5.15 Programa de indicação (adicionado 2026-07-21/22)
 
@@ -156,6 +156,10 @@ Cada profissional tem um link próprio de indicação, em Configurações ("Indi
 ### 5.16 Sino de notificações e menu (adicionado 2026-07-27)
 
 O painel do profissional tem um sino fixo no topo de toda tela (ao lado do menu ☰), com histórico de eventos: mensagem nova de um aluno, aluno que respondeu a anamnese pela primeira vez. "Sair" saiu do topo e agora fica dentro do menu ☰ (lateral), junto dos outros atalhos.
+
+### 5.17 Exercício personalizado (adicionado 2026-07-27)
+
+Na busca de exercício (montar treino), se o profissional não achar o que precisa, tem a opção "Criar exercício novo" — só nome + grupo muscular. Esse exercício fica **só na conta de quem criou**, nunca aparece nem fica buscável pra outro profissional (diferente da biblioteca padrão, com ~1550 itens, essa sim compartilhada com todo mundo). O profissional que criou pode editar (nome/grupo muscular) ou apagar depois, clicando no ícone de lápis ao lado do exercício quando ele aparece na busca — apagar não afeta treinos que já usam esse exercício. Vídeo/imagem também podem ser vinculados a um exercício criado, do mesmo jeito que a qualquer outro da biblioteca (ver seção 5.14).
 
 ---
 

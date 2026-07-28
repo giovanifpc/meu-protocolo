@@ -126,7 +126,9 @@ Financeiro (Pix pro aluno): recurso opcional, ligado na aba "Financeiro" do menu
 
 Ranking: recurso opcional (o profissional liga em Configurações) — quando ligado, os alunos do mesmo profissional veem um placar mensal entre si (pontos por treino, medalha, recorde de carga), com nome abreviado, resetando todo mês.
 
-Vídeo de execução: o profissional pode colar um link do próprio YouTube num exercício da biblioteca — o aluno vê esse vídeo na tela de execução daquele exercício, no lugar do GIF padrão. Sempre link do YouTube, nunca upload de arquivo.
+Vídeo/imagem de execução: o profissional pode colar um link do próprio YouTube e/ou subir uma imagem própria (JPG/PNG/GIF até 2MB, com recorte quadrado ou paisagem) num exercício da biblioteca — o aluno vê essa mídia na tela de execução daquele exercício, no lugar do GIF padrão (vídeo tem prioridade se os dois existirem). Sempre privado por profissional, nunca aparece pra outro.
+
+Exercício personalizado: na busca de exercício (montar treino), se não achar, tem "Criar exercício novo" (nome + grupo muscular) — fica só na conta de quem criou, nunca compartilhado com outros profissionais. Dá pra editar ou apagar depois pelo ícone de lápis na busca; apagar não afeta treinos que já usam.
 
 Programa de indicação: cada profissional tem um link próprio de indicação (em Configurações, "Indique um amigo"). Quando outra pessoa se cadastra por esse link e vira cliente pagante de verdade (depois do trial dela), quem indicou ganha 1 mês grátis, aplicado automaticamente na cobrança seguinte. Só quem indica é recompensado.
 

@@ -7,8 +7,10 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.6.0',
+      version: '1.7.0',
       items: [
+        'Novo: crie exercícios que não estão na biblioteca, direto na busca ao montar um treino — fica só na sua conta, nunca compartilhado com outros profissionais.',
+        'Novo: vincule uma imagem própria (além do vídeo do YouTube) a qualquer exercício, com recorte quadrado ou paisagem.',
         'Novo: "Comparativos" em Avaliação física — escolha 2 avaliações e o app monta sozinho as fotos lado a lado e a tabela de variação de medidas; publique quando quiser que o aluno veja.',
         'Novo: botão pra remover uma foto de avaliação física sem precisar substituir por outra.',
         'Corrigido: upload de fotos de avaliação física, que às vezes não subia sem mostrar nenhum erro.',

@@ -319,6 +319,17 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .hist-meta-ico svg{width:13px;height:13px;flex-shrink:0}
 .hist-photos{display:flex;gap:8px;margin-top:10px}
 .hist-photos img{width:52px;height:68px;object-fit:cover;border-radius:8px;border:1px solid var(--card-border);cursor:pointer}
+.cmp-back-btn{background:none;border:none;color:var(--primary);font-family:var(--font);font-size:13px;font-weight:700;padding:0 0 12px;cursor:pointer}
+.cmp-angle{margin-bottom:16px}
+.cmp-angle-label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.cmp-photo-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cmp-photo-pair figure{margin:0;text-align:center}
+.cmp-photo-pair img,.cmp-photo-pair .ph-placeholder{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:10px;background:var(--bg);border:1px solid var(--card-border);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px}
+.cmp-photo-pair figcaption{font-size:11px;font-weight:700;color:var(--muted);margin-top:4px}
+.comparison-table{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0}
+.comparison-table th,.comparison-table td{padding:6px 4px;text-align:left;border-bottom:1px solid var(--card-border)}
+.comparison-table th{font-size:10px;text-transform:uppercase;color:var(--muted);font-weight:700}
+.comparison-table td:not(:first-child),.comparison-table th:not(:first-child){text-align:right}
 
 .load-chart-card{background:var(--card-grad);border:1px solid var(--card-border);box-shadow:var(--shadow-card);border-radius:var(--radius);padding:16px;margin-bottom:18px}
 .lcc-title{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--primary);margin-bottom:10px}
@@ -987,6 +998,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   let logoUrl = null;
   let nutritionGuidance = null;
   let assessments = [];
+  let comparisons = [];
   let anamnese = null;
   let anamneseNeedsAttention = false;
   let notifications = [];
@@ -1270,6 +1282,13 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       .eq('status', 'finalizada')
       .order('avaliado_em', { ascending: true });
     assessments = assess || [];
+
+    const { data: comps } = await supa
+      .from('assessment_comparisons')
+      .select('*')
+      .eq('student_id', student.id)
+      .order('created_at', { ascending: false });
+    comparisons = comps || [];
 
     const { data: anamneseData } = await supa
       .from('student_anamnese')
@@ -1762,6 +1781,11 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       </div>
       ${chartPct.length >= 2 ? `<div id="assessChart"></div>` : (chartPeso.length >= 2 ? `<div id="assessChart"></div>` : '')}
       <div id="assessList"></div>
+      ${comparisons.length ? `
+        <div class="section-label">Comparativos</div>
+        <div id="comparisonsListSection"></div>
+        <div id="comparisonDetailSection" style="display:none;"></div>
+      ` : ''}
     `;
     const chartData = chartPct.length >= 2 ? chartPct : chartPeso;
     if (chartData.length >= 2) renderAssessmentChart($('assessChart'), chartData);
@@ -1783,6 +1807,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         </div>`;
     }).join('');
     assessments.forEach(a => { if ((a.fotos || []).length) loadAssessmentPhotos(a); });
+    if (comparisons.length) renderComparisonsListForStudent();
   }
 
   async function loadAssessmentPhotos(a) {
@@ -1795,6 +1820,128 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     const wrapNow = document.querySelector(`.hist-photos[data-assessment-id="${a.id}"]`);
     if (!wrapNow) return;
     wrapNow.innerHTML = urls.filter(Boolean).map(u => `<img src="${u.url}" alt="${escapeHtml(u.tipo)}" onclick="window.open('${u.url}','_blank')">`).join('');
+  }
+
+  // Comparativo entre 2 avaliações — só leitura aqui, o profissional é quem
+  // monta e publica (avaliacoes.html). O aluno só enxerga os já publicados
+  // (RLS de assessment_comparisons já garante isso).
+  const existingPhotoUrlCache = {}; // path -> signed url, compartilhado entre lista e detalhe do comparativo
+  const PHOTO_SLOTS = [
+    { key: 'frente', label: 'Frente' },
+    { key: 'lado', label: 'Lado' },
+    { key: 'costas', label: 'Costas' },
+  ];
+  const PERI_FIELDS = [
+    { key: 'torax', label: 'Tórax' },
+    { key: 'cintura', label: 'Cintura' },
+    { key: 'abdomen', label: 'Abdômen' },
+    { key: 'quadril', label: 'Quadril' },
+    { key: 'braco_direito_relaxado', label: 'Braço dir. (relaxado)' },
+    { key: 'braco_direito_contraido', label: 'Braço dir. (contraído)' },
+    { key: 'braco_esquerdo_relaxado', label: 'Braço esq. (relaxado)' },
+    { key: 'braco_esquerdo_contraido', label: 'Braço esq. (contraído)' },
+    { key: 'coxa_direita', label: 'Coxa direita' },
+    { key: 'coxa_esquerda', label: 'Coxa esquerda' },
+    { key: 'panturrilha_direita', label: 'Panturrilha dir.' },
+    { key: 'panturrilha_esquerda', label: 'Panturrilha esq.' },
+  ];
+  const BIO_FIELDS = [
+    { key: 'massa_magra_kg', label: 'Massa magra', unit: 'kg' },
+    { key: 'agua_corporal_pct', label: 'Água corporal', unit: '%' },
+    { key: 'gordura_visceral', label: 'Gordura visceral', unit: '' },
+    { key: 'taxa_metabolica_basal', label: 'Taxa metabólica basal', unit: 'kcal' },
+    { key: 'massa_ossea_kg', label: 'Massa óssea', unit: 'kg' },
+    { key: 'idade_metabolica', label: 'Idade metabólica', unit: 'anos' },
+  ];
+  const COMPARISON_METRICS = [
+    { key: 'peso_kg', label: 'Peso', unit: 'kg', judged: true, get: (a) => a.peso_kg },
+    { key: 'pct_gordura', label: '% Gordura', unit: '%', judged: true, get: (a) => assessmentPct(a) },
+    ...PERI_FIELDS.map(f => ({ key: 'peri_' + f.key, label: f.label, unit: 'cm', judged: false, get: (a) => a.perimetria?.[f.key] })),
+    ...BIO_FIELDS.map(f => ({ key: 'bio_' + f.key, label: f.label, unit: f.unit, judged: false, get: (a) => a.bioimpedancia?.[f.key] })),
+  ];
+
+  function renderComparisonsListForStudent() {
+    const el = $('comparisonsListSection');
+    if (!el) return;
+    const rows = comparisons.map(c => {
+      const before = assessments.find(a => a.id === c.before_assessment_id);
+      const after = assessments.find(a => a.id === c.after_assessment_id);
+      if (!before || !after) return '';
+      const dBefore = new Date(before.avaliado_em + 'T00:00:00').toLocaleDateString('pt-BR');
+      const dAfter = new Date(after.avaliado_em + 'T00:00:00').toLocaleDateString('pt-BR');
+      return `
+        <div class="hist-item" data-cmp-id="${c.id}" style="cursor:pointer">
+          <div class="hist-top"><span class="hist-date">${dBefore} → ${dAfter}</span></div>
+          <div class="hist-meta"><span>Toque pra ver a comparação completa</span></div>
+        </div>`;
+    }).filter(Boolean).join('');
+    el.innerHTML = rows || '<div class="empty-state"><div class="es-txt">Nenhum comparativo publicado ainda.</div></div>';
+    el.querySelectorAll('[data-cmp-id]').forEach(item => {
+      item.addEventListener('click', () => showComparisonDetail(item.dataset.cmpId));
+    });
+  }
+
+  function comparisonMetricsTableHtml(before, after) {
+    const rows = COMPARISON_METRICS.map(m => {
+      const vBefore = m.get(before), vAfter = m.get(after);
+      if (vBefore == null && vAfter == null) return '';
+      const delta = (vBefore != null && vAfter != null) ? (vAfter - vBefore) : null;
+      const deltaHtml = delta == null ? '—' : `<span style="font-weight:700;${m.judged ? `color:${delta <= 0 ? 'var(--accent)' : 'var(--danger)'}` : ''}">${delta > 0 ? '+' : ''}${delta.toFixed(1)}${m.unit}</span>`;
+      return `<tr><td>${escapeHtml(m.label)}</td><td>${vBefore != null ? vBefore.toFixed(1) + m.unit : '—'}</td><td>${vAfter != null ? vAfter.toFixed(1) + m.unit : '—'}</td><td>${deltaHtml}</td></tr>`;
+    }).filter(Boolean).join('');
+    if (!rows) return '<div class="empty-state"><div class="es-txt">Nenhuma das duas avaliações tem dado numérico registrado.</div></div>';
+    return `<table class="comparison-table"><thead><tr><th>Medida</th><th>Antes</th><th>Depois</th><th>Variação</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
+  function showComparisonDetail(id) {
+    const c = comparisons.find(x => x.id === id);
+    const before = c && assessments.find(a => a.id === c.before_assessment_id);
+    const after = c && assessments.find(a => a.id === c.after_assessment_id);
+    if (!c || !before || !after) return;
+    $('comparisonsListSection').style.display = 'none';
+    const el = $('comparisonDetailSection');
+    el.style.display = 'block';
+    el.innerHTML = `
+      <button type="button" class="cmp-back-btn" id="cmpBackBtn">‹ Voltar aos comparativos</button>
+      ${comparisonMetricsTableHtml(before, after)}
+      <div id="cmpDetailPhotos"></div>
+    `;
+    $('cmpBackBtn').addEventListener('click', () => {
+      el.style.display = 'none';
+      $('comparisonsListSection').style.display = 'block';
+    });
+    const photosWrap = $('cmpDetailPhotos');
+    photosWrap.innerHTML = PHOTO_SLOTS.map(slot => {
+      const fb = (before.fotos || []).find(f => f.tipo === slot.key);
+      const fa = (after.fotos || []).find(f => f.tipo === slot.key);
+      if (!fb && !fa) return '';
+      return `
+        <div class="cmp-angle">
+          <div class="cmp-angle-label">${slot.label}</div>
+          <div class="cmp-photo-pair" data-tipo="${slot.key}">
+            <figure><div class="ph-preview" data-side="before">${fb ? '<div class="ph-placeholder">Carregando…</div>' : '<div class="ph-placeholder">Sem foto</div>'}</div><figcaption>Antes</figcaption></figure>
+            <figure><div class="ph-preview" data-side="after">${fa ? '<div class="ph-placeholder">Carregando…</div>' : '<div class="ph-placeholder">Sem foto</div>'}</div><figcaption>Depois</figcaption></figure>
+          </div>
+        </div>`;
+    }).join('');
+    PHOTO_SLOTS.forEach(slot => {
+      const fb = (before.fotos || []).find(f => f.tipo === slot.key);
+      const fa = (after.fotos || []).find(f => f.tipo === slot.key);
+      if (fb) resolveComparisonPhoto(slot.key, 'before', fb.path);
+      if (fa) resolveComparisonPhoto(slot.key, 'after', fa.path);
+    });
+  }
+
+  async function resolveComparisonPhoto(tipo, side, path) {
+    let url = existingPhotoUrlCache[path];
+    if (!url) {
+      const { data, error } = await supa.storage.from('assessment-photos').createSignedUrl(path, 3600);
+      if (error || !data) return;
+      url = data.signedUrl;
+      existingPhotoUrlCache[path] = url;
+    }
+    const target = document.querySelector(`.cmp-photo-pair[data-tipo="${tipo}"] .ph-preview[data-side="${side}"]`);
+    if (target) target.innerHTML = `<img src="${url}" alt="">`;
   }
 
   function renderAssessmentChart(container, data) {

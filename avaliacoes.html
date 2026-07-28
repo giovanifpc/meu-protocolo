@@ -117,6 +117,16 @@
   .anamnese-row .ar-val { font-size:13px; line-height:1.5; }
   .anamnese-alert { background:#FDEDEC; color:var(--danger); border-radius:8px; padding:8px 12px; font-size:12px; font-weight:700; margin-bottom:10px; }
   .evo-tab { padding:6px 10px; border-radius:8px; font-size:12px; font-weight:700; background:var(--bg); border:1px solid var(--line); color:var(--muted); cursor:pointer; }
+  .cmp-angle { margin-bottom:16px; }
+  .cmp-angle-label { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
+  .cmp-photo-pair { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .cmp-photo-pair figure { margin:0; text-align:center; }
+  .cmp-photo-pair .ph-preview img, .cmp-photo-pair .ph-placeholder { width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:10px; background:var(--bg); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:11px; }
+  .cmp-photo-pair figcaption { font-size:11px; font-weight:700; color:var(--muted); margin-top:4px; }
+  .comparison-table { width:100%; border-collapse:collapse; font-size:13px; margin:12px 0; }
+  .comparison-table th, .comparison-table td { padding:6px 4px; text-align:left; border-bottom:1px solid var(--line); }
+  .comparison-table th { font-size:10px; text-transform:uppercase; color:var(--muted); font-weight:700; }
+  .comparison-table td:not(:first-child), .comparison-table th:not(:first-child) { text-align:right; }
   .evo-tab.active { background:var(--primary); color:#fff; border-color:var(--primary); }
 </style>
 </head>
@@ -150,6 +160,34 @@
           <button class="btn secondary small" id="newAssessmentBtn" type="button">+ Nova avaliação</button>
         </div>
         <div id="assessmentList"></div>
+      </div>
+
+      <div class="card" id="comparisonsCard" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <h2 style="margin:0;">Comparativos<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Como funciona o comparativo', 'Escolha duas avaliações já finalizadas (uma mais antiga como \'Antes\' e uma mais recente como \'Depois\') e o app monta sozinho a comparação: fotos lado a lado por ângulo (frente com frente, lado com lado, costas com costas) e uma tabela com a variação de cada medida. Fica como <strong>rascunho</strong> até você clicar em \'Publicar pro aluno\' — só depois disso ele aparece pra ela na tela de Avaliação física.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></h2>
+          <button class="btn secondary small" id="newComparisonBtn" type="button">+ Novo comparativo</button>
+        </div>
+        <div id="comparisonList"></div>
+      </div>
+
+      <div class="card" id="comparisonFormArea" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <h2 style="margin:0;">Comparativo</h2>
+          <span class="status-tag" id="cmpStatusTag"></span>
+        </div>
+        <div class="row two">
+          <div class="field"><label>Antes</label><select id="cmpBeforeSelect"></select></div>
+          <div class="field"><label>Depois</label><select id="cmpAfterSelect"></select></div>
+        </div>
+        <div id="cmpPreview"></div>
+        <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
+          <button class="btn secondary" id="cmpSaveDraftBtn" type="button">Salvar rascunho</button>
+          <button class="btn" id="cmpPublishBtn" type="button">Publicar pro aluno</button>
+          <button class="btn secondary" id="cmpUnpublishBtn" type="button" style="display:none;">Despublicar</button>
+          <button class="btn secondary" id="cmpDeleteBtn" type="button" style="display:none;color:var(--danger);">Excluir</button>
+          <button class="btn secondary" id="cmpCancelBtn" type="button">Cancelar</button>
+        </div>
+        <div class="msg" id="cmpMsg"></div>
       </div>
 
       <div class="card" id="formArea" style="display:none;">
@@ -393,7 +431,9 @@
     if (!studentId) { $('contentArea').style.display = 'none'; return; }
     $('contentArea').style.display = 'block';
     $('formArea').style.display = 'none';
-    await Promise.all([loadAssessments(), loadAnamnese()]);
+    $('comparisonFormArea').style.display = 'none';
+    await loadAssessments();
+    await Promise.all([loadAnamnese(), loadComparisons()]);
   }
 
   async function loadAnamnese() {
@@ -432,6 +472,7 @@
     assessments = data || [];
     renderAssessmentList();
     renderEvolution();
+    renderComparisonsCard();
   }
 
   function pctGordura(a) {
@@ -525,6 +566,196 @@
     $('evoChart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:${W}px;display:block">${bars}${values}${labels}</svg>`;
   }
 
+  // Comparativo entre 2 avaliações — view computada sob demanda a partir de
+  // avaliações já existentes (mesmo padrão dos apps de mercado, tipo
+  // Trainerize/TrueCoach: slider antes/depois calculado na hora, não um novo
+  // "check-in"). `assessment_comparisons` só guarda o par de IDs + status
+  // rascunho/publicado; fotos e métricas continuam vindo de
+  // `physical_assessments`, nunca duplicadas.
+  let comparisons = [];
+  let currentComparison = null;
+
+  const COMPARISON_METRICS = [
+    { key: 'peso_kg', label: 'Peso', unit: 'kg', judged: true, get: (a) => a.peso_kg },
+    { key: 'pct_gordura', label: '% Gordura', unit: '%', judged: true, get: (a) => pctGordura(a) },
+    ...PERI_FIELDS.map(f => ({ key: 'peri_' + f.key, label: f.label, unit: 'cm', judged: false, get: (a) => a.perimetria?.[f.key] })),
+    ...BIO_FIELDS.filter(f => f.key !== 'percentual_gordura').map(f => ({ key: 'bio_' + f.key, label: f.label, unit: f.unit, judged: false, get: (a) => a.bioimpedancia?.[f.key] })),
+  ];
+
+  function fmtDate(isoDate) { return new Date(isoDate.slice(0, 10) + 'T00:00:00').toLocaleDateString('pt-BR'); }
+
+  async function loadComparisons() {
+    const { data, error } = await supa
+      .from('assessment_comparisons')
+      .select('*')
+      .eq('student_id', currentStudentId)
+      .order('created_at', { ascending: false });
+    if (error) { console.error(error.message); return; }
+    comparisons = data || [];
+    renderComparisonsCard();
+  }
+
+  function renderComparisonsCard() {
+    const finalizedCount = assessments.filter(a => a.status === 'finalizada').length;
+    $('comparisonsCard').style.display = finalizedCount >= 2 ? 'block' : 'none';
+    if (finalizedCount < 2) return;
+    const el = $('comparisonList');
+    if (!comparisons.length) { el.innerHTML = '<div class="empty">Nenhum comparativo criado ainda.</div>'; return; }
+    el.innerHTML = comparisons.map(c => {
+      const before = assessments.find(a => a.id === c.before_assessment_id);
+      const after = assessments.find(a => a.id === c.after_assessment_id);
+      const label = before && after ? `${fmtDate(before.avaliado_em)} → ${fmtDate(after.avaliado_em)}` : 'Avaliação removida';
+      return `
+        <div class="assessment-item" data-id="${c.id}">
+          <div>
+            <div class="ai-main">${label}</div>
+            <div class="ai-meta">Criado em ${fmtDate(c.created_at)}</div>
+          </div>
+          <span class="status-tag ${c.status}">${c.status === 'publicado' ? 'Publicado' : 'Rascunho'}</span>
+        </div>`;
+    }).join('');
+    el.querySelectorAll('.assessment-item').forEach(item => {
+      item.addEventListener('click', () => openComparison(item.dataset.id));
+    });
+  }
+
+  $('newComparisonBtn').addEventListener('click', () => openComparison(null));
+
+  function openComparison(id) {
+    currentComparison = id ? comparisons.find(c => c.id === id) : {
+      id: null, student_id: currentStudentId, before_assessment_id: null, after_assessment_id: null, status: 'rascunho',
+    };
+    if (!currentComparison) return;
+    // ascendente (mais antiga primeiro) — assessments já vem ordenado desc
+    const finalized = assessments.filter(a => a.status === 'finalizada').slice().reverse();
+    const optsHtml = finalized.map(a => `<option value="${a.id}">${fmtDate(a.avaliado_em)}</option>`).join('');
+    $('cmpBeforeSelect').innerHTML = optsHtml;
+    $('cmpAfterSelect').innerHTML = optsHtml;
+    $('cmpBeforeSelect').value = currentComparison.before_assessment_id || finalized[0]?.id || '';
+    $('cmpAfterSelect').value = currentComparison.after_assessment_id || finalized[finalized.length - 1]?.id || '';
+
+    $('cmpStatusTag').textContent = currentComparison.status === 'publicado' ? 'Publicado' : 'Rascunho';
+    $('cmpStatusTag').className = 'status-tag ' + currentComparison.status;
+    $('cmpPublishBtn').style.display = currentComparison.status === 'publicado' ? 'none' : 'inline-block';
+    $('cmpUnpublishBtn').style.display = currentComparison.status === 'publicado' ? 'inline-block' : 'none';
+    $('cmpDeleteBtn').style.display = id ? 'inline-block' : 'none';
+    $('cmpMsg').textContent = '';
+    $('cmpMsg').className = 'msg';
+
+    renderComparisonPreview();
+    $('formArea').style.display = 'none';
+    $('comparisonFormArea').style.display = 'block';
+    $('comparisonFormArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderComparisonPreview() {
+    const beforeId = $('cmpBeforeSelect').value, afterId = $('cmpAfterSelect').value;
+    const el = $('cmpPreview');
+    if (!beforeId || !afterId) { el.innerHTML = ''; return; }
+    if (beforeId === afterId) { el.innerHTML = '<div class="empty">Escolha duas avaliações diferentes.</div>'; return; }
+    const before = assessments.find(a => a.id === beforeId);
+    const after = assessments.find(a => a.id === afterId);
+    if (!before || !after) { el.innerHTML = ''; return; }
+    el.innerHTML = renderComparisonMetricsTable(before, after) + '<div id="cmpPhotos"></div>';
+    renderComparisonPhotos(before, after);
+  }
+
+  $('cmpBeforeSelect').addEventListener('change', renderComparisonPreview);
+  $('cmpAfterSelect').addEventListener('change', renderComparisonPreview);
+
+  function renderComparisonMetricsTable(before, after) {
+    const rows = COMPARISON_METRICS.map(m => {
+      const vBefore = m.get(before), vAfter = m.get(after);
+      if (vBefore == null && vAfter == null) return '';
+      const delta = (vBefore != null && vAfter != null) ? (vAfter - vBefore) : null;
+      const deltaHtml = delta == null ? '—' : `<span style="font-weight:700;${m.judged ? `color:${delta <= 0 ? 'var(--accent)' : 'var(--danger)'}` : ''}">${delta > 0 ? '+' : ''}${delta.toFixed(1)}${m.unit}</span>`;
+      return `<tr><td>${escapeHtml(m.label)}</td><td>${vBefore != null ? vBefore.toFixed(1) + m.unit : '—'}</td><td>${vAfter != null ? vAfter.toFixed(1) + m.unit : '—'}</td><td>${deltaHtml}</td></tr>`;
+    }).filter(Boolean).join('');
+    if (!rows) return '<div class="empty">Nenhuma das duas avaliações tem dado numérico registrado.</div>';
+    return `<table class="comparison-table"><thead><tr><th>Medida</th><th>Antes</th><th>Depois</th><th>Variação</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
+  function renderComparisonPhotos(before, after) {
+    const wrap = $('cmpPhotos');
+    wrap.innerHTML = PHOTO_SLOTS.map(slot => {
+      const fb = (before.fotos || []).find(f => f.tipo === slot.key);
+      const fa = (after.fotos || []).find(f => f.tipo === slot.key);
+      if (!fb && !fa) return '';
+      return `
+        <div class="cmp-angle">
+          <div class="cmp-angle-label">${slot.label}</div>
+          <div class="cmp-photo-pair" data-tipo="${slot.key}">
+            <figure><div class="ph-preview" data-side="before">${fb ? '<div class="ph-placeholder">Carregando…</div>' : '<div class="ph-placeholder">Sem foto</div>'}</div><figcaption>Antes</figcaption></figure>
+            <figure><div class="ph-preview" data-side="after">${fa ? '<div class="ph-placeholder">Carregando…</div>' : '<div class="ph-placeholder">Sem foto</div>'}</div><figcaption>Depois</figcaption></figure>
+          </div>
+        </div>`;
+    }).join('');
+    PHOTO_SLOTS.forEach(slot => {
+      const fb = (before.fotos || []).find(f => f.tipo === slot.key);
+      const fa = (after.fotos || []).find(f => f.tipo === slot.key);
+      if (fb) resolveComparisonPhoto(slot.key, 'before', fb.path);
+      if (fa) resolveComparisonPhoto(slot.key, 'after', fa.path);
+    });
+  }
+
+  async function resolveComparisonPhoto(tipo, side, path) {
+    let url = existingPhotoUrlCache[path];
+    if (!url) {
+      const { data, error } = await supa.storage.from('assessment-photos').createSignedUrl(path, 3600);
+      if (error || !data) return;
+      url = data.signedUrl;
+      existingPhotoUrlCache[path] = url;
+    }
+    const target = document.querySelector(`.cmp-photo-pair[data-tipo="${tipo}"] .ph-preview[data-side="${side}"]`);
+    if (target) target.innerHTML = `<img src="${url}" alt="">`;
+  }
+
+  async function saveComparison(publish) {
+    const beforeId = $('cmpBeforeSelect').value, afterId = $('cmpAfterSelect').value;
+    if (!beforeId || !afterId || beforeId === afterId) {
+      $('cmpMsg').textContent = 'Escolha duas avaliações diferentes.';
+      $('cmpMsg').className = 'msg error';
+      return;
+    }
+    const payload = {
+      professional_id: professional.id,
+      student_id: currentStudentId,
+      before_assessment_id: beforeId,
+      after_assessment_id: afterId,
+    };
+    if (publish) { payload.status = 'publicado'; payload.published_at = new Date().toISOString(); }
+    const { error } = currentComparison.id
+      ? await supa.from('assessment_comparisons').update(payload).eq('id', currentComparison.id)
+      : await supa.from('assessment_comparisons').insert(payload);
+    if (error) {
+      $('cmpMsg').textContent = 'Erro ao salvar: ' + error.message;
+      $('cmpMsg').className = 'msg error';
+      return;
+    }
+    toast(publish ? 'Comparativo publicado — já aparece pro aluno.' : 'Comparativo salvo como rascunho.');
+    $('comparisonFormArea').style.display = 'none';
+    await loadComparisons();
+  }
+
+  $('cmpSaveDraftBtn').addEventListener('click', () => saveComparison(false));
+  $('cmpPublishBtn').addEventListener('click', () => saveComparison(true));
+  $('cmpUnpublishBtn').addEventListener('click', async () => {
+    const { error } = await supa.from('assessment_comparisons').update({ status: 'rascunho' }).eq('id', currentComparison.id);
+    if (error) { toast('Erro: ' + error.message); return; }
+    toast('Comparativo despublicado — o aluno não vê mais.');
+    $('comparisonFormArea').style.display = 'none';
+    await loadComparisons();
+  });
+  $('cmpDeleteBtn').addEventListener('click', async () => {
+    if (!confirm('Excluir esse comparativo? As avaliações usadas nele não são afetadas — só o comparativo em si é apagado, sem retenção.')) return;
+    const { error } = await supa.from('assessment_comparisons').delete().eq('id', currentComparison.id);
+    if (error) { toast('Erro: ' + error.message); return; }
+    toast('Comparativo excluído.');
+    $('comparisonFormArea').style.display = 'none';
+    await loadComparisons();
+  });
+  $('cmpCancelBtn').addEventListener('click', () => { $('comparisonFormArea').style.display = 'none'; });
+
   $('newAssessmentBtn').addEventListener('click', () => openAssessment(null));
   $('cancelFormBtn').addEventListener('click', () => { clearPendingPhotoData(); $('formArea').style.display = 'none'; });
 
@@ -535,6 +766,7 @@
       bioimpedancia: {}, perimetria: {}, fotos: [], observacoes: '', status: 'rascunho',
     };
     const a = currentAssessment;
+    $('comparisonFormArea').style.display = 'none';
 
     $('formTitle').textContent = id ? 'Editar avaliação' : 'Nova avaliação';
     $('formStatusTag').textContent = a.status === 'finalizada' ? 'Finalizada' : 'Rascunho';
@@ -654,10 +886,12 @@
   const MAX_PHOTO_DIM = 1600;
   const PHOTO_JPEG_QUALITY = 0.85;
   let pendingPhotoData = {}; // tipo -> { blob, previewUrl }
+  let pendingPhotoRemovals = new Set(); // tipos marcados pra remover ao salvar
 
   function clearPendingPhotoData() {
     Object.values(pendingPhotoData).forEach(p => { if (p.previewUrl) URL.revokeObjectURL(p.previewUrl); });
     pendingPhotoData = {};
+    pendingPhotoRemovals = new Set();
   }
 
   const existingPhotoUrlCache = {}; // path -> signed url
@@ -668,10 +902,11 @@
     const fotos = currentAssessment.fotos || [];
     const existing = fotos.find(f => f.tipo === slot.key);
     const pending = pendingPhotoData[slot.key];
+    const markedForRemoval = pendingPhotoRemovals.has(slot.key);
     const preview = el.querySelector('.ph-preview');
     if (pending) {
       preview.innerHTML = `<img src="${pending.previewUrl}" alt="${slot.label}">`;
-    } else if (existing) {
+    } else if (existing && !markedForRemoval) {
       preview.innerHTML = '<div class="ph-placeholder">Carregando…</div>';
       const cached = existingPhotoUrlCache[existing.path];
       const applyUrl = (url) => { if (document.querySelector(`.photo-slot[data-tipo="${slot.key}"] .ph-preview`)) preview.innerHTML = `<img src="${url}" alt="${slot.label}">`; };
@@ -689,14 +924,20 @@
     }
     const statusEl = el.querySelector('.ph-status');
     if (pending) { statusEl.textContent = 'Nova foto pronta pra salvar'; statusEl.className = 'ph-status pending'; }
+    else if (markedForRemoval) { statusEl.textContent = 'Foto será removida ao salvar'; statusEl.className = 'ph-status error'; }
     else { statusEl.textContent = ''; statusEl.className = 'ph-status'; }
     const viewBtn = el.querySelector('.view-photo-btn');
-    if (viewBtn) viewBtn.style.display = (existing && !pending) ? 'block' : 'none';
+    if (viewBtn) viewBtn.style.display = (existing && !pending && !markedForRemoval) ? 'block' : 'none';
+    const removeBtn = el.querySelector('.remove-photo-btn');
+    if (removeBtn) removeBtn.style.display = (existing && !pending && !markedForRemoval) ? 'block' : 'none';
+    const undoBtn = el.querySelector('.undo-remove-photo-btn');
+    if (undoBtn) undoBtn.style.display = markedForRemoval ? 'block' : 'none';
     const pickBtn = el.querySelector('.photo-pick-btn');
-    if (pickBtn) pickBtn.textContent = (existing || pending) ? 'Trocar foto' : 'Escolher foto';
+    if (pickBtn) pickBtn.textContent = (existing || pending) && !markedForRemoval ? 'Trocar foto' : 'Escolher foto';
   }
 
   function processPhotoFile(tipo, file) {
+    pendingPhotoRemovals.delete(tipo);
     const el = document.querySelector(`.photo-slot[data-tipo="${tipo}"] .ph-status`);
     if (el) { el.textContent = 'Processando foto...'; el.className = 'ph-status pending'; }
     const img = new Image();
@@ -740,6 +981,8 @@
           <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,.heic,.jpg,.jpeg,.png,.webp" class="photo-input" data-tipo="${slot.key}" style="display:none;">
           <div class="ph-status"></div>
           <button type="button" class="btn secondary small view-photo-btn" style="margin-top:4px;width:100%;display:none;">Ver</button>
+          <button type="button" class="btn secondary small remove-photo-btn" style="margin-top:4px;width:100%;display:none;color:var(--danger);">Remover foto</button>
+          <button type="button" class="btn secondary small undo-remove-photo-btn" style="margin-top:4px;width:100%;display:none;">Desfazer remoção</button>
         </div>`).join('');
     PHOTO_SLOTS.forEach(slot => renderPhotoSlot(slot));
     wrap.querySelectorAll('.photo-pick-btn').forEach(btn => {
@@ -761,6 +1004,21 @@
         const { data, error } = await supa.storage.from('assessment-photos').createSignedUrl(existing.path, 300);
         if (error) { toast('Erro ao abrir foto: ' + error.message); return; }
         window.open(data.signedUrl, '_blank');
+      });
+    });
+    wrap.querySelectorAll('.remove-photo-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tipo = btn.closest('.photo-slot').dataset.tipo;
+        if (!confirm('Remover essa foto? A remoção só é efetivada ao salvar/finalizar.')) return;
+        pendingPhotoRemovals.add(tipo);
+        renderPhotoSlot(PHOTO_SLOTS.find(s => s.key === tipo));
+      });
+    });
+    wrap.querySelectorAll('.undo-remove-photo-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tipo = btn.closest('.photo-slot').dataset.tipo;
+        pendingPhotoRemovals.delete(tipo);
+        renderPhotoSlot(PHOTO_SLOTS.find(s => s.key === tipo));
       });
     });
   }
@@ -797,8 +1055,15 @@
   }
 
   async function uploadPendingPhotos(assessmentId) {
-    const fotos = (currentAssessment.fotos || []).slice();
+    let fotos = (currentAssessment.fotos || []).slice();
     const failures = [];
+    for (const tipo of pendingPhotoRemovals) {
+      const old = fotos.find(f => f.tipo === tipo);
+      if (!old) continue;
+      const { error } = await supa.storage.from('assessment-photos').remove([old.path]);
+      if (error) { failures.push(`remover ${tipo}: ${error.message}`); continue; }
+      fotos = fotos.filter(f => f.tipo !== tipo);
+    }
     for (const tipo of Object.keys(pendingPhotoData)) {
       const { blob } = pendingPhotoData[tipo];
       const path = `${currentStudentId}/${assessmentId}/${tipo}-${Date.now()}.jpg`;
@@ -840,8 +1105,9 @@
     currentAssessment = data;
 
     const hadPending = Object.keys(pendingPhotoData).length > 0;
+    const hadRemovals = pendingPhotoRemovals.size > 0;
     const { fotos, failures } = await uploadPendingPhotos(data.id);
-    if (fotos.length) {
+    if (hadPending || hadRemovals) {
       const { data: updated, error: fotoErr } = await supa.from('physical_assessments').update({ fotos }).eq('id', data.id).select().single();
       if (!fotoErr) currentAssessment = updated;
     }
@@ -855,7 +1121,8 @@
       renderPhotoSlots();
       return;
     }
-    toast(finalize ? 'Avaliação finalizada.' : (hadPending ? 'Rascunho salvo, foto(s) enviada(s).' : 'Rascunho salvo.'));
+    const photoNote = hadPending ? (hadRemovals ? ' Foto(s) atualizadas.' : ' Foto(s) enviada(s).') : (hadRemovals ? ' Foto(s) removida(s).' : '');
+    toast((finalize ? 'Avaliação finalizada.' : 'Rascunho salvo.') + photoNote);
     $('formArea').style.display = 'none';
     await loadAssessments();
   }

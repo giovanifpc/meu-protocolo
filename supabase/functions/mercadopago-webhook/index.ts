@@ -91,22 +91,98 @@ Deno.serve(async (req) => {
 
     if (tipo === 'preapproval' || tipo === 'subscription_preapproval') {
       const preapproval = await mpFetch(`/preapproval/${dataId}`);
-      const professionalId = preapproval.external_reference;
-      if (professionalId) {
-        const novoStatus = preapproval.status === 'authorized' ? 'ativo'
-          : (preapproval.status === 'paused' || preapproval.status === 'cancelled') ? 'inativo'
-          : undefined;
-        await supaAdmin.from('professionals').update({
-          mp_subscription_status: preapproval.status,
-          ...(novoStatus ? { status: novoStatus } : {}),
-          ...(novoStatus === 'inativo' ? { inactive_since: new Date().toISOString() } : {}),
-        }).eq('id', professionalId);
-        await supaAdmin.from('billing_events').update({ professional_id: professionalId }).eq('mp_id', dataId).eq('mp_type', tipo);
+      const externalRef = preapproval.external_reference;
+      if (externalRef) {
+        const { data: proMatch } = await supaAdmin.from('professionals').select('id').eq('id', externalRef).maybeSingle();
+
+        if (proMatch) {
+          // Nível 2: assinatura do próprio profissional (comportamento já
+          // existente, inalterado).
+          const professionalId = proMatch.id;
+          const novoStatus = preapproval.status === 'authorized' ? 'ativo'
+            : (preapproval.status === 'paused' || preapproval.status === 'cancelled') ? 'inativo'
+            : undefined;
+          await supaAdmin.from('professionals').update({
+            mp_subscription_status: preapproval.status,
+            ...(novoStatus ? { status: novoStatus } : {}),
+            ...(novoStatus === 'inativo' ? { inactive_since: new Date().toISOString() } : {}),
+          }).eq('id', professionalId);
+          await supaAdmin.from('billing_events').update({ professional_id: professionalId }).eq('mp_id', dataId).eq('mp_type', tipo);
+        } else {
+          // Nível 1: mensalidade automática do aluno (cartão) — só espelha o
+          // status; quem decide bloquear acesso do aluno continua sendo o
+          // profissional manualmente (mesma regra já fechada no desenho:
+          // falha de cobrança nunca bloqueia acesso sozinha).
+          const { data: stuMatch } = await supaAdmin.from('students').select('id, professional_id').eq('id', externalRef).maybeSingle();
+          if (stuMatch) {
+            await supaAdmin.from('students').update({ mp_subscription_status: preapproval.status }).eq('id', stuMatch.id);
+            await supaAdmin.from('billing_events').update({ professional_id: stuMatch.professional_id }).eq('mp_id', dataId).eq('mp_type', tipo);
+          }
+        }
       }
     } else if (tipo === 'payment') {
       const payment = await mpFetch(`/v1/payments/${dataId}`);
-      const professionalId = payment.external_reference;
-      if (professionalId) {
+      const externalRef = payment.external_reference;
+
+      const { data: proMatch } = externalRef
+        ? await supaAdmin.from('professionals').select('id').eq('id', externalRef).maybeSingle()
+        : { data: null };
+
+      if (!proMatch && externalRef) {
+        // Nível 1: cobrança automática do aluno (cartão recorrente ou Pix
+        // avulso gerado pelo cron) — grava no ledger e atualiza o estado do
+        // aluno. Nunca confundir com a cobrança da assinatura do profissional
+        // tratada no bloco abaixo.
+        const { data: stuMatch } = await supaAdmin.from('students')
+          .select('id, professional_id, dunning_attempts, mp_charge_method').eq('id', externalRef).maybeSingle();
+        if (stuMatch) {
+          const taxaRetida = Array.isArray(payment.fee_details)
+            ? payment.fee_details.filter((f: any) => f.type === 'application_fee').reduce((acc: number, f: any) => acc + (f.amount || 0), 0)
+            : 0;
+          const valor = Number(payment.transaction_amount || 0);
+          const metodo = payment.payment_method_id === 'pix' ? 'pix_avulso' : 'cartao';
+
+          await supaAdmin.from('student_billing_charges').upsert({
+            student_id: stuMatch.id,
+            professional_id: stuMatch.professional_id,
+            metodo,
+            mp_payment_id: dataId,
+            status: payment.status,
+            valor,
+            taxa_retida: taxaRetida,
+            valor_liquido: valor - taxaRetida,
+            motivo_falha: payment.status === 'rejected' ? (payment.status_detail || null) : null,
+            paid_at: payment.status === 'approved' ? new Date().toISOString() : null,
+          }, { onConflict: 'student_id,mp_payment_id' });
+
+          if (payment.status === 'approved') {
+            await supaAdmin.from('students').update({
+              ultimo_pagamento_em: new Date().toISOString().slice(0, 10),
+              dunning_attempts: 0,
+              ...(metodo === 'pix_avulso' ? { pix_pending_payment_id: null, pix_pending_qr_base64: null, pix_pending_copy_paste: null, pix_pending_expires_at: null } : {}),
+            }).eq('id', stuMatch.id);
+          } else if (payment.status === 'rejected' && metodo === 'cartao') {
+            const attempts = (stuMatch.dunning_attempts || 0) + 1;
+            await supaAdmin.from('students').update({ dunning_attempts: attempts }).eq('id', stuMatch.id);
+            // 2-3 tentativas (o próprio Mercado Pago já reprocessa a cobrança
+            // recorrente sozinho em dias alternados) — só na exceção o
+            // profissional é avisado, nunca a cada tentativa isolada.
+            if (attempts >= 3) {
+              const { data: stuFull } = await supaAdmin.from('students').select('nome').eq('id', stuMatch.id).maybeSingle();
+              await supaAdmin.from('professional_notifications').insert({
+                professional_id: stuMatch.professional_id,
+                title: 'Falha na cobrança automática',
+                body: `${stuFull?.nome || 'Um aluno'} teve ${attempts} tentativas de cobrança recusadas — considere falar com ele(a).`,
+              });
+            }
+          }
+        }
+        await supaAdmin.from('billing_events').update({ professional_id: null }).eq('mp_id', dataId).eq('mp_type', tipo);
+        return jsonResponse({ ok: true });
+      }
+
+      const professionalId = externalRef;
+      if (proMatch && professionalId) {
         // Lido ANTES de atualizar ultima_cobranca_em — é o jeito de saber se
         // essa é a 1ª cobrança aprovada desse profissional (dispara a
         // recompensa de indicação) sem precisar de uma coluna extra só pra

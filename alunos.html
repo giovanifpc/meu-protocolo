@@ -227,11 +227,13 @@
   const PLAN_STUDENT_LIMITS = { starter: 15, pro: 40, elite: Infinity };
   let notesByStudent = {};
   let currentStudentCount = 0;
+  let studentsCache = [];
 
   async function loadStudents() {
     const { data, error } = await supa.from('students').select('*').eq('professional_id', professional.id).order('created_at', { ascending: false });
     const list = $('studentsList');
     if (error) { list.innerHTML = `<div class="empty">Erro ao carregar alunos.</div>`; return; }
+    studentsCache = data || [];
     currentStudentCount = data ? data.length : 0;
     if (!data || data.length === 0) { list.innerHTML = `<div class="empty">Nenhum aluno cadastrado ainda.</div>`; return; }
 
@@ -365,6 +367,10 @@
     const msgEl = $('deleteMsg-' + studentId);
     btn.disabled = true;
     msgEl.textContent = '';
+    // Cancela a cobrança automática (se houver) antes de excluir — sem isso,
+    // o Mercado Pago continuaria tentando cobrar o cartão de um aluno já
+    // excluído. Melhor esforço: falha aqui não deve impedir a exclusão.
+    await supa.functions.invoke('mercadopago-cancel-student-charge', { body: { student_id: studentId } }).catch(() => {});
     const { error } = await supa.from('students').delete().eq('id', studentId);
     btn.disabled = false;
     if (error) {
@@ -410,6 +416,20 @@
     };
     const { error } = await supa.from('students').update(payload).eq('id', studentId);
     if (error) { toast('Erro ao salvar: ' + error.message); return; }
+
+    // Se o aluno já tem cobrança automática por cartão ativa, sincroniza o
+    // valor novo com o Mercado Pago (lacuna 4 do desenho de cobrança
+    // automática) — sem isso, o cartão continuaria sendo cobrado no valor
+    // antigo. Melhor esforço: não bloqueia o salvamento local se falhar.
+    const student = studentsCache?.find(s => s.id === studentId);
+    if (student?.mp_charge_method === 'cartao' && payload.mensalidade_valor) {
+      supa.functions.invoke('mercadopago-update-student-charge', {
+        body: { student_id: studentId, novo_valor: payload.mensalidade_valor },
+      }).then(({ data, error: syncErr }) => {
+        if (syncErr || data?.error) toast('Mensalidade salva, mas falhou ao sincronizar com o Mercado Pago: ' + (data?.error || syncErr?.message));
+      }).catch(() => {});
+    }
+
     toast('WhatsApp/mensalidade salvos.');
     await loadStudents();
   }
@@ -478,6 +498,13 @@
     }
     sel.dataset.prevStatus = newStatus;
     $('dangerZone-' + studentId).style.display = newStatus === 'inativo' ? 'block' : 'none';
+    // Marcar Inativo também cancela a cobrança automática desse aluno (lacuna
+    // 3 do desenho de cobrança automática) — sem isso o app continuaria
+    // tentando cobrar o cartão de alguém já bloqueado. Melhor esforço, não
+    // trava o resto do fluxo se falhar.
+    if (newStatus === 'inativo') {
+      supa.functions.invoke('mercadopago-cancel-student-charge', { body: { student_id: studentId } }).catch(() => {});
+    }
     toast(newStatus === 'inativo' ? 'Acesso do aluno bloqueado — ele vê um aviso pra falar com você.' : 'Status atualizado.');
   }
 

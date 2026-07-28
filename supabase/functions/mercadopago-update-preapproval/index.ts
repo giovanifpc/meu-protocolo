@@ -73,6 +73,21 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Cobrança automática dos alunos é exclusiva Pro/Elite (mesma lógica do
+    // white-label) — downgrade pro Starter com automação ainda ativa é
+    // bloqueado, nunca desativado sozinho (decisão fechada em 2026-07-28).
+    if (newPlan === 'starter') {
+      const { count: automatedCount, error: autoErr } = await supa
+        .from('students')
+        .select('id', { count: 'exact', head: true })
+        .eq('professional_id', professional.id)
+        .neq('mp_charge_method', 'nenhum');
+      if (autoErr) throw new Error('Erro ao checar cobrança automática: ' + autoErr.message);
+      if ((automatedCount ?? 0) > 0) {
+        throw new Error(`Você tem ${automatedCount} aluno(s) com cobrança automática ativa — desative antes de trocar pro plano Starter.`);
+      }
+    }
+
     const valor = professional.valor_customizado ?? PLAN_PRICES[newPlan];
     let synced = false;
 

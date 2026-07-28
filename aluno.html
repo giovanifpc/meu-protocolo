@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://drive.google.com https://img.youtube.com https://*.supabase.co; frame-src https://www.youtube-nocookie.com; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co https://o4511757250199552.ingest.us.sentry.io; object-src 'none'; base-uri 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.sentry-cdn.com https://sdk.mercadopago.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://drive.google.com https://img.youtube.com https://*.supabase.co https://*.mercadopago.com https://*.mlstatic.com; frame-src https://www.youtube-nocookie.com https://*.mercadopago.com; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co https://o4511757250199552.ingest.us.sentry.io https://*.mercadopago.com https://api.mercadopago.com; object-src 'none'; base-uri 'self';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#F8F9FA">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,6 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
 <script src="https://js.sentry-cdn.com/dd3ca3ee7a720284b2a9bf8240b29158.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://sdk.mercadopago.com/js/v2"></script>
 <script src="student-hints.js" defer></script>
 <script src="whats-new.js" defer></script>
 <script>window.SUPPORT_WIDGET_NO_FAB = true;</script>
@@ -462,6 +463,16 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .fin-pixkey code{flex:1;min-width:0;overflow-wrap:break-word;font-family:inherit}
 .fin-copy-btn{border:none;background:var(--primary);color:#fff;font-weight:700;font-size:12px;padding:7px 12px;border-radius:8px;cursor:pointer;flex-shrink:0}
 .fin-disclaimer{font-size:11.5px;color:var(--faint);line-height:1.5;margin-top:12px}
+.fin-mp-field{background:var(--card-2);border:1px solid var(--line);border-radius:10px;padding:11px 12px;margin-top:10px;height:44px}
+.fin-text-input{width:100%;background:var(--card-2);border:1px solid var(--line);border-radius:10px;padding:11px 12px;margin-top:10px;font-size:14px;color:var(--text);font-family:var(--font);box-sizing:border-box}
+.msg{font-size:13px}
+.msg.error{color:var(--danger)}
+.fin-history-row{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.fin-history-row:last-child{border-bottom:none}
+.fin-history-row .fh-status{font-weight:700}
+.fin-history-row .fh-status.approved{color:var(--accent-dim)}
+.fin-history-row .fh-status.rejected{color:var(--danger)}
+.fin-history-row .fh-status.pending{color:var(--muted)}
 </style>
 </head>
 <body>
@@ -644,8 +655,74 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         <div class="fin-disclaimer">Depois de pagar, avise seu personal por lá — a confirmação aqui no app é feita por ele(a), não automática.</div>
       </div>
     </div>
+
+    <!-- Cobrança automática (profissional conectado ao Mercado Pago) -->
+    <div id="finAutoContent" style="display:none;">
+      <div class="fin-card" id="finAutoEmpty" style="text-align:center;">
+        <div style="color:var(--muted);font-size:13.5px;line-height:1.6;margin-bottom:14px;">Configure como você quer pagar sua mensalidade.</div>
+        <button class="btn" id="finAddMethodBtn" style="width:100%;">+ Adicionar método de pagamento</button>
+      </div>
+
+      <div class="fin-card" id="finCardActive" style="display:none;">
+        <div class="fin-status ok">Cobrança automática ativa</div>
+        <div class="fin-row"><span class="fin-lbl">Cartão</span><span class="fin-val" id="finCardDigits">—</span></div>
+        <div class="fin-row"><span class="fin-lbl">Mensalidade</span><span class="fin-val" id="finAutoValorCard">—</span></div>
+        <div class="fin-row"><span class="fin-lbl">Próxima cobrança</span><span class="fin-val" id="finAutoNextCard">—</span></div>
+        <button class="btn secondary" data-role="change-method" style="width:100%;margin-top:10px;">Trocar método de pagamento</button>
+        <button class="btn secondary" data-role="remove-method" style="width:100%;margin-top:8px;color:var(--danger);">Remover método de pagamento</button>
+      </div>
+
+      <div class="fin-card" id="finPixAutoActive" style="display:none;">
+        <div class="fin-status ok">Pagamento via Pix</div>
+        <p style="font-size:13px;color:var(--muted);line-height:1.5;margin:0 0 10px;">Um código Pix novo é gerado automaticamente a cada ciclo, 3 dias antes do vencimento.</p>
+        <div class="fin-row"><span class="fin-lbl">Mensalidade</span><span class="fin-val" id="finAutoValorPix">—</span></div>
+        <div class="fin-row"><span class="fin-lbl">Próximo vencimento</span><span class="fin-val" id="finAutoNextPix">—</span></div>
+        <div id="finPixPendingBlock" style="display:none;margin-top:12px;">
+          <img class="fin-qr" id="finPixPendingQr" alt="QR Pix">
+          <div class="fin-pixkey"><code id="finPixPendingCode"></code><button class="fin-copy-btn" id="finCopyPendingPixBtn" type="button">Copiar</button></div>
+        </div>
+        <button class="btn secondary" data-role="change-method" style="width:100%;margin-top:10px;">Trocar método de pagamento</button>
+        <button class="btn secondary" data-role="remove-method" style="width:100%;margin-top:8px;color:var(--danger);">Remover método de pagamento</button>
+      </div>
+
+      <div class="fin-card" id="finHistoryCard" style="display:none;">
+        <div class="section-label" style="margin-top:0;">Histórico de cobranças</div>
+        <div id="finHistoryList"></div>
+      </div>
+    </div>
   </div>
 </section>
+
+<!-- Bottom-sheet: escolher método de cobrança automática -->
+<div class="checkin-overlay" id="finMethodOverlay">
+  <div class="checkin-card">
+    <h3>Como você quer pagar?</h3>
+    <p class="ci-sub">Escolha como sua mensalidade será cobrada automaticamente todo mês.</p>
+    <div class="ci-choice-row" style="flex-direction:column;gap:10px;">
+      <button class="ci-choice" style="font-size:14px;padding:14px;text-align:left;" id="finPickCartao">💳 Cartão de crédito<br><small>Cobrança automática todo mês</small></button>
+      <button class="ci-choice" style="font-size:14px;padding:14px;text-align:left;" id="finPickPix">Pix<br><small>Código novo gerado automaticamente a cada ciclo</small></button>
+    </div>
+    <button class="btn secondary" id="finMethodCancelBtn" style="width:100%;margin-top:16px;">Cancelar</button>
+  </div>
+</div>
+
+<!-- Formulário de cartão (Secure Fields — tokeniza no navegador, número nunca passa pelo nosso servidor) -->
+<div class="checkin-overlay" id="finCardOverlay">
+  <div class="checkin-card">
+    <h3>Cartão de crédito</h3>
+    <p class="ci-sub">Seus dados vão direto pro Mercado Pago — nunca guardamos o número do seu cartão.</p>
+    <div id="finCardNumberField" class="fin-mp-field"></div>
+    <div style="display:flex;gap:8px;">
+      <div id="finCardExpiryField" class="fin-mp-field" style="flex:1;"></div>
+      <div id="finCardCvvField" class="fin-mp-field" style="flex:1;"></div>
+    </div>
+    <input type="text" id="finCardholderName" class="fin-text-input" placeholder="Nome impresso no cartão">
+    <input type="text" id="finCardCpf" class="fin-text-input" placeholder="CPF do titular">
+    <button class="btn" id="finCardSubmitBtn" style="width:100%;margin-top:12px;">Confirmar</button>
+    <button class="btn secondary" id="finCardCancelBtn" style="width:100%;margin-top:8px;">Cancelar</button>
+    <div class="msg" id="finCardMsg" style="font-size:12.5px;margin-top:8px;min-height:1em;"></div>
+  </div>
+</div>
 
 <!-- ===== BOTTOM NAV ===== -->
 <nav class="bottom-nav" id="bottomNav" style="display:none">
@@ -866,6 +943,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';
   const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // Mesma Public Key usada em onboarding.html — tokenização de cartão no
+  // marketplace continua sob a MESMA aplicação Mercado Pago, o que muda por
+  // conexão OAuth é só o access_token da conta conectada do profissional.
+  const MERCADOPAGO_PUBLIC_KEY = 'APP_USR-b5376858-ebb9-44fe-8d82-6cc525eaa4f2';
   const $ = (id) => document.getElementById(id);
 
   const ICONS = {
@@ -1068,6 +1149,16 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     if (accessBlocked) return;
     hideNav();
     showScreen('financeiro');
+
+    const connected = student.professionals?.mp_connect_status === 'conectado';
+    $('finAutoContent').style.display = connected ? 'block' : 'none';
+    if (connected) {
+      $('finEmpty').style.display = 'none';
+      $('finContent').style.display = 'none';
+      await renderAutoFinanceiro();
+      return;
+    }
+
     const enabled = !!student.professionals?.payment_info_enabled;
     $('finEmpty').style.display = enabled ? 'none' : 'block';
     $('finContent').style.display = enabled ? 'block' : 'none';
@@ -1116,6 +1207,163 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     } catch {
       toast('Não foi possível copiar — selecione o texto manualmente.');
     }
+  });
+
+  /* ---- cobrança automática (aluno -> profissional) ---- */
+  async function renderAutoFinanceiro() {
+    const metodo = student.mp_charge_method || 'nenhum';
+    $('finAutoEmpty').style.display = metodo === 'nenhum' ? 'block' : 'none';
+    $('finCardActive').style.display = metodo === 'cartao' ? 'block' : 'none';
+    $('finPixAutoActive').style.display = metodo === 'pix_avulso' ? 'block' : 'none';
+
+    const valorTxt = student.mensalidade_valor ? `R$ ${Number(student.mensalidade_valor).toFixed(2)}` : 'Não cadastrado';
+    const info = computeDueInfoAluno(student);
+    const nextTxt = info ? info.due.toLocaleDateString('pt-BR') : 'Não cadastrado';
+
+    if (metodo === 'cartao') {
+      $('finCardDigits').textContent = student.mp_card_last4 ? `•••• ${student.mp_card_last4}${student.mp_card_expiry ? ' — ' + student.mp_card_expiry : ''}` : 'Cadastrado';
+      $('finAutoValorCard').textContent = valorTxt;
+      $('finAutoNextCard').textContent = nextTxt;
+    } else if (metodo === 'pix_avulso') {
+      $('finAutoValorPix').textContent = valorTxt;
+      $('finAutoNextPix').textContent = nextTxt;
+      const hasPending = !!student.pix_pending_copy_paste;
+      $('finPixPendingBlock').style.display = hasPending ? 'block' : 'none';
+      if (hasPending) {
+        $('finPixPendingQr').src = student.pix_pending_qr_base64 ? `data:image/png;base64,${student.pix_pending_qr_base64}` : '';
+        $('finPixPendingQr').style.display = student.pix_pending_qr_base64 ? 'block' : 'none';
+        $('finPixPendingCode').textContent = student.pix_pending_copy_paste;
+      }
+    }
+
+    await renderBillingHistory();
+  }
+
+  async function renderBillingHistory() {
+    const { data: charges } = await supa
+      .from('student_billing_charges')
+      .select('metodo, status, valor, created_at')
+      .eq('student_id', student.id)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    if (!charges || !charges.length) { $('finHistoryCard').style.display = 'none'; return; }
+    $('finHistoryCard').style.display = 'block';
+    const statusLabel = { approved: 'Pago', rejected: 'Recusado', pending: 'Pendente', refunded: 'Estornado' };
+    $('finHistoryList').innerHTML = charges.map(c => `
+      <div class="fin-history-row">
+        <span>${new Date(c.created_at).toLocaleDateString('pt-BR')} — ${c.metodo === 'pix_avulso' ? 'Pix' : 'Cartão'}</span>
+        <span>R$ ${Number(c.valor).toFixed(2)} <span class="fh-status ${c.status}">${statusLabel[c.status] || c.status}</span></span>
+      </div>
+    `).join('');
+  }
+
+  function openMethodSheet() { $('finMethodOverlay').classList.add('show'); }
+  function closeMethodSheet() { $('finMethodOverlay').classList.remove('show'); }
+  $('finAddMethodBtn').addEventListener('click', openMethodSheet);
+  document.querySelectorAll('[data-role="change-method"]').forEach(btn => btn.addEventListener('click', openMethodSheet));
+  $('finMethodCancelBtn').addEventListener('click', closeMethodSheet);
+
+  document.querySelectorAll('[data-role="remove-method"]').forEach(btn => btn.addEventListener('click', async () => {
+    if (!confirm('Remover seu método de pagamento? A cobrança automática para — você volta a combinar o pagamento direto com seu personal.')) return;
+    btn.disabled = true;
+    const { data, error } = await supa.functions.invoke('mercadopago-cancel-student-charge', { body: {} });
+    btn.disabled = false;
+    if (error || data?.error) { toast('Erro: ' + (data?.error || error?.message)); return; }
+    student.mp_charge_method = 'nenhum';
+    student.mp_card_last4 = null;
+    student.mp_card_expiry = null;
+    student.pix_pending_copy_paste = null;
+    student.pix_pending_qr_base64 = null;
+    toast('Método de pagamento removido.');
+    await renderAutoFinanceiro();
+  }));
+
+  $('finPickPix').addEventListener('click', async () => {
+    if (!student.mensalidade_valor || !student.mensalidade_dia_vencimento) {
+      toast('Sua mensalidade ainda não foi cadastrada pelo seu personal — fale com ele(a) antes.');
+      return;
+    }
+    closeMethodSheet();
+    const { data, error } = await supa.functions.invoke('mercadopago-charge-student', { body: { metodo: 'pix_avulso' } });
+    if (error || data?.error) { toast('Erro: ' + (data?.error || error?.message)); return; }
+    student.mp_charge_method = 'pix_avulso';
+    toast('Pix configurado — o código é gerado automaticamente perto do vencimento.');
+    await renderAutoFinanceiro();
+  });
+
+  let mpCardFields = null;
+  function openCardForm() {
+    if (!student.mensalidade_valor || !student.mensalidade_dia_vencimento) {
+      toast('Sua mensalidade ainda não foi cadastrada pelo seu personal — fale com ele(a) antes.');
+      return;
+    }
+    closeMethodSheet();
+    $('finCardMsg').textContent = '';
+    $('finCardOverlay').classList.add('show');
+    if (!mpCardFields) {
+      const mp = new MercadoPago(MERCADOPAGO_PUBLIC_KEY, { locale: 'pt-BR' });
+      mpCardFields = {
+        cardNumber: mp.fields.create('cardNumber', { placeholder: '0000 0000 0000 0000' }).mount('finCardNumberField'),
+        expirationDate: mp.fields.create('expirationDate', { placeholder: 'MM/AA' }).mount('finCardExpiryField'),
+        securityCode: mp.fields.create('securityCode', { placeholder: 'CVV' }).mount('finCardCvvField'),
+        mp,
+      };
+    }
+  }
+  $('finPickCartao').addEventListener('click', openCardForm);
+  $('finCardCancelBtn').addEventListener('click', () => $('finCardOverlay').classList.remove('show'));
+
+  $('finCardSubmitBtn').addEventListener('click', async () => {
+    const cardholderName = $('finCardholderName').value.trim();
+    const identificationNumber = $('finCardCpf').value.trim();
+    if (!cardholderName || !identificationNumber) { $('finCardMsg').textContent = 'Preencha nome no cartão e CPF.'; $('finCardMsg').className = 'msg error'; return; }
+    $('finCardSubmitBtn').disabled = true;
+    $('finCardMsg').textContent = 'Validando cartão...';
+    $('finCardMsg').className = 'msg';
+
+    let tokenResult;
+    try {
+      tokenResult = await mpCardFields.mp.fields.createCardToken({ cardholderName, identificationType: 'CPF', identificationNumber });
+    } catch (err) {
+      $('finCardSubmitBtn').disabled = false;
+      $('finCardMsg').textContent = 'Cartão inválido: ' + (err?.message || 'confira os dados e tente de novo.');
+      $('finCardMsg').className = 'msg error';
+      return;
+    }
+
+    const cardExpiry = tokenResult.expiration_month && tokenResult.expiration_year
+      ? `${String(tokenResult.expiration_month).padStart(2, '0')}/${String(tokenResult.expiration_year).slice(-2)}`
+      : null;
+
+    $('finCardMsg').textContent = 'Ativando cobrança automática...';
+    const { data, error } = await supa.functions.invoke('mercadopago-charge-student', {
+      body: {
+        metodo: 'cartao',
+        card_token_id: tokenResult.id,
+        card_last4: tokenResult.last_four_digits,
+        card_expiry: cardExpiry,
+      },
+    });
+    $('finCardSubmitBtn').disabled = false;
+    if (error || data?.error) {
+      $('finCardMsg').textContent = 'Erro: ' + (data?.error || error?.message);
+      $('finCardMsg').className = 'msg error';
+      return;
+    }
+
+    student.mp_charge_method = 'cartao';
+    student.mp_card_last4 = tokenResult.last_four_digits;
+    student.mp_card_expiry = cardExpiry;
+    $('finCardOverlay').classList.remove('show');
+    toast('Cobrança automática ativada.');
+    await renderAutoFinanceiro();
+  });
+
+  $('finCopyPendingPixBtn').addEventListener('click', async () => {
+    const code = student.pix_pending_copy_paste;
+    if (!code) return;
+    try { await navigator.clipboard.writeText(code); toast('Código Pix copiado.'); }
+    catch { toast('Não foi possível copiar — selecione o texto manualmente.'); }
   });
 
   function openDrawer() {
@@ -1182,7 +1430,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 
     const { data: st, error } = await supa
       .from('students')
-      .select('*, professionals(display_name, color_preset, ranking_enabled, whatsapp, home_subtitle, payment_info_enabled, pix_key_text)')
+      .select('*, professionals(id, display_name, color_preset, ranking_enabled, whatsapp, home_subtitle, payment_info_enabled, pix_key_text, mp_connect_status)')
       .eq('email', session.user.email)
       .maybeSingle();
 

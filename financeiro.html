@@ -120,8 +120,28 @@
 
   <main>
     <div class="card">
-      <h2>Recebimento dos alunos</h2>
-      <p class="card-sub">Ligue pra deixar seu QR e chave Pix visíveis pros seus alunos, dentro do app deles.</p>
+      <h2>Cobrança automática</h2>
+      <p class="card-sub">Conecte sua conta Mercado Pago pra seus alunos pagarem sozinhos, todo mês — cartão ou Pix, sem você precisar cobrar manualmente.</p>
+      <div id="mpDisconnected">
+        <button class="btn" id="mpConnectBtn">Conectar minha conta Mercado Pago</button>
+        <div class="msg" id="mpConnectMsg"></div>
+      </div>
+      <div id="mpConnected" style="display:none;">
+        <div class="toggle-row" style="margin-bottom:0;">
+          <div class="tr-text">
+            <div class="tr-label" style="color:var(--accent-dim);">✓ Conta conectada</div>
+            <div class="tr-sub">Seus alunos já podem escolher cartão ou Pix na aba Financeiro deles.</div>
+          </div>
+          <button class="btn danger small" id="mpDisconnectBtn" type="button">Desconectar</button>
+        </div>
+        <div class="msg" id="mpDisconnectMsg"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Pix estático (manual)</h2>
+      <p class="card-sub" id="pixStaticSub">Ligue pra deixar seu QR e chave Pix visíveis pros seus alunos, dentro do app deles.</p>
+      <div id="pixStaticDisabledNote" class="qr-note" style="display:none;">Com a cobrança automática conectada, o Pix estático fica em segundo plano (os dados continuam salvos, só não aparecem pro aluno) — ele reaparece sozinho se você desconectar.</div>
       <div class="toggle-row">
         <div class="tr-text">
           <div class="tr-label">Mostrar Pix pros meus alunos</div>
@@ -172,6 +192,23 @@
         </div>
       </div>
       <p class="revenue-disclaimer">Baseado no que você marcou como pago em cada aluno (aba Alunos) — não é um pagamento verificado automaticamente, já que o recebimento é direto por Pix, sem gateway.</p>
+      <div id="autoRevenueBlock" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--line);">
+        <div class="tr-label" style="margin-bottom:10px;">Cobrança automática este mês</div>
+        <div class="revenue-grid" style="grid-template-columns:1fr 1fr 1fr;">
+          <div class="revenue-stat">
+            <div class="rv-num" id="arGross" style="font-size:16px;">—</div>
+            <div class="rv-lbl">Bruto</div>
+          </div>
+          <div class="revenue-stat">
+            <div class="rv-num" id="arFee" style="font-size:16px;">—</div>
+            <div class="rv-lbl">Taxa retida</div>
+          </div>
+          <div class="revenue-stat received">
+            <div class="rv-num" id="arNet" style="font-size:16px;">—</div>
+            <div class="rv-lbl">Líquido</div>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -253,6 +290,71 @@
       $('qrPreviewPh').style.display = 'block';
       $('removeQrBtn').style.display = 'none';
     }
+  }
+
+  $('mpConnectBtn').addEventListener('click', async () => {
+    $('mpConnectBtn').disabled = true;
+    $('mpConnectMsg').textContent = 'Preparando conexão...';
+    $('mpConnectMsg').className = 'msg';
+    const { data, error } = await supa.functions.invoke('mercadopago-oauth-connect', { body: {} });
+    if (error || data?.error) {
+      $('mpConnectBtn').disabled = false;
+      $('mpConnectMsg').textContent = 'Erro: ' + (data?.error || error?.message || 'não foi possível iniciar a conexão.');
+      $('mpConnectMsg').className = 'msg error';
+      return;
+    }
+    window.location.href = data.url;
+  });
+
+  $('mpDisconnectBtn').addEventListener('click', async () => {
+    if (!confirm('Desconectar sua conta Mercado Pago? A cobrança automática dos seus alunos para na hora — o Pix estático (se configurado) volta a aparecer pra eles sozinho.')) return;
+    $('mpDisconnectBtn').disabled = true;
+    $('mpDisconnectMsg').textContent = 'Desconectando...';
+    const { data, error } = await supa.functions.invoke('mercadopago-oauth-disconnect', { body: {} });
+    $('mpDisconnectBtn').disabled = false;
+    if (error || data?.error) {
+      $('mpDisconnectMsg').textContent = 'Erro: ' + (data?.error || error?.message);
+      $('mpDisconnectMsg').className = 'msg error';
+      return;
+    }
+    $('mpDisconnectMsg').textContent = '';
+    toast('Conta desconectada.');
+    professional.mp_connect_status = 'revogado';
+    applyMpConnectUi();
+  });
+
+  function applyMpConnectUi() {
+    const connected = professional.mp_connect_status === 'conectado';
+    $('mpDisconnected').style.display = connected ? 'none' : 'block';
+    $('mpConnected').style.display = connected ? 'block' : 'none';
+    $('pixStaticSub').style.display = connected ? 'none' : 'block';
+    $('pixStaticDisabledNote').style.display = connected ? 'block' : 'none';
+    $('paymentToggle').closest('.toggle-row').style.display = connected ? 'none' : 'flex';
+    $('paymentFields').classList.toggle('show', !connected && !!professional.payment_info_enabled);
+  }
+
+  async function loadAutoRevenue() {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const { data: charges } = await supa
+      .from('student_billing_charges')
+      .select('valor, taxa_retida, valor_liquido, status')
+      .eq('professional_id', professional.id)
+      .eq('status', 'approved')
+      .gte('paid_at', monthStart);
+    if (!charges || !charges.length) return;
+    const gross = charges.reduce((acc, c) => acc + Number(c.valor || 0), 0);
+    const fee = charges.reduce((acc, c) => acc + Number(c.taxa_retida || 0), 0);
+    const net = charges.reduce((acc, c) => acc + Number(c.valor_liquido || 0), 0);
+    $('arGross').textContent = `R$ ${gross.toFixed(2)}`;
+    $('arFee').textContent = `R$ ${fee.toFixed(2)}`;
+    $('arNet').textContent = `R$ ${net.toFixed(2)}`;
+    $('autoRevenueBlock').style.display = 'block';
+  }
+
+  const mpConnectParam = new URLSearchParams(location.search).get('mp_connect');
+  if (mpConnectParam) {
+    history.replaceState(null, '', location.pathname);
   }
 
   $('paymentToggle').addEventListener('change', async (e) => {
@@ -458,8 +560,11 @@
     });
 
     $('paymentToggle').checked = !!pro.payment_info_enabled;
-    $('paymentFields').classList.toggle('show', !!pro.payment_info_enabled);
     $('pixKeyInput').value = pro.pix_key_text || '';
+    applyMpConnectUi();
+
+    if (mpConnectParam === 'ok') toast('Conta Mercado Pago conectada com sucesso.');
+    else if (mpConnectParam === 'erro') toast('Não foi possível conectar sua conta Mercado Pago — tente de novo.');
 
     const { data: qrSigned } = await supa.storage.from(QR_BUCKET).createSignedUrl(`${professional.id}/pix-qr.png`, 300);
     if (qrSigned?.signedUrl) {
@@ -473,6 +578,7 @@
       .eq('professional_id', professional.id);
     if (studentsError) { console.error('Falha ao carregar alunos pra Receita:', studentsError.message); return; }
     renderRevenue(students || []);
+    loadAutoRevenue();
   }
 
   boot();

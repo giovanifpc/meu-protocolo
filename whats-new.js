@@ -7,8 +7,11 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.8.0',
+      version: '1.9.0',
       items: [
+        'Novo: cobrança automática! Conecte sua conta Mercado Pago em Financeiro e seus alunos passam a pagar sozinhos, todo mês, por cartão ou Pix — sem taxa no plano Elite, 1% no Pro.',
+        'Novo: "Trocar cartão atual" na sua própria assinatura, dentro de Perfil → Seu plano.',
+        'Receita em Financeiro agora mostra o bruto/taxa/líquido das cobranças automatizadas, além do que já era autodeclarado.',
         'Novo: notificações push no sino ficam disponíveis também pra você, não só pro aluno — ative em Notificações, dentro do sino.',
         'Novo: crie exercícios que não estão na biblioteca, direto na busca ao montar um treino — fica só na sua conta, nunca compartilhado com outros profissionais.',
         'Novo: vincule uma imagem própria (além do vídeo do YouTube) a qualquer exercício, com recorte quadrado ou paisagem.',
@@ -22,8 +25,9 @@
       ]
     },
     aluno: {
-      version: '1.3.0',
+      version: '1.4.0',
       items: [
+        'Novo: se seu personal ativar a cobrança automática, a aba Financeiro ganha cartão de crédito ou Pix gerado sozinho a cada mês — escolha em Financeiro.',
         'Novo: quando seu personal publica um comparativo de avaliação física, ele aparece na tela de Avaliação física — fotos antes/depois e a variação de cada medida.',
         'Novo: as fotos da sua avaliação física agora aparecem na tela de Avaliação física.',
         'Nova aba "Financeiro" no menu lateral — veja o status da sua mensalidade e o Pix do seu personal, quando disponibilizado.',

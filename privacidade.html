@@ -40,6 +40,7 @@
       <h2>2. Quais dados coletamos</h2>
       <p>Do profissional: nome, e-mail, dados de branding (nome de exibição, cor, logo) e dados de cobrança da assinatura (processados pelo Mercado Pago — não armazenamos número de cartão).</p>
       <p>Do aluno, inseridos pelo próprio aluno ou pelo profissional: nome, e-mail, telefone (opcional), protocolos de treino e histórico de execução, anamnese/PAR-Q (objetivo, histórico médico, lesões, cirurgias, medicamentos, hábito de fumar — <span class="tag">dado sensível de saúde</span>), avaliações físicas (dobras cutâneas, bioimpedância, perimetria, fotos corporais — <span class="tag">dado sensível de saúde</span>) e orientação nutricional.</p>
+      <p>Quando o profissional ativa a cobrança automática da mensalidade, também tratamos: o cartão de crédito do aluno de forma tokenizada (o número completo nunca é armazenado por nós — só um token gerado pelo Mercado Pago) e o histórico de cobranças (data, valor, status de pagamento).</p>
 
       <h2>3. Base legal</h2>
       <p>Para os dados de saúde (anamnese e avaliação física), a base legal é o <strong>consentimento específico do titular</strong> (art. 11 da LGPD), obtido no primeiro acesso do aluno à plataforma. Para os demais dados necessários ao funcionamento do serviço (cadastro, protocolos, cobrança), a base legal é a <strong>execução do contrato</strong> firmado entre o profissional e o Meu Protocolo (e, por extensão, o uso autorizado pelo aluno ao aceitar o convite do seu profissional).</p>
@@ -50,7 +51,7 @@
       <h2>5. Com quem compartilhamos dados</h2>
       <ul>
         <li><strong>Supabase</strong> — provedor de hospedagem de banco de dados e autenticação (infraestrutura técnica, não acessa os dados para fins próprios).</li>
-        <li><strong>Mercado Pago</strong> — processa a cobrança da assinatura do profissional; não temos acesso a número de cartão, apenas ao status do pagamento.</li>
+        <li><strong>Mercado Pago</strong> — processa a cobrança da assinatura do profissional e, quando ativada, a cobrança automática da mensalidade do aluno pro profissional; não temos acesso a número de cartão, apenas ao status do pagamento. Quando o profissional conecta a própria conta Mercado Pago (cobrança automática dos alunos), ele autoriza o Meu Protocolo a processar pagamentos em nome dessa conta — a conexão pode ser desfeita a qualquer momento pelo próprio profissional.</li>
         <li><strong>Resend</strong> — envio dos e-mails de acesso (código de login).</li>
       </ul>
       <p>Não vendemos, alugamos ou compartilhamos dados pessoais com terceiros para fins de publicidade.</p>

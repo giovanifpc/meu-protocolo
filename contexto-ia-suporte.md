@@ -161,6 +161,14 @@ O painel do profissional tem um sino fixo no topo de toda tela (ao lado do menu 
 
 Na busca de exercício (montar treino), se o profissional não achar o que precisa, tem a opção "Criar exercício novo" — só nome + grupo muscular. Esse exercício fica **só na conta de quem criou**, nunca aparece nem fica buscável pra outro profissional (diferente da biblioteca padrão, com ~1550 itens, essa sim compartilhada com todo mundo). O profissional que criou pode editar (nome/grupo muscular) ou apagar depois, clicando no ícone de lápis ao lado do exercício quando ele aparece na busca — apagar não afeta treinos que já usam esse exercício. Vídeo/imagem também podem ser vinculados a um exercício criado, do mesmo jeito que a qualquer outro da biblioteca (ver seção 5.14).
 
+### 5.18 Cobrança automática da mensalidade — aluno → profissional (adicionado 2026-07-28)
+
+Recurso opcional dos planos Pro/Elite, em Financeiro (menu lateral do profissional). O profissional conecta a própria conta Mercado Pago com um clique ("Conectar minha conta Mercado Pago") — depois disso, cada aluno passa a escolher, na própria aba Financeiro dele, entre **cartão de crédito** (cobrança recorrente automática todo mês) ou **Pix** (um código novo é gerado sozinho, automaticamente, 3 dias antes de cada vencimento — o aluno nunca precisa pedir). O aluno recebe um e-mail e uma notificação no sino avisando 3 dias antes da cobrança/Pix. Ele pode trocar de método ou remover a qualquer momento, na própria tela.
+
+Taxa: no plano **Pro**, cada cobrança automatizada tem 1% retido pro Meu Protocolo; no plano **Elite**, não tem taxa nenhuma. Isso é só sobre cobrança **automatizada** — o Pix estático manual (chave copia-e-cola, sem conta conectada) nunca teve taxa e continua existindo como alternativa pra quem não quer conectar conta nenhuma; os dois não convivem ao mesmo tempo (conectar a conta esconde o Pix estático, desconectar traz ele de volta sozinho).
+
+Se o profissional desconectar a conta, a cobrança automática de todos os alunos dele para na hora (nenhum aluno fica "preso" nisso). Se um pagamento por cartão falhar repetidas vezes, o profissional é avisado no sino — não é o suporte por IA que resolve isso, é sempre o profissional decidindo o que fazer com aquele aluno específico (inclusive se quer marcá-lo como Inativo). O suporte por IA **nunca** tem acesso a token/dado de pagamento de ninguém — se um aluno ou profissional relatar problema de cobrança específico (Pix que não gerou, cartão recusado, valor errado), a orientação é sempre escalar (ver seção 7), nunca tentar diagnosticar ou "corrigir" via conversa.
+
 ---
 
 ## 6. Perguntas frequentes esperadas (ponto de partida, não lista fechada)

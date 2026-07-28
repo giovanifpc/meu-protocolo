@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://drive.google.com https://*.supabase.co; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co https://o4511757250199552.ingest.us.sentry.io; object-src 'none'; base-uri 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.sentry-cdn.com https://sdk.mercadopago.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://drive.google.com https://*.supabase.co https://*.mercadopago.com https://*.mlstatic.com; frame-src https://*.mercadopago.com; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co https://o4511757250199552.ingest.us.sentry.io https://*.mercadopago.com https://api.mercadopago.com; object-src 'none'; base-uri 'self';">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" href="icons/favicon-32-v2.png">
 <link rel="manifest" href="manifest-painel.json">
@@ -14,6 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://js.sentry-cdn.com/dd3ca3ee7a720284b2a9bf8240b29158.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://sdk.mercadopago.com/js/v2"></script>
 <script src="support-widget.js" defer></script>
 <script src="assistant-hints.js" defer></script>
 <script src="whats-new.js" defer></script>
@@ -44,6 +45,8 @@
   .btn.danger { background:#FDEDEC; color:var(--danger); border:1px solid #F5C6C0; }
   .btn:disabled { opacity:.5; cursor:not-allowed; }
   .msg { font-size:13px; margin-top:8px; }
+  .fin-mp-field-perfil { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:11px 12px; margin-top:10px; height:44px; }
+  .fin-text-input-perfil { width:100%; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:11px 12px; margin-top:10px; font-size:14px; color:var(--text); font-family:var(--font); box-sizing:border-box; }
   .msg.error { color:var(--danger); }
   .plan-tag { font-size:11px; font-weight:700; padding:2px 10px; border-radius:8px; background:#E7F7F1; color:var(--accent-dim); text-transform:uppercase; display:inline-block; }
   .plan-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px; }
@@ -170,6 +173,28 @@
           <button class="btn" id="planConfirmBtn" style="flex:1;" type="button">Confirmar troca</button>
         </div>
         <div class="msg" id="planMsg"></div>
+      </div>
+    </div>
+
+    <div class="card" id="cardBillingCard" style="display:none;">
+      <h2>Cartão da assinatura</h2>
+      <div class="field" id="cardBillingInfo">
+        <p style="font-size:13px;color:var(--muted);margin:0;">Cartão cadastrado — troque quando precisar, sem precisar cancelar e refazer a assinatura.</p>
+      </div>
+      <button class="btn secondary" id="cardBillingChangeBtn" type="button">Trocar cartão atual</button>
+      <div id="cardBillingForm" style="display:none;margin-top:14px;">
+        <div id="pfCardNumberField" class="fin-mp-field-perfil"></div>
+        <div style="display:flex;gap:8px;">
+          <div id="pfCardExpiryField" class="fin-mp-field-perfil" style="flex:1;"></div>
+          <div id="pfCardCvvField" class="fin-mp-field-perfil" style="flex:1;"></div>
+        </div>
+        <input type="text" id="pfCardholderName" class="fin-text-input-perfil" placeholder="Nome impresso no cartão">
+        <input type="text" id="pfCardCpf" class="fin-text-input-perfil" placeholder="CPF do titular">
+        <div style="display:flex;gap:10px;margin-top:12px;">
+          <button class="btn secondary" id="cardBillingCancelBtn" style="flex:1;" type="button">Cancelar</button>
+          <button class="btn" id="cardBillingSubmitBtn" style="flex:1;" type="button">Confirmar</button>
+        </div>
+        <div class="msg" id="cardBillingMsg"></div>
       </div>
     </div>
 
@@ -358,6 +383,7 @@
   const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';
   const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const MERCADOPAGO_PUBLIC_KEY = 'APP_USR-b5376858-ebb9-44fe-8d82-6cc525eaa4f2';
   const $ = (id) => document.getElementById(id);
   function openDrawer() { $('drawerOverlay').classList.add('show'); $('sideDrawer').classList.add('show'); }
   function closeDrawer() { $('drawerOverlay').classList.remove('show'); $('sideDrawer').classList.remove('show'); }
@@ -480,6 +506,57 @@
       $('whiteLabelFields').style.pointerEvents = '';
     }
     toast(`Plano alterado pra ${PLAN_LABELS[professional.plan]}.`);
+  });
+
+  /* ---- Cartão da assinatura (nível 2 — troca sem cancelar/recriar) ---- */
+  let pfCardFields = null;
+  $('cardBillingChangeBtn').addEventListener('click', () => {
+    $('cardBillingForm').style.display = 'block';
+    $('cardBillingMsg').textContent = '';
+    if (!pfCardFields) {
+      const mp = new MercadoPago(MERCADOPAGO_PUBLIC_KEY, { locale: 'pt-BR' });
+      pfCardFields = {
+        cardNumber: mp.fields.create('cardNumber', { placeholder: '0000 0000 0000 0000' }).mount('pfCardNumberField'),
+        expirationDate: mp.fields.create('expirationDate', { placeholder: 'MM/AA' }).mount('pfCardExpiryField'),
+        securityCode: mp.fields.create('securityCode', { placeholder: 'CVV' }).mount('pfCardCvvField'),
+        mp,
+      };
+    }
+  });
+  $('cardBillingCancelBtn').addEventListener('click', () => { $('cardBillingForm').style.display = 'none'; });
+
+  $('cardBillingSubmitBtn').addEventListener('click', async () => {
+    const cardholderName = $('pfCardholderName').value.trim();
+    const identificationNumber = $('pfCardCpf').value.trim();
+    if (!cardholderName || !identificationNumber) {
+      $('cardBillingMsg').textContent = 'Preencha nome no cartão e CPF.';
+      $('cardBillingMsg').className = 'msg error';
+      return;
+    }
+    $('cardBillingSubmitBtn').disabled = true;
+    $('cardBillingMsg').textContent = 'Validando cartão...';
+    $('cardBillingMsg').className = 'msg';
+
+    let tokenResult;
+    try {
+      tokenResult = await pfCardFields.mp.fields.createCardToken({ cardholderName, identificationType: 'CPF', identificationNumber });
+    } catch (err) {
+      $('cardBillingSubmitBtn').disabled = false;
+      $('cardBillingMsg').textContent = 'Cartão inválido: ' + (err?.message || 'confira os dados e tente de novo.');
+      $('cardBillingMsg').className = 'msg error';
+      return;
+    }
+
+    $('cardBillingMsg').textContent = 'Atualizando cartão...';
+    const { data, error } = await supa.functions.invoke('mercadopago-update-card', { body: { card_token_id: tokenResult.id } });
+    $('cardBillingSubmitBtn').disabled = false;
+    if (error || data?.error) {
+      $('cardBillingMsg').textContent = 'Erro: ' + (data?.error || error?.message);
+      $('cardBillingMsg').className = 'msg error';
+      return;
+    }
+    $('cardBillingForm').style.display = 'none';
+    toast('Cartão da assinatura atualizado.');
   });
 
   // Réplica real do banner de Início do aluno.html (.pro-topband/.pro-row),
@@ -693,6 +770,7 @@
     });
     $('planInfo').textContent = `${PLAN_LABELS[pro.plan] || pro.plan} · ${pro.status}`;
     renderPlanGrid();
+    $('cardBillingCard').style.display = pro.mp_preapproval_id ? 'block' : 'none';
     if (location.hash === '#planCard') {
       requestAnimationFrame(() => $('planCard').scrollIntoView({ behavior: 'smooth', block: 'start' }));
     }

@@ -657,6 +657,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     </button>
 
     <div class="section-label">Conta</div>
+    <div class="menu-item" style="cursor:default">
+      <div class="menu-ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z" opacity="0"/><path d="M22 6 12 13 2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg></div>
+      <div class="menu-info"><div class="mi-title">E-mail logado</div><div class="mi-sub" id="settingsEmailText" style="word-break:break-all">—</div></div>
+    </div>
     <button class="menu-item" id="settingsLogoutBtn">
       <div class="menu-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div>
       <div class="menu-info"><div class="mi-title">Sair</div><div class="mi-sub">Encerrar sessão</div></div>
@@ -1518,6 +1522,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   async function boot() {
     const { data: { session } } = await supa.auth.getSession();
     if (!session) { window.location.href = 'login.html'; return; }
+    $('settingsEmailText').textContent = session.user.email;
 
     const { data: st, error } = await supa
       .from('students')

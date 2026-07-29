@@ -56,6 +56,19 @@
   .plan-option .po-price { font-size:15px; font-weight:800; margin-top:4px; }
   .plan-option .po-price small { font-size:10px; font-weight:600; color:var(--muted); }
   .plan-option button { width:100%; margin-top:8px; padding:7px 4px; font-size:11.5px; border-radius:8px; }
+  .plan-details-link { width:100%; margin-top:6px; padding:6px 4px; font-size:10.5px; background:none; border:none; color:var(--muted); text-decoration:underline; cursor:pointer; font-family:var(--font); }
+  .plan-detail-card { border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:12px; background:var(--bg); }
+  .plan-detail-card.current { border-color:var(--primary); background:#EEF3FE; }
+  .pdc-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
+  .pdc-name { font-size:15px; font-weight:800; }
+  .pdc-price { font-size:15px; font-weight:800; }
+  .pdc-price small { font-size:10px; font-weight:600; color:var(--muted); }
+  .pdc-features { list-style:none; margin:0; padding:0; font-size:12.5px; line-height:1.8; }
+  .pdc-features li { padding-left:22px; position:relative; }
+  .pdc-features li.yes:before { content:"✓"; position:absolute; left:0; color:var(--accent-dim); font-weight:800; }
+  .pdc-features li.no { color:var(--faint); }
+  .pdc-features li.no:before { content:"✕"; position:absolute; left:0; color:var(--faint); }
+  .pdc-features li small { color:var(--muted); display:block; font-size:11px; }
   .toggle-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
   .toggle-row .tr-text { flex:1; }
   .toggle-row .tr-label { font-size:14px; font-weight:600; }
@@ -161,6 +174,11 @@
   </header>
 
   <main>
+    <div class="card" id="accountCard" style="padding:12px 16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Conta logada</div>
+      <div id="accountEmailText" style="font-size:14px;font-weight:600;word-break:break-all;">—</div>
+    </div>
+
     <div class="card" id="planCard">
       <h2>Seu plano</h2>
       <div id="planInfo" class="plan-tag">—</div>
@@ -331,6 +349,16 @@
     </div>
   </div>
 
+  <div class="preview-overlay" id="planDetailsOverlay">
+    <div class="preview-modal">
+      <div class="preview-modal-head">
+        <h3>Detalhes dos planos</h3>
+        <button class="preview-close-btn" id="closePlanDetailsBtn" type="button" aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div id="planDetailsBody"></div>
+    </div>
+  </div>
+
   <div class="crop-overlay" id="logoCropOverlay">
     <div class="crop-card">
       <h3>Ajustar logo</h3>
@@ -447,6 +475,7 @@
           <div class="po-name">${PLAN_LABELS[id]}</div>
           <div class="po-price">R$${planPriceFor(id)}<small>/mês</small></div>
           <button class="btn ${isCurrent ? 'secondary' : ''}" data-plan="${id}" ${isCurrent ? 'disabled' : ''} type="button">${isCurrent ? 'Atual' : 'Escolher'}</button>
+          <button class="plan-details-link" type="button" data-details="${id}">Detalhes do plano</button>
         </div>
       `;
     }).join('');
@@ -454,7 +483,56 @@
     $('planGrid').querySelectorAll('button[data-plan]').forEach((btn) => {
       btn.addEventListener('click', () => openPlanConfirm(btn.dataset.plan));
     });
+    $('planGrid').querySelectorAll('button[data-details]').forEach((btn) => {
+      btn.addEventListener('click', () => openPlanDetails(btn.dataset.details));
+    });
   }
+
+  // Conteúdo levantado do que já é gated de verdade no código (não
+  // inventado): limite de aluno (alunos.html, PLAN_STUDENT_LIMITS), marca
+  // personalizada (perfil.html, whiteLabelLock), IA de interpretação de
+  // relatório (relatorios.html, professional.plan==='elite'), cobrança
+  // automática do aluno + taxa (mercadopago-charge-student, application_fee
+  // 1% só no Pro). NOTA: a cobrança automática hoje está disponível pra
+  // QUALQUER plano no código (nenhum gate de plano encontrado em
+  // financeiro.html nem nas Edge Functions de conectar/cobrar), incluindo
+  // Starter com taxa 0% igual o Elite — diferente do que a documentação de
+  // negócio descreve ("automação fora do Starter"). Refletido abaixo do
+  // jeito que o código realmente se comporta hoje, não do jeito descrito no
+  // planejamento — vale revisar com o usuário se isso é bug ou decisão.
+  function planDetailsHtml() {
+    const specs = {
+      starter: { alunos: 'Até 15 alunos', marca: false, ia: false, cobranca: true, taxa: 'sem taxa' },
+      pro: { alunos: 'Até 40 alunos', marca: true, ia: false, cobranca: true, taxa: 'taxa de 1% por cobrança' },
+      elite: { alunos: 'Alunos ilimitados', marca: true, ia: true, cobranca: true, taxa: 'sem taxa' },
+    };
+    return PLAN_ORDER.map((id) => {
+      const s = specs[id];
+      const isCurrent = professional.plan === id;
+      return `
+        <div class="plan-detail-card ${isCurrent ? 'current' : ''}">
+          <div class="pdc-head">
+            <span class="pdc-name">${PLAN_LABELS[id]}${isCurrent ? ' (atual)' : ''}</span>
+            <span class="pdc-price">R$${planPriceFor(id)}<small>/mês</small></span>
+          </div>
+          <ul class="pdc-features">
+            <li class="yes">${s.alunos}</li>
+            <li class="${s.marca ? 'yes' : 'no'}">Marca personalizada (cor + logo)</li>
+            <li class="${s.ia ? 'yes' : 'no'}">IA de interpretação de relatório</li>
+            <li class="${s.cobranca ? 'yes' : 'no'}">Cobrança automática do aluno${s.cobranca ? `<small>${s.taxa}</small>` : ''}</li>
+          </ul>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function openPlanDetails(planId) {
+    $('planDetailsBody').innerHTML = planDetailsHtml();
+    $('planDetailsOverlay').classList.add('show');
+    const card = $('planDetailsOverlay').querySelectorAll('.plan-detail-card')[PLAN_ORDER.indexOf(planId)];
+    if (card) requestAnimationFrame(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }
+  $('closePlanDetailsBtn').addEventListener('click', () => $('planDetailsOverlay').classList.remove('show'));
 
   function openPlanConfirm(planId) {
     pendingPlan = planId;
@@ -759,6 +837,8 @@
   async function boot() {
     const { data: { session } } = await supa.auth.getSession();
     if (!session) { window.location.href = 'login.html'; return; }
+
+    $('accountEmailText').textContent = session.user.email;
 
     const { data: pro, error } = await supa.from('professionals').select('*').eq('email', session.user.email).maybeSingle();
     if (error) { console.error('Falha ao carregar professional:', error.message); return; }

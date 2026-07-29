@@ -993,9 +993,39 @@
     toast('Treino criado pela IA — revise antes de publicar.');
   }
 
+  // Achado real (2026-07-29): a chamada a match_exercise_library nunca
+  // checava `error` — se a RPC falhasse por qualquer motivo (ex: extensão
+  // pg_trgm indisponível no ambiente, timeout, etc.), o erro sumia em
+  // silêncio e TODO exercício gerado por IA ficava sem gif, sem nenhum
+  // sinal em lugar nenhum. Corrigido em duas camadas: (1) loga o erro de
+  // verdade, pra aparecer no console na próxima vez que isso for testado
+  // contra o banco real; (2) fallback pra search_exercise_library (RPC mais
+  // simples, só substring — já comprovadamente funcional na busca manual,
+  // não depende de similarity()/pg_trgm) — cobre o caso de
+  // match_exercise_library falhar sem deixar o exercício sem gif à toa.
   async function matchExerciseByName(nome) {
-    const { data } = await supa.rpc('match_exercise_library', { q: nome });
-    return (data && data[0]) || null;
+    const { data, error } = await supa.rpc('match_exercise_library', { q: nome });
+    if (error) {
+      console.error(`match_exercise_library falhou pra "${nome}":`, error.message);
+      return await fallbackMatchExercise(nome);
+    }
+    if (data && data[0]) return data[0];
+    return await fallbackMatchExercise(nome);
+  }
+
+  async function fallbackMatchExercise(nome) {
+    const { data, error } = await supa.rpc('search_exercise_library', { q: nome });
+    if (error || !data || !data.length) {
+      if (error) console.error(`search_exercise_library (fallback) também falhou pra "${nome}":`, error.message);
+      return null;
+    }
+    // search_exercise_library devolve até 20 resultados ordenados por nome
+    // (não por qualidade de match) — escolhe o de tamanho mais próximo do
+    // termo buscado, proxy simples de "nome mais específico/próximo",
+    // evitando pegar sempre o primeiro alfabético.
+    return data.reduce((best, cur) =>
+      Math.abs(cur.nome.length - nome.length) < Math.abs(best.nome.length - nome.length) ? cur : best
+    );
   }
 
   async function regenerateWorkoutExercises(workoutUid, btn) {

@@ -93,6 +93,14 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### 💡 Princípio de posicionamento de marca registrado: vender status, não utilidade (2026-07-29)
+
+Insight do usuário pra aplicar **quando o produto entrar na fase de tráfego pago/marketing de verdade** (hoje ainda estamos na fase de validação com Founders, longe disso — ver Fases 2-4/11 do `roadmap-pos-dev.md`) — não é implementação, é diretriz de branding/copy pra guardar pro futuro.
+
+- **Referência histórica que motivou o princípio**: campanha prussiana "Gold gab ich für Eisen" (1813, Guerras Napoleônicas) — a família real pediu que os mais ricos doassem ouro/joias pra financiar a guerra, em troca de réplicas de ferro com a inscrição "eu troquei ouro por ferro". Usar essas réplicas de ferro virou símbolo de status/prestígio mais valorizado socialmente que o ouro original que foi doado.
+- **Analogia do usuário**: ninguém compra Rolex pra ver a hora, ninguém compra mansão só por precisar de espaço — a decisão de compra em produtos de alto valor percebido é movida por **status/prestígio**, não por utilidade funcional pura.
+- **Aplicação pretendida**: quando a Meu Protocolo desenhar copy/campanha de tráfego pago (ainda não desenhado, nenhuma peça de marketing criada em cima disso ainda), o posicionamento deve mirar em transmitir status/prestígio pra quem assina — ser personal trainer com Meu Protocolo como sinal de profissionalização/diferenciação —, não só listar funcionalidade. Vale cruzar com a pesquisa competitiva já feita (seção "Pesquisa competitiva de posicionamento" abaixo) na hora de escrever a mensagem.
+
 ### ✅ Cobrança automática implementada (aluno → profissional + assinatura do profissional) (2026-07-28, sessão seguinte)
 
 Fecha o escopo fechado na sessão anterior (ver "⏳ Escopo FECHADO..." mais abaixo, que continua sendo a fonte da verdade do *desenho* — esta seção documenta o que foi *construído* em cima dele). Implementado numa sessão local do PC (CLI com acesso de rede real, deploy direto).

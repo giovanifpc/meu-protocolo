@@ -93,6 +93,37 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### ⏳ Checklist consolidado pra sessão do PC — fecha a sessão remota de 2026-07-29 (branch `claude/nutritracker-protocol-scope-q3e0bn`, 9 commits, nunca mesclado)
+
+Sessão inteira ficou numa branch só (`claude/nutritracker-protocol-scope-q3e0bn`), nunca mesclada na `main` — nada disso está no ar ainda, nem via GitHub Pages nem no banco. Ordem sugerida pra retomar:
+
+1. **Mesclar o branch pra `main`** (mesmo padrão de sessões anteriores — ver "Checklist da sessão de 2026-07-27" mais abaixo pro precedente). Revisar o diff antes, é grande (9 commits).
+2. **Aplicar as migrations do nutritracker, nessa ordem**: `supabase_51_nutritracker.sql` → `supabase_52_food_library_seed.sql` → `supabase_53_food_library_search.sql`. Testar o fluxo ponta a ponta (ver seção própria do nutritracker abaixo pro que falta validar).
+3. **Deploy das 4 Edge Functions tocadas na trava de cobrança automática do Starter**: `mercadopago-oauth-connect`, `mercadopago-oauth-callback`, `mercadopago-charge-student`, `billing-cron-daily` — nada disso reflete em produção até o deploy rodar. Depois do deploy, um `select` rápido em `professional_mp_connections`/`professionals.mp_connect_status` pra confirmar que nenhuma conta Starter real já está conectada (ver seção própria).
+4. **Testar a correção de `matchExerciseByName`** (`treinos.html`) gerando um treino por IA de verdade, com o console do navegador aberto — se aparecer o log de erro novo (`match_exercise_library falhou pra "..."`), a causa raiz fica confirmada na hora.
+5. **Testar o timeout de imagem** (`armImageTimeouts`, `aluno.html`) executando um treino com gif que historicamente falhava — confirmar que agora troca de variação de URL mais rápido em vez de ficar "pendurado".
+6. **Migração dos gifs pro Cloudflare R2** — escopo fechado, nada implementado ainda, ver seção própria logo abaixo. Só dá pra fazer no PC porque depende de: ativar R2 na conta Cloudflare (cartão de crédito), criar bucket + domínio próprio, e ter rede real pra baixar/subir ~4GB (a sessão remota consegue fazer requisição HTTP simples via `curl`, mas uma transferência de volume grande e sustentada é mais arriscada/lenta pelo proxy da sessão — mais seguro rodar isso localmente).
+7. **Placeholder não-prescritivo na caixa de orientação livre do nutritracker** — já estava correto desde antes (conferido, "Ex: Beber 2L de água por dia..."), nenhuma mudança precisou.
+8. Itens menores já registrados nas seções de cada feature: atualizar `contexto-ia-suporte.md`/`SYSTEM_PROMPT` quando o nutritracker for ao ar; bump de `whats-new.js`/`CACHE_NAME` quando o deploy real acontecer.
+
+### ⏳ Escopo fechado, nada implementado: migrar os gifs de exercício do Google Drive pro Cloudflare R2 (2026-07-29)
+
+Motivado pelo bug investigado na mesma sessão (ver "Bug relatado: treinos gerados por IA saem sem gif nenhum" logo abaixo) — causa raiz real confirmada por teste direto: os ~1550 gifs (4GB no total, confirmado pelo usuário) são hospedados como link direto do Google Drive, que não é CDN de verdade — a maioria carrega, mas devagar (1-7MB por arquivo) e uma fração real trava ou falha. O timeout adicionado (`armImageTimeouts`) melhora a experiência de falha, mas não resolve a causa de fundo.
+
+**Comparação de custo pesquisada antes de decidir** (com dado real, não estimativa):
+- **Supabase Storage**: Free só tem 1GB de storage + 5GB de egress (banda) por mês **pro projeto inteiro** — não cabe (nem storage nem banda, mesmo comprimindo os gifs pra caber em 1GB, o volume de visualização real já estouraria os 5GB de banda com poucos alunos ativos). Resolver de verdade exigiria o plano **Pro (US$25/mês)** — 100GB storage + 250GB egress cacheado incluído.
+- **Cloudflare R2** (mesma conta que já registra o domínio, não é fornecedor novo — só precisa ativar o produto): free tier tem **10GB de storage** (4GB cabe à vontade) e **10 milhões de leituras/mês grátis**, e o ponto decisivo — **egress é sempre zero, não importa o volume**. Ataca a causa raiz (custo de banda crescendo com uso) de graça, no estágio atual do produto.
+- **Decisão fechada**: usar R2 pra essa mídia específica, não forçar upgrade do Supabase agora. **Importante, perguntado explicitamente pelo usuário e respondido**: o Supabase provavelmente vai precisar virar Pro **em algum momento, mas por outro motivo** — não existe backup/PITR automático do banco hoje (`pitr_enabled: false`), já registrado como pendência pro "final do projeto" (ver "Pendências decididas pro final do projeto" no fim deste arquivo). São duas decisões independentes — R2 pra mídia não precisa esperar nem forçar a decisão de backup, e vice-versa.
+- **Requisito de conta, verificado antes de prometer**: R2 não exige upgrade do plano do domínio/site (Free/Pro/Business de site é outra coisa) — é um produto à parte, na mesma conta gratuita. Só exige cadastrar cartão de crédito pra ativar (cobrança por uso, não por plano) — cobrança esperada R$0 dado o volume.
+
+**Desenho da migração (não implementado)**:
+1. Bucket R2 novo (ex: `exercise-gifs`), público, path determinístico `{exercise_id}.gif` — mesma convenção de path já usada em outros buckets do projeto.
+2. Domínio próprio ligado ao bucket via "Custom Domains" do R2 (ex: `media.meuprotocolo.app`), grátis, mesma zona Cloudflare já configurada — **nunca usar a URL padrão `*.r2.dev` em produção** (a própria Cloudflare documenta que é limitada/sujeita a throttling).
+3. Script de migração (roda uma vez): baixa cada um dos ~1550 gifs do Drive, sobe pro R2 no path novo, atualiza `exercise_library.gif_url` pra apontar pro domínio novo — não precisa tocar em `training_protocols` já publicados, já que `gif_url` é resolvido em tempo real via join, nunca congelado no jsonb do protocolo.
+4. Simplificação de código depois da migração: o mecanismo de 3 variações de URL (`driveFileId`/`exerciseMediaCandidates`, `aluno.html`) existe só por causa da fragilidade do Drive — com R2 confiável, isso vira complexidade desnecessária, dá pra reduzir pra uma URL só (mantendo o timeout como rede de segurança, nunca custa nada ter).
+5. **Fora de escopo desta leva**: mídia customizada que o profissional já sobe por conta própria (`exercise-media`, Supabase Storage, exercício/vídeo próprio) — escala e dono do dado diferentes, não tem a mesma pressão de custo por volume compartilhado entre todos os tenants. Não mexer nisso agora.
+- **Pendências antes de eu poder rodar isso**: usuário precisa (a) ativar R2 na conta Cloudflare, (b) criar o bucket + domínio custom, (c) gerar uma API key escopada só pra esse bucket (nunca uma chave com acesso ao resto da conta) e passar pra próxima sessão que for rodar a migração.
+
 ### 🔧 Bug relatado: treinos gerados por IA saem sem gif nenhum — causa raiz real identificada (2026-07-29, mesma sessão, atualização do achado abaixo)
 
 **Supera o diagnóstico inicial abaixo** — o usuário testou de verdade e relatou o sintoma exato: aparece uma tentativa de carregar, e depois a mensagem "Vídeo indisponível" (não "Vídeo em breve"). Isso muda a causa: "Vídeo indisponível" só aparece quando `ex.media` (o gif_url) **já foi encontrado** e passou pelas 3 tentativas de URL sem conseguir carregar (`mediaImgMarkup`/`swapExerciseImage`, `aluno.html`) — ou seja, o matching (achado de ontem) não era a causa raiz real deste caso, só uma correção defensiva válida à parte.

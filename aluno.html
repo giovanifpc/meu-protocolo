@@ -3130,6 +3130,26 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     if (img.parentNode) img.parentNode.innerHTML = fallback || `<span class="ph">${ICONS.dumbbell}</span>`;
   }
 
+  // Achado real (2026-07-29): os gifs vêm de link direto do Google Drive
+  // (não é CDN de verdade), pesam na faixa de 1-7MB cada, e uma fração deles
+  // não dá erro nenhum — fica "pendurada" (nem carrega nem falha) por um
+  // tempo bem mais longo que o timeout nativo do navegador pra <img>. Sem
+  // isso, o retry entre as 3 variações de URL só avançava em cima de um
+  // erro definitivo (onerror) — uma conexão travada nunca avançava sozinha.
+  // Timeout explícito de 6s força o avanço pra próxima variação (ou pro
+  // fallback, se já for a última) bem mais rápido que esperar o navegador
+  // desistir por conta própria.
+  function armImageTimeouts(root) {
+    if (!root) return;
+    root.querySelectorAll('img[data-src-list]:not([data-armed])').forEach((img) => {
+      img.setAttribute('data-armed', '1');
+      const timer = setTimeout(() => {
+        if (img.isConnected && (!img.complete || img.naturalWidth === 0)) swapExerciseImage(img);
+      }, 6000);
+      img.addEventListener('load', () => clearTimeout(timer), { once: true });
+    });
+  }
+
   /* ---- OVERVIEW ---- */
   function openOverview(idx) {
     hideNav();
@@ -3165,6 +3185,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         </div>
       </div>
     `; }).join('');
+    armImageTimeouts(listEl);
     w.exercises.forEach((ex, i) => {
       if (isCardioExercise(ex) || youtubeIdFor(ex)) return;
       const imgPath = customImagePathFor(ex);
@@ -3268,6 +3289,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       <div class="sets-head"><span class="sh-title">Séries</span><span class="sh-target">Meta: ${cfg.sets}x${escapeHtml(String(cfg.reps))}${cfg.nota ? ' · ' + escapeHtml(cfg.nota) : ''} · descanso ${cfg.rest}s</span></div>
       ${setsHtml}
       ${noteHtml}`;
+    armImageTimeouts($('execBody'));
     if (customImgPath) resolveCustomExerciseImage(customImgPath, '.exec-media');
 
     $('prevBtn').style.visibility = i === 0 ? 'hidden' : 'visible';

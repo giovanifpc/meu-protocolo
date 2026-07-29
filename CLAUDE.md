@@ -93,6 +93,13 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### ⏳ 2 pendências de UX registradas, não implementadas ainda (2026-07-29)
+
+Dois pedidos do usuário, deliberadamente só documentados agora — implementação fica pra uma próxima sessão.
+
+1. **Mostrar o e-mail da conta logada em Perfil/Configurações, dos dois lados** (`perfil.html` do profissional e a tela de Configurações/Perfil do `aluno.html`). Motivo relatado: o usuário tem vários e-mails de teste e hoje não tem como saber, olhando a tela, qual conta está logada no momento — o e-mail nunca aparece em lugar nenhum do perfil/config. É só exibir (`auth.jwt() ->> 'email'` ou o `email` já carregado no boot de cada página), sem campo editável nem mudança de schema.
+2. **Botão "Detalhes do plano" na tela de troca de plano** (`perfil.html`, seção "Seu plano" — grade de 3 cards Starter/Pro/Elite + botão "Trocar", já implementada desde 2026-07-21, ver "Upgrade de plano self-service implementado" mais abaixo). Hoje os cards mostram preço mas não deixam claro o que cada plano inclui de fato. Pedido: um botão "Detalhes do plano" embaixo de cada card, levando pra uma página ou banner no estilo clássico de comparação de planos de app (3 colunas, preço em destaque + lista de funcionalidades de cada um) — conteúdo (lista de funcionalidade por plano) precisa ser levantado a partir do que já é gated de verdade no código (limite de alunos por plano, white-label Pro/Elite, IA de interpretação de relatório exclusiva Elite, taxa de 1%/0% na cobrança automática) na hora de implementar, não inventado solto.
+
 ### 💡 Princípio de posicionamento de marca registrado: vender status, não utilidade (2026-07-29)
 
 Insight do usuário pra aplicar **quando o produto entrar na fase de tráfego pago/marketing de verdade** (hoje ainda estamos na fase de validação com Founders, longe disso — ver Fases 2-4/11 do `roadmap-pos-dev.md`) — não é implementação, é diretriz de branding/copy pra guardar pro futuro.

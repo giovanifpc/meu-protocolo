@@ -122,6 +122,7 @@
     <div class="card">
       <h2>Cobrança automática</h2>
       <p class="card-sub">Conecte sua conta Mercado Pago pra seus alunos pagarem sozinhos, todo mês — cartão ou Pix, sem você precisar cobrar manualmente.</p>
+      <div id="mpStarterLock" class="msg" style="display:none;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;">Cobrança automática é exclusiva dos planos Pro e Elite. <a href="perfil.html#planCard" style="color:var(--primary);font-weight:700;">Fazer upgrade</a></div>
       <div id="mpDisconnected">
         <button class="btn" id="mpConnectBtn">Conectar minha conta Mercado Pago</button>
         <div class="msg" id="mpConnectMsg"></div>
@@ -325,7 +326,13 @@
 
   function applyMpConnectUi() {
     const connected = professional.mp_connect_status === 'conectado';
-    $('mpDisconnected').style.display = connected ? 'none' : 'block';
+    // Starter nunca inicia conexão nova — mas se por algum motivo uma conta
+    // Starter já estiver conectada (ex: desconto de plano feito por fora,
+    // ou dado de antes desta trava existir), deixa ver o painel "conectado"
+    // normalmente pra ela conseguir desconectar, só não oferece conectar de novo.
+    const starterLocked = professional.plan === 'starter' && !connected;
+    $('mpStarterLock').style.display = starterLocked ? 'block' : 'none';
+    $('mpDisconnected').style.display = connected ? 'none' : (starterLocked ? 'none' : 'block');
     $('mpConnected').style.display = connected ? 'block' : 'none';
     $('pixStaticSub').style.display = connected ? 'none' : 'block';
     $('pixStaticDisabledNote').style.display = connected ? 'block' : 'none';

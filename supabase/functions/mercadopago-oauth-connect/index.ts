@@ -46,8 +46,15 @@ Deno.serve(async (req) => {
     if (!user) throw new Error('Sessão inválida.');
 
     const { data: professional, error: proErr } = await supa
-      .from('professionals').select('id').eq('email', user.email).maybeSingle();
+      .from('professionals').select('id, plan').eq('email', user.email).maybeSingle();
     if (proErr || !professional) throw new Error('Profissional não encontrado.');
+
+    // Cobrança automática dos alunos é exclusiva Pro/Elite (mesma lógica do
+    // white-label) — barrado aqui no servidor, não só escondido no front
+    // (financeiro.html já esconde o botão pro Starter, isso é a garantia real).
+    if (professional.plan === 'starter') {
+      throw new Error('Cobrança automática é exclusiva dos planos Pro e Elite. Faça upgrade em Perfil > Seu plano.');
+    }
 
     const state = crypto.randomUUID();
     const supaAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);

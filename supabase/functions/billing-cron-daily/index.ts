@@ -165,6 +165,11 @@ Deno.serve(async (req) => {
       try {
         const professional: any = s.professionals;
         if (!professional || professional.mp_connect_status !== 'conectado') continue;
+        // Defesa em profundidade: cobrança automática é exclusiva Pro/Elite
+        // (barrada na origem em mercadopago-oauth-connect/-callback/-charge-
+        // student) — se algum dado antigo escapou dessa trava, o cron nunca
+        // deve continuar cobrando/lembrando um aluno de profissional Starter.
+        if (professional.plan === 'starter') continue;
 
         const due = computeNextDueDate(s.mensalidade_dia_vencimento, s.ultimo_pagamento_em, s.created_at);
         if (daysBetween(today, due) !== 3) continue;

@@ -104,6 +104,15 @@ Deno.serve(async (req) => {
     if (!professional || professional.mp_connect_status !== 'conectado') {
       throw new Error('Seu personal ainda não ativou a cobrança automática.');
     }
+    // Defesa em profundidade: cobrança automática é exclusiva Pro/Elite,
+    // já barrada na origem em mercadopago-oauth-connect/-callback — mas se
+    // o profissional baixou pro Starter DEPOIS de já ter conectado a conta
+    // (mp_connect_status continua 'conectado', só não tem estudante com
+    // automação ativa ainda pra travar o downgrade), essa é a última linha
+    // de defesa antes de cobrar de verdade.
+    if (professional.plan === 'starter') {
+      throw new Error('Seu plano não inclui cobrança automática — fale com o suporte ou faça upgrade pra Pro/Elite.');
+    }
     if (!student.mensalidade_valor) throw new Error('Sua mensalidade ainda não foi cadastrada — fale com seu personal.');
     if (!student.mensalidade_dia_vencimento) throw new Error('Seu dia de vencimento ainda não foi cadastrado — fale com seu personal.');
 

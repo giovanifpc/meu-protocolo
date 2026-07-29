@@ -43,6 +43,18 @@ Deno.serve(async (req) => {
       return redirect('mp_connect=erro&motivo=expirado');
     }
 
+    // Defesa em profundidade: mercadopago-oauth-connect já barra Starter na
+    // origem, mas o plano pode ter mudado entre gerar o link e voltar da
+    // Mercado Pago (ex: downgrade no meio do fluxo) — reconfere antes de
+    // finalizar a conexão, nunca confia só na checagem de quando o link foi
+    // criado.
+    const { data: proCheck } = await supaAdmin
+      .from('professionals').select('plan').eq('id', stateRow.professional_id).maybeSingle();
+    if (proCheck?.plan === 'starter') {
+      await supaAdmin.from('mp_oauth_states').delete().eq('state', state);
+      return redirect('mp_connect=erro&motivo=plano_starter');
+    }
+
     const tokenRes = await fetch('https://api.mercadopago.com/oauth/token', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

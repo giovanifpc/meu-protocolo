@@ -399,6 +399,43 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .nutri-card{background:var(--card-grad);border:1px solid var(--card-border);box-shadow:var(--shadow-card);border-radius:var(--radius);padding:18px;margin-bottom:16px}
 .nutri-text{font-size:14px;line-height:1.6;color:var(--text);white-space:pre-wrap}
 
+/* NUTRITRACKER (meta validada + diário alimentar) */
+.locked-goal .lg-row{display:flex;gap:12px;align-items:flex-start}
+.locked-goal svg{width:24px;height:24px;color:var(--faint);flex-shrink:0;margin-top:2px}
+.locked-goal .lg-title{font-size:14px;font-weight:700;margin-bottom:4px}
+.locked-goal .lg-sub{font-size:12.5px;color:var(--muted);line-height:1.5}
+.macro-row{margin-bottom:12px}
+.macro-row:last-of-type{margin-bottom:0}
+.macro-row-top{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--text);margin-bottom:5px}
+.macro-bar{height:6px;background:var(--elev);border-radius:6px;overflow:hidden}
+.macro-fill{height:100%;background:linear-gradient(90deg,var(--primary-dim),var(--primary));border-radius:6px;transition:.5s}
+.food-log-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.food-log-row:last-child{border-bottom:none}
+.flr-name{font-size:13.5px;font-weight:700}
+.flr-meta{font-size:11.5px;color:var(--muted);margin-top:2px}
+.flr-remove{background:none;border:none;padding:6px;color:var(--faint);cursor:pointer;display:flex;flex-shrink:0}
+.flr-remove svg{width:16px;height:16px}
+.food-log-empty{font-size:13px;color:var(--muted);text-align:center;padding:14px 0}
+.food-log-total{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;font-weight:700}
+.food-log-total span:last-child{color:var(--primary)}
+
+#addMealCard{max-width:400px;max-height:88vh;overflow-y:auto}
+.meal-type-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px}
+.meal-type-btn{padding:8px 4px;border-radius:10px;border:2px solid var(--line);background:var(--card-2);color:var(--muted);font-size:10.5px;font-weight:700;cursor:pointer;font-family:var(--font)}
+.meal-type-btn.selected{border-color:var(--primary);color:var(--primary);background:rgba(var(--primary-rgb),.06)}
+.food-search-input{width:100%;background:var(--card-2);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:14px;color:var(--text);font-family:var(--font);margin-bottom:8px}
+.food-search-input:focus{outline:none;border-color:var(--primary)}
+.food-search-results{max-height:240px;overflow-y:auto}
+.food-result-item{padding:10px 8px;border-radius:8px;cursor:pointer;font-size:13.5px}
+.food-result-item:active{background:var(--elev)}
+.food-result-item .fri-macros{font-size:11px;color:var(--muted);margin-top:2px}
+.food-result-item.create-item{color:var(--primary);font-weight:700}
+.food-detail-name{font-size:15px;font-weight:800;margin-bottom:4px}
+.food-detail-macros{font-size:12px;color:var(--muted);margin-bottom:14px}
+.food-detail-preview{background:var(--bg);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--muted);margin-top:10px}
+.back-link-btn{display:flex;align-items:center;gap:4px;background:none;border:none;color:var(--muted);font-size:12px;font-weight:700;padding:0 0 12px;cursor:pointer;font-family:var(--font)}
+.back-link-btn svg{width:14px;height:14px}
+
 /* CHECK-IN DIÁRIO (água + sono) */
 .water-strip{cursor:pointer}
 .water-strip .ws-row{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700;color:var(--text)}
@@ -914,6 +951,54 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   </div>
 </div>
 
+<!-- ===== ADICIONAR REFEIÇÃO (nutritracker) ===== -->
+<div class="checkin-overlay" id="addMealOverlay">
+  <div class="checkin-card" id="addMealCard">
+    <h3>Adicionar refeição</h3>
+
+    <div id="addMealSearchView">
+      <div class="meal-type-row" id="mealTypeRow"></div>
+      <input type="text" class="food-search-input" id="foodSearchInput" placeholder="Buscar alimento...">
+      <div class="food-search-results" id="foodSearchResults"></div>
+      <div class="crop-actions">
+        <button class="btn btn-ghost" type="button" onclick="closeAddMealModal()">Cancelar</button>
+      </div>
+    </div>
+
+    <div id="addMealDetailView" style="display:none">
+      <button type="button" class="back-link-btn" onclick="backToFoodSearch()">‹ Voltar à busca</button>
+      <div class="food-detail-name" id="fdName">—</div>
+      <div class="food-detail-macros" id="fdMacros100">—</div>
+      <div class="ci-input-row">
+        <input type="number" id="foodQtyInput" placeholder="100" inputmode="numeric" value="100">
+        <span>gramas</span>
+      </div>
+      <div class="food-detail-preview" id="fdPreview">—</div>
+      <div class="crop-actions">
+        <button class="btn btn-ghost" type="button" onclick="closeAddMealModal()">Cancelar</button>
+        <button class="btn btn-primary" type="button" id="confirmAddFoodBtn">Adicionar</button>
+      </div>
+    </div>
+
+    <div id="addMealCreateView" style="display:none">
+      <button type="button" class="back-link-btn" onclick="backToFoodSearch()">‹ Voltar à busca</button>
+      <div class="field" style="margin-bottom:10px">
+        <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Nome do alimento</label>
+        <input type="text" class="food-search-input" id="newFoodNome" style="margin-bottom:0">
+      </div>
+      <p class="ci-sub" style="margin:8px 0">Valores por 100g:</p>
+      <div class="ci-input-row"><input type="number" id="newFoodKcal" placeholder="Kcal" inputmode="numeric"><span>kcal</span></div>
+      <div class="ci-input-row"><input type="number" id="newFoodProt" placeholder="Proteína" inputmode="numeric"><span>g prot.</span></div>
+      <div class="ci-input-row"><input type="number" id="newFoodCarb" placeholder="Carboidrato" inputmode="numeric"><span>g carb.</span></div>
+      <div class="ci-input-row"><input type="number" id="newFoodGord" placeholder="Gordura" inputmode="numeric"><span>g gord.</span></div>
+      <div class="crop-actions">
+        <button class="btn btn-ghost" type="button" onclick="closeAddMealModal()">Cancelar</button>
+        <button class="btn btn-primary" type="button" id="createFoodBtn">Criar e usar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== CHECK-IN DE SONO (ao abrir o app) ===== -->
 <div class="checkin-overlay" id="sleepOverlay">
   <div class="checkin-card">
@@ -977,6 +1062,8 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     moon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
     whatsapp: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.16-.17.2-.35.22-.65.08-.3-.15-1.26-.46-2.4-1.48-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.21-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.87 1.21 3.07c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.62.71.23 1.36.2 1.87.12.57-.08 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35z"/><path d="M12 2C6.48 2 2 6.48 2 12c0 1.79.48 3.47 1.3 4.92L2 22l5.21-1.26A9.96 9.96 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18.03a8 8 0 0 1-4.08-1.12l-.29-.17-3.03.74.75-2.97-.19-.3A8 8 0 1 1 12 20.03z"/></svg>`,
     message: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+    plus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+    trash: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
   };
 
   // Cor de marca (plano Pro/Elite) e modo claro/escuro são eixos
@@ -1089,6 +1176,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   let todayCheckin = null; // linha de student_checkins de hoje, ou null se ainda não existe
   let sleepQualitySel = null;
   let sleepDurationSel = null;
+  let macroGoal = null; // student_macro_goal — null = ainda travado, sem consulta validada
+  let foodLogToday = []; // student_food_log do dia local do aluno
+  let foodPickedItem = null; // item de food_library selecionado no meio do fluxo "Adicionar refeição"
+  let foodSearchDebounce = null;
   let state = { workoutIndex:0, currentExercise:0, sessionData:[], startTime:null, restInterval:null, restRemaining:0, restTotal:0, rating:null };
 
   function toast(msg, isHtml) {
@@ -1522,6 +1613,21 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       .eq('student_id', student.id)
       .maybeSingle();
     nutritionGuidance = guidance || null;
+
+    const { data: goal } = await supa
+      .from('student_macro_goal')
+      .select('*')
+      .eq('student_id', student.id)
+      .maybeSingle();
+    macroGoal = goal || null;
+
+    const { data: log } = await supa
+      .from('student_food_log')
+      .select('*')
+      .eq('student_id', student.id)
+      .eq('data', todayKey())
+      .order('created_at', { ascending: true });
+    foodLogToday = log || [];
 
     const { data: assess } = await supa
       .from('physical_assessments')
@@ -2615,25 +2721,254 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         <div class="water-bar"><div class="water-fill" style="width:${Math.min(100, Math.round((todayCheckin?.water_ml || 0) / waterGoalMl() * 100))}%"></div></div>
       </div>
     `;
-    if (!nutritionGuidance || (!nutritionGuidance.orientacao && !nutritionGuidance.pdf_path)) {
-      area.innerHTML = waterHtml + `<div class="empty-state"><div class="es-ico">${ICONS.utensils}</div><div class="es-txt">Sua orientação nutricional ainda não foi configurada.<br>Assim que seu personal disponibilizar, ela aparecerá aqui.</div></div>`;
-      return;
-    }
-    area.innerHTML = waterHtml + `
-      <div class="nutri-card">
-        <div class="section-label" style="margin-top:0">Orientação atual</div>
-        <div class="nutri-text">${nutritionGuidance.orientacao ? escapeHtml(nutritionGuidance.orientacao) : 'Sem orientação em texto — veja o PDF abaixo.'}</div>
-      </div>
-      ${nutritionGuidance.pdf_path ? `<button class="btn btn-primary" id="viewNutriPdfBtn">${ICONS.fileText} Ver plano em PDF</button>` : ''}
-    `;
-    if (nutritionGuidance.pdf_path) {
+    const guidanceHtml = (!nutritionGuidance || (!nutritionGuidance.orientacao && !nutritionGuidance.pdf_path))
+      ? `<div class="empty-state"><div class="es-ico">${ICONS.utensils}</div><div class="es-txt">Sua orientação nutricional em texto/PDF ainda não foi configurada.<br>Assim que seu personal disponibilizar, ela aparecerá aqui.</div></div>`
+      : `
+        <div class="nutri-card">
+          <div class="section-label" style="margin-top:0">Orientação atual</div>
+          <div class="nutri-text">${nutritionGuidance.orientacao ? escapeHtml(nutritionGuidance.orientacao) : 'Sem orientação em texto — veja o PDF abaixo.'}</div>
+        </div>
+        ${nutritionGuidance.pdf_path ? `<button class="btn btn-primary" id="viewNutriPdfBtn" style="width:100%;margin-bottom:16px">${ICONS.fileText} Ver plano em PDF</button>` : ''}
+      `;
+
+    area.innerHTML = waterHtml + macroGoalHeaderHtml() + foodLogSectionHtml() + guidanceHtml;
+
+    if (nutritionGuidance && nutritionGuidance.pdf_path) {
       $('viewNutriPdfBtn').addEventListener('click', async () => {
         const { data, error } = await supa.storage.from('nutri-pdfs').createSignedUrl(nutritionGuidance.pdf_path, 300);
         if (error) { toast('Erro ao abrir o PDF: ' + error.message); return; }
         window.open(data.signedUrl, '_blank');
       });
     }
+    if (macroGoal && macroGoal.pdf_path) {
+      $('viewGoalPdfBtn').addEventListener('click', async () => {
+        const { data, error } = await supa.storage.from('nutri-pdfs').createSignedUrl(macroGoal.pdf_path, 300);
+        if (error) { toast('Erro ao abrir o PDF: ' + error.message); return; }
+        window.open(data.signedUrl, '_blank');
+      });
+    }
+    $('openAddMealBtn').addEventListener('click', openAddMealModal);
+    $('foodLogList').querySelectorAll('[data-role="remove-log"]').forEach(btn => {
+      btn.addEventListener('click', () => removeFoodLogEntry(btn.dataset.logId));
+    });
   }
+
+  /* ---- NUTRITRACKER: meta validada + diário alimentar ----
+     Meta (VET/macro) nunca é calculada pelo app — só transcrita pelo
+     profissional depois de consulta real com nutricionista (ver
+     student_macro_goal, supabase_51). O diário em si (registrar o que comeu,
+     ver somatório) é medição, não prescrição — liberado sempre, mesmo sem
+     meta validada. */
+  const MEAL_LABELS = {
+    cafe_da_manha: 'Café da manhã', lanche_manha: 'Lanche da manhã', almoco: 'Almoço',
+    lanche_tarde: 'Lanche da tarde', jantar: 'Jantar', ceia: 'Ceia',
+  };
+
+  function dailyTotals() {
+    return foodLogToday.reduce((acc, r) => ({
+      kcal: acc.kcal + Number(r.kcal || 0),
+      proteina: acc.proteina + Number(r.proteina_g || 0),
+      carboidrato: acc.carboidrato + Number(r.carboidrato_g || 0),
+      gordura: acc.gordura + Number(r.gordura_g || 0),
+    }), { kcal: 0, proteina: 0, carboidrato: 0, gordura: 0 });
+  }
+
+  function macroGoalHeaderHtml() {
+    if (!macroGoal) {
+      return `
+        <div class="nutri-card locked-goal">
+          <div class="lg-row">
+            ${ICONS.lock}
+            <div>
+              <div class="lg-title">Meta nutricional ainda não liberada</div>
+              <div class="lg-sub">Fale com seu personal sobre uma consulta com nutricionista parceira. Enquanto isso, você já pode registrar o que comeu e ver os totais logo abaixo.</div>
+            </div>
+          </div>
+        </div>`;
+    }
+    const t = dailyTotals();
+    const bar = (label, done, goal, unit) => goal
+      ? `<div class="macro-row"><div class="macro-row-top"><span>${label}</span><span>${Math.round(done)} / ${goal}${unit}</span></div><div class="macro-bar"><div class="macro-fill" style="width:${Math.min(100, Math.round(done / goal * 100))}%"></div></div></div>`
+      : '';
+    return `
+      <div class="nutri-card goal-unlocked">
+        <div class="section-label" style="margin-top:0">Meta validada por ${escapeHtml(macroGoal.nutricionista_nome)}</div>
+        ${bar('Calorias', t.kcal, macroGoal.meta_kcal, 'kcal')}
+        ${bar('Proteína', t.proteina, macroGoal.meta_proteina_g, 'g')}
+        ${bar('Carboidrato', t.carboidrato, macroGoal.meta_carboidrato_g, 'g')}
+        ${bar('Gordura', t.gordura, macroGoal.meta_gordura_g, 'g')}
+        ${macroGoal.orientacao_resumo ? `<div class="nutri-text" style="margin-top:10px">${escapeHtml(macroGoal.orientacao_resumo)}</div>` : ''}
+        ${macroGoal.pdf_path ? `<button class="btn btn-ghost" id="viewGoalPdfBtn" type="button" style="width:100%;margin-top:12px">${ICONS.fileText} Ver PDF da nutricionista</button>` : ''}
+      </div>`;
+  }
+
+  function foodLogSectionHtml() {
+    const t = dailyTotals();
+    const rows = foodLogToday.length
+      ? foodLogToday.map(r => `
+          <div class="food-log-row">
+            <div class="flr-main">
+              <div class="flr-name">${escapeHtml(r.nome_congelado)}</div>
+              <div class="flr-meta">${MEAL_LABELS[r.refeicao] || r.refeicao} · ${r.quantidade_g}g · ${Math.round(r.kcal)}kcal</div>
+            </div>
+            <button type="button" class="flr-remove" data-role="remove-log" data-log-id="${r.id}" aria-label="Remover">${ICONS.trash}</button>
+          </div>`).join('')
+      : '<div class="food-log-empty">Nenhuma refeição registrada hoje ainda.</div>';
+    return `
+      <div class="nutri-card">
+        <div class="section-label" style="margin-top:0">Diário de hoje</div>
+        <button class="btn btn-primary" id="openAddMealBtn" type="button" style="width:100%;margin-bottom:14px">${ICONS.plus} Adicionar refeição</button>
+        <div id="foodLogList">${rows}</div>
+        <div class="food-log-total">
+          <span>Total do dia</span>
+          <span>${Math.round(t.kcal)}kcal · P ${Math.round(t.proteina)}g · C ${Math.round(t.carboidrato)}g · G ${Math.round(t.gordura)}g</span>
+        </div>
+      </div>`;
+  }
+
+  async function removeFoodLogEntry(logId) {
+    const { error } = await supa.from('student_food_log').delete().eq('id', logId);
+    if (error) { toast('Erro ao remover: ' + error.message); return; }
+    foodLogToday = foodLogToday.filter(r => r.id !== logId);
+    buildNutri();
+  }
+
+  /* ---- Modal "Adicionar refeição" ---- */
+  function defaultMealType() {
+    const h = new Date().getHours();
+    if (h < 10) return 'cafe_da_manha';
+    if (h < 12) return 'lanche_manha';
+    if (h < 15) return 'almoco';
+    if (h < 18) return 'lanche_tarde';
+    if (h < 21) return 'jantar';
+    return 'ceia';
+  }
+  let selectedMealType = null;
+
+  function openAddMealModal() {
+    selectedMealType = defaultMealType();
+    foodPickedItem = null;
+    $('mealTypeRow').innerHTML = Object.keys(MEAL_LABELS).map(k =>
+      `<button type="button" class="meal-type-btn ${k === selectedMealType ? 'selected' : ''}" data-meal="${k}">${MEAL_LABELS[k]}</button>`
+    ).join('');
+    $('mealTypeRow').querySelectorAll('.meal-type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedMealType = btn.dataset.meal;
+        $('mealTypeRow').querySelectorAll('.meal-type-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+      });
+    });
+    $('foodSearchInput').value = '';
+    $('foodSearchResults').innerHTML = '';
+    showAddMealView('search');
+    $('addMealOverlay').classList.add('show');
+  }
+  function closeAddMealModal() { $('addMealOverlay').classList.remove('show'); }
+  function showAddMealView(view) {
+    $('addMealSearchView').style.display = view === 'search' ? 'block' : 'none';
+    $('addMealDetailView').style.display = view === 'detail' ? 'block' : 'none';
+    $('addMealCreateView').style.display = view === 'create' ? 'block' : 'none';
+  }
+  function backToFoodSearch() { showAddMealView('search'); }
+
+  $('foodSearchInput').addEventListener('input', (e) => {
+    clearTimeout(foodSearchDebounce);
+    const q = e.target.value.trim();
+    if (q.length < 2) { $('foodSearchResults').innerHTML = ''; return; }
+    foodSearchDebounce = setTimeout(() => searchFoodLibrary(q), 300);
+  });
+
+  async function searchFoodLibrary(q) {
+    const { data, error } = await supa.rpc('search_food_library', { q });
+    if (error) { console.error(error.message); return; }
+    const results = data || [];
+    const resultsHtml = results.length
+      ? results.map(f => `
+          <div class="food-result-item" data-food-id="${f.id}">
+            ${escapeHtml(f.nome)}
+            <div class="fri-macros">${f.kcal_100g}kcal · P${f.proteina_g_100g}g · C${f.carboidrato_g_100g}g · G${f.gordura_g_100g}g <small>(100g)</small></div>
+          </div>`).join('')
+      : '';
+    const createHtml = `<div class="food-result-item create-item" data-role="create-food">${ICONS.plus} Criar alimento novo: "${escapeHtml(q)}"</div>`;
+    $('foodSearchResults').innerHTML = resultsHtml + createHtml;
+
+    $('foodSearchResults').querySelectorAll('[data-food-id]').forEach(item => {
+      item.addEventListener('click', () => {
+        const f = results.find(x => x.id === item.dataset.foodId);
+        if (f) selectFoodItem(f);
+      });
+    });
+    $('foodSearchResults').querySelector('[data-role="create-food"]').addEventListener('click', () => {
+      $('newFoodNome').value = q;
+      $('newFoodKcal').value = '';
+      $('newFoodProt').value = '';
+      $('newFoodCarb').value = '';
+      $('newFoodGord').value = '';
+      showAddMealView('create');
+    });
+  }
+
+  function selectFoodItem(f) {
+    foodPickedItem = f;
+    $('fdName').textContent = f.nome;
+    $('fdMacros100').textContent = `${f.kcal_100g}kcal · P${f.proteina_g_100g}g · C${f.carboidrato_g_100g}g · G${f.gordura_g_100g}g por 100g`;
+    $('foodQtyInput').value = 100;
+    updateFoodDetailPreview();
+    showAddMealView('detail');
+  }
+
+  function updateFoodDetailPreview() {
+    if (!foodPickedItem) return;
+    const qty = Number($('foodQtyInput').value) || 0;
+    const ratio = qty / 100;
+    const kcal = Math.round(foodPickedItem.kcal_100g * ratio);
+    const prot = (foodPickedItem.proteina_g_100g * ratio).toFixed(1);
+    const carb = (foodPickedItem.carboidrato_g_100g * ratio).toFixed(1);
+    const gord = (foodPickedItem.gordura_g_100g * ratio).toFixed(1);
+    $('fdPreview').textContent = `Nessa quantidade: ${kcal}kcal · P${prot}g · C${carb}g · G${gord}g`;
+  }
+  $('foodQtyInput').addEventListener('input', updateFoodDetailPreview);
+
+  $('confirmAddFoodBtn').addEventListener('click', async () => {
+    if (!foodPickedItem) return;
+    const qty = Number($('foodQtyInput').value);
+    if (!qty || qty <= 0) { toast('Informe uma quantidade válida.'); return; }
+    const ratio = qty / 100;
+    const payload = {
+      student_id: student.id,
+      food_library_id: foodPickedItem.id,
+      nome_congelado: foodPickedItem.nome,
+      quantidade_g: qty,
+      refeicao: selectedMealType,
+      kcal: Math.round(foodPickedItem.kcal_100g * ratio * 100) / 100,
+      proteina_g: Math.round(foodPickedItem.proteina_g_100g * ratio * 100) / 100,
+      carboidrato_g: Math.round(foodPickedItem.carboidrato_g_100g * ratio * 100) / 100,
+      gordura_g: Math.round(foodPickedItem.gordura_g_100g * ratio * 100) / 100,
+      data: todayKey(),
+    };
+    const { data, error } = await supa.from('student_food_log').insert(payload).select().single();
+    if (error) { toast('Erro ao adicionar: ' + error.message); return; }
+    foodLogToday.push(data);
+    closeAddMealModal();
+    buildNutri();
+    toast('Refeição adicionada.');
+  });
+
+  $('createFoodBtn').addEventListener('click', async () => {
+    const nome = $('newFoodNome').value.trim();
+    const kcal = Number($('newFoodKcal').value);
+    const prot = Number($('newFoodProt').value) || 0;
+    const carb = Number($('newFoodCarb').value) || 0;
+    const gord = Number($('newFoodGord').value) || 0;
+    if (!nome) { toast('Informe o nome do alimento.'); return; }
+    if (!kcal || kcal < 0) { toast('Informe as calorias por 100g.'); return; }
+    const { data, error } = await supa.from('food_library').insert({
+      nome, kcal_100g: kcal, proteina_g_100g: prot, carboidrato_g_100g: carb, gordura_g_100g: gord,
+      created_by_student_id: student.id, fonte: 'personalizado',
+    }).select().single();
+    if (error) { toast('Erro ao criar alimento: ' + error.message); return; }
+    selectFoodItem(data);
+  });
 
   const WEEKDAY_KEYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
   const WEEKDAY_LABELS = { dom: 'domingo', seg: 'segunda', ter: 'terça', qua: 'quarta', qui: 'quinta', sex: 'sexta', sab: 'sábado' };

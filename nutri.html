@@ -77,6 +77,29 @@
   .empty { color:var(--muted); font-size:13px; text-align:center; padding:16px 0; }
   .msg { font-size:13px; margin-top:8px; }
   .msg.error { color:var(--danger); }
+  .locked-banner { display:flex; align-items:flex-start; gap:10px; background:var(--bg); border:1px dashed var(--line); border-radius:10px; padding:14px; color:var(--muted); font-size:13px; line-height:1.5; }
+  .locked-banner svg { width:22px; height:22px; flex-shrink:0; color:var(--faint); margin-top:1px; }
+  .goal-summary { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:12px; }
+  .goal-summary .gs-nutri { font-size:12px; font-weight:700; color:var(--accent-dim); margin-bottom:10px; }
+  .goal-summary .gs-orientacao { font-size:13px; line-height:1.5; margin-top:10px; white-space:pre-wrap; }
+  .goal-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .goal-grid .gg-item { text-align:center; }
+  .goal-grid .gg-val { font-size:16px; font-weight:800; }
+  .goal-grid .gg-lbl { font-size:9.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.3px; margin-top:2px; }
+  .macro-form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .macro-form-row .field { margin-bottom:0; }
+  .field input[type="text"], .field input[type="number"] { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; color:var(--text); font-family:var(--font); }
+  .field input:focus { outline:none; border-color:var(--primary); }
+  .field select { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; color:var(--text); font-family:var(--font); }
+  .consent-row { display:flex; align-items:flex-start; gap:8px; font-size:12px; color:var(--muted); line-height:1.5; margin:14px 0; }
+  .consent-row input { margin-top:3px; flex-shrink:0; }
+  .btn-row { display:flex; gap:10px; flex-wrap:wrap; }
+  .food-log-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  .food-log-row:last-child { border-bottom:none; }
+  .flr-name { font-weight:600; }
+  .flr-meta { font-size:11.5px; color:var(--muted); margin-top:2px; }
+  .food-log-total { display:flex; justify-content:space-between; margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:12.5px; font-weight:700; }
+  .food-log-total span:last-child { color:var(--primary); }
   .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:#23263a; color:#fff; padding:10px 18px; border-radius:10px; font-size:13px; z-index:999; }
 </style>
 </head>
@@ -102,6 +125,11 @@
 
     <div id="editorArea" style="display:none;">
       <div class="card">
+        <h2>Diário alimentar de hoje<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Sobre o diário', 'O aluno registra sozinho o que comeu no próprio app — aqui você só acompanha, não edita. É o mesmo somatório que ele vê do lado dele.<br><br>É medição, não prescrição: o app nunca calcula meta nenhuma sozinho, só soma o que foi registrado.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></h2>
+        <div id="foodLogArea"></div>
+      </div>
+
+      <div class="card">
         <h2>Orientação atual<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('O que colocar aqui', 'Sem parceria com nutricionista: use só o campo de texto pra uma orientação básica (hidratação, evitar ultraprocessado, priorizar proteína magra) — já tem valor sem ser um plano formal.<br><br>Com parceria: suba o PDF que o nutricionista parceiro preparou, e use o texto pra resumir os pontos principais.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></h2>
         <div class="field">
           <textarea id="orientacaoInput" placeholder="Ex: Beber 2L de água por dia, priorizar proteína nas refeições principais, evitar açúcar refinado à noite..."></textarea>
@@ -120,6 +148,11 @@
       <div class="card" style="display:flex; gap:10px;">
         <button class="btn" id="saveBtn">Salvar</button>
         <span class="msg" id="saveMsg"></span>
+      </div>
+
+      <div class="card">
+        <h2>Meta nutricional validada<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Por que a meta é travada', 'Cálculo de meta calórica/macronutrientes (VET) é prescrição dietética — atividade privativa do nutricionista (Nota Técnica CFN nº 82/2023), fora das atribuições do profissional de Educação Física.<br><br>Por isso o app nunca calcula essa meta sozinho. Você só transcreve aqui o que a nutricionista parceira do aluno definiu numa consulta real — o diário alimentar (aba do aluno) continua liberado sem isso, é só a meta oficial que fica travada até então.<br><br>O nome + CRN + UF são obrigatórios: é a mesma exigência que a própria profissão já tem (nutricionista assina prescrição com nome e CRN), o que reduz risco de um preenchimento sem lastro nenhum.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></h2>
+        <div id="macroGoalArea"></div>
       </div>
     </div>
   </main>
@@ -161,6 +194,20 @@
 
   let professional = null;
   let currentGuidance = null; // { id, student_id, orientacao, pdf_path, pdf_nome }
+  let currentMacroGoal = null; // student_macro_goal (null = ainda travado, nenhuma consulta validada)
+  const UF_LIST = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+  const MEAL_LABELS = {
+    cafe_da_manha: 'Café da manhã', lanche_manha: 'Lanche da manhã', almoco: 'Almoço',
+    lanche_tarde: 'Lanche da tarde', jantar: 'Jantar', ceia: 'Ceia',
+  };
+  // Mesmo cálculo de "hoje" que aluno.html usa (data local do navegador, não
+  // current_date do servidor) — o diário é gravado com a data local de quem
+  // registrou, então o profissional precisa calcular do mesmo jeito pra ver
+  // o dia certo.
+  function localDateKey() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
 
   function toast(msg) {
     const t = document.createElement('div');
@@ -202,6 +249,8 @@
       $('studentSelect').value = preselect;
       updateTabbar(preselect);
       await loadOrCreateGuidance(preselect);
+      await loadMacroGoal(preselect);
+      await loadFoodLogArea(preselect);
     }
   }
 
@@ -222,6 +271,8 @@
     updateTabbar(studentId);
     if (!studentId) { $('editorArea').style.display = 'none'; return; }
     await loadOrCreateGuidance(studentId);
+    await loadMacroGoal(studentId);
+    await loadFoodLogArea(studentId);
   });
 
   async function loadOrCreateGuidance(studentId) {
@@ -304,6 +355,226 @@
     renderPdfCurrent();
     toast('Salvo com sucesso.');
   });
+
+  /* ---- META NUTRICIONAL VALIDADA (student_macro_goal) ----
+     Bloco separado de nutrition_guidance (orientação livre acima, que
+     continua existindo do jeito que sempre foi) — os dois blocos CONVIVEM,
+     nunca um substitui o outro. Este aqui exige nome+CRN+UF da nutricionista
+     e só existe depois de uma consulta real (ver help banner do card). */
+
+  function macroGoalPdfPath(studentId) { return `${studentId}/meta-validada.pdf`; }
+
+  async function loadMacroGoal(studentId) {
+    const { data, error } = await supa
+      .from('student_macro_goal')
+      .select('*')
+      .eq('student_id', studentId)
+      .maybeSingle();
+    if (error) { console.error(error.message); toast('Erro ao carregar meta validada.'); return; }
+    currentMacroGoal = data || null;
+    renderMacroGoal();
+  }
+
+  function renderMacroGoal() {
+    $('macroGoalArea').innerHTML = currentMacroGoal ? macroGoalSummaryHtml(currentMacroGoal) : macroGoalFormHtml(null);
+    if (currentMacroGoal) attachMacroGoalSummaryHandlers();
+    else attachMacroGoalFormHandlers(null);
+  }
+
+  function macroGoalSummaryHtml(g) {
+    return `
+      <div class="goal-summary">
+        <div class="gs-nutri">Validado por ${escapeHtml(g.nutricionista_nome)} — CRN ${escapeHtml(g.nutricionista_crn)}/${escapeHtml(g.nutricionista_crn_uf)}</div>
+        <div class="goal-grid">
+          <div class="gg-item"><div class="gg-val">${g.meta_kcal ?? '—'}</div><div class="gg-lbl">kcal</div></div>
+          <div class="gg-item"><div class="gg-val">${g.meta_proteina_g ?? '—'}</div><div class="gg-lbl">proteína g</div></div>
+          <div class="gg-item"><div class="gg-val">${g.meta_carboidrato_g ?? '—'}</div><div class="gg-lbl">carbo g</div></div>
+          <div class="gg-item"><div class="gg-val">${g.meta_gordura_g ?? '—'}</div><div class="gg-lbl">gordura g</div></div>
+        </div>
+        ${g.orientacao_resumo ? `<div class="gs-orientacao">${escapeHtml(g.orientacao_resumo)}</div>` : ''}
+      </div>
+      ${g.pdf_path ? `<button class="btn secondary small" id="mgViewPdfBtn" type="button" style="margin-bottom:12px">Ver PDF da nutricionista</button>` : ''}
+      <div class="btn-row">
+        <button class="btn secondary small" id="mgEditBtn" type="button">Editar</button>
+        <button class="btn secondary small" id="mgRemoveBtn" type="button" style="color:var(--danger)">Remover validação</button>
+      </div>
+    `;
+  }
+
+  function attachMacroGoalSummaryHandlers() {
+    const g = currentMacroGoal;
+    if (g.pdf_path) {
+      $('mgViewPdfBtn').addEventListener('click', async () => {
+        const { data, error } = await supa.storage.from('nutri-pdfs').createSignedUrl(g.pdf_path, 300);
+        if (error) { toast('Erro ao gerar link do PDF: ' + error.message); return; }
+        window.open(data.signedUrl, '_blank');
+      });
+    }
+    $('mgEditBtn').addEventListener('click', () => {
+      $('macroGoalArea').innerHTML = macroGoalFormHtml(g);
+      attachMacroGoalFormHandlers(g);
+    });
+    $('mgRemoveBtn').addEventListener('click', async () => {
+      if (!confirm('Remover a validação nutricional deste aluno? A meta, orientação e PDF do nutri somem e o app volta ao estado travado (o diário alimentar do aluno continua funcionando normalmente).')) return;
+      const { error } = await supa.from('student_macro_goal').delete().eq('id', g.id);
+      if (error) { toast('Erro ao remover: ' + error.message); return; }
+      if (g.pdf_path) await supa.storage.from('nutri-pdfs').remove([g.pdf_path]);
+      currentMacroGoal = null;
+      renderMacroGoal();
+      toast('Validação removida.');
+    });
+  }
+
+  function macroGoalFormHtml(g) {
+    const ufOptions = UF_LIST.map(uf => `<option value="${uf}" ${g && g.nutricionista_crn_uf === uf ? 'selected' : ''}>${uf}</option>`).join('');
+    return `
+      <div class="locked-banner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <span>${g ? 'Editando a validação existente.' : 'Ainda travado — preencha depois de uma consulta real com nutricionista parceira.'}</span>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label>Nome da nutricionista</label>
+        <input type="text" id="mgNome" placeholder="Nome completo" value="${g ? escapeHtml(g.nutricionista_nome) : ''}">
+      </div>
+      <div class="macro-form-row">
+        <div class="field"><label>CRN</label><input type="text" id="mgCrn" placeholder="Ex: 12345" value="${g ? escapeHtml(g.nutricionista_crn) : ''}"></div>
+        <div class="field"><label>UF do CRN</label><select id="mgCrnUf"><option value="">UF...</option>${ufOptions}</select></div>
+      </div>
+      <div class="macro-form-row" style="margin-top:12px">
+        <div class="field"><label>Meta calórica (kcal/dia)</label><input type="number" id="mgKcal" placeholder="Ex: 2000" value="${g && g.meta_kcal != null ? g.meta_kcal : ''}"></div>
+        <div class="field"><label>Proteína (g/dia)</label><input type="number" id="mgProt" placeholder="Opcional" value="${g && g.meta_proteina_g != null ? g.meta_proteina_g : ''}"></div>
+      </div>
+      <div class="macro-form-row">
+        <div class="field"><label>Carboidrato (g/dia)</label><input type="number" id="mgCarb" placeholder="Opcional" value="${g && g.meta_carboidrato_g != null ? g.meta_carboidrato_g : ''}"></div>
+        <div class="field"><label>Gordura (g/dia)</label><input type="number" id="mgGord" placeholder="Opcional" value="${g && g.meta_gordura_g != null ? g.meta_gordura_g : ''}"></div>
+      </div>
+      <div class="field">
+        <label>Orientação resumida (opcional)</label>
+        <textarea id="mgOrientacao" placeholder="Resumo curto tirado do plano da nutricionista, ex: priorizar 4 refeições, fracionamento a cada 3h..." style="min-height:80px">${g && g.orientacao_resumo ? escapeHtml(g.orientacao_resumo) : ''}</textarea>
+      </div>
+      <div class="field">
+        <label>PDF do plano da nutricionista (opcional)</label>
+        <div id="mgPdfCurrentArea">${g && g.pdf_path ? `<div class="pdf-current"><span class="pdf-name">${escapeHtml(g.pdf_nome || 'plano-nutri.pdf')}</span></div>` : '<div class="empty">Nenhum PDF enviado ainda.</div>'}</div>
+        <input type="file" id="mgPdfInput" accept="application/pdf">
+      </div>
+      <label class="consent-row">
+        <input type="checkbox" id="mgConsent">
+        <span>Confirmo que os dados acima foram fornecidos por uma nutricionista habilitada, durante uma consulta real com este aluno, e sou responsável pela veracidade dessas informações.</span>
+      </label>
+      <div class="btn-row">
+        <button class="btn" id="mgSaveBtn" disabled>Salvar meta validada</button>
+        ${g ? '<button class="btn secondary" id="mgCancelEditBtn" type="button">Cancelar</button>' : ''}
+      </div>
+      <span class="msg" id="mgMsg"></span>
+    `;
+  }
+
+  function attachMacroGoalFormHandlers(g) {
+    const requiredIds = ['mgNome', 'mgCrn', 'mgCrnUf'];
+    function refreshSaveEnabled() {
+      const filled = requiredIds.every(id => $(id).value.trim() !== '');
+      $('mgSaveBtn').disabled = !(filled && $('mgConsent').checked);
+    }
+    requiredIds.forEach(id => $(id).addEventListener('input', refreshSaveEnabled));
+    $('mgCrnUf').addEventListener('change', refreshSaveEnabled);
+    $('mgConsent').addEventListener('change', refreshSaveEnabled);
+
+    if (g) {
+      $('mgCancelEditBtn').addEventListener('click', () => renderMacroGoal());
+    }
+
+    $('mgSaveBtn').addEventListener('click', async () => {
+      $('mgSaveBtn').disabled = true;
+      $('mgMsg').textContent = '';
+      $('mgMsg').className = 'msg';
+
+      const studentId = $('studentSelect').value;
+      const file = $('mgPdfInput').files[0];
+      let pdfPath = g ? g.pdf_path : null;
+      let pdfNome = g ? g.pdf_nome : null;
+
+      if (file) {
+        const newPath = macroGoalPdfPath(studentId);
+        const { error: uploadErr } = await supa.storage.from('nutri-pdfs').upload(newPath, file, { contentType: 'application/pdf', upsert: true });
+        if (uploadErr) {
+          $('mgMsg').textContent = 'Erro ao enviar PDF: ' + uploadErr.message;
+          $('mgMsg').className = 'msg error';
+          $('mgSaveBtn').disabled = false;
+          return;
+        }
+        pdfPath = newPath;
+        pdfNome = file.name;
+      }
+
+      const payload = {
+        professional_id: professional.id,
+        student_id: studentId,
+        nutricionista_nome: $('mgNome').value.trim(),
+        nutricionista_crn: $('mgCrn').value.trim(),
+        nutricionista_crn_uf: $('mgCrnUf').value,
+        meta_kcal: $('mgKcal').value.trim() === '' ? null : Number($('mgKcal').value),
+        meta_proteina_g: $('mgProt').value.trim() === '' ? null : Number($('mgProt').value),
+        meta_carboidrato_g: $('mgCarb').value.trim() === '' ? null : Number($('mgCarb').value),
+        meta_gordura_g: $('mgGord').value.trim() === '' ? null : Number($('mgGord').value),
+        orientacao_resumo: $('mgOrientacao').value.trim() || null,
+        pdf_path: pdfPath,
+        pdf_nome: pdfNome,
+      };
+
+      const { data, error } = g
+        ? await supa.from('student_macro_goal').update(payload).eq('id', g.id).select().single()
+        : await supa.from('student_macro_goal').insert(payload).select().single();
+
+      $('mgSaveBtn').disabled = false;
+      if (error) {
+        $('mgMsg').textContent = 'Erro ao salvar: ' + error.message;
+        $('mgMsg').className = 'msg error';
+        return;
+      }
+      currentMacroGoal = data;
+      renderMacroGoal();
+      toast('Meta validada salva.');
+    });
+
+    refreshSaveEnabled();
+  }
+
+  /* ---- Diário alimentar do aluno (só leitura, aluno registra do próprio app) ---- */
+  async function loadFoodLogArea(studentId) {
+    const { data, error } = await supa
+      .from('student_food_log')
+      .select('*')
+      .eq('student_id', studentId)
+      .eq('data', localDateKey())
+      .order('created_at', { ascending: true });
+    const area = $('foodLogArea');
+    if (error) { area.innerHTML = '<div class="empty">Erro ao carregar o diário.</div>'; return; }
+    const rows = data || [];
+    if (!rows.length) {
+      area.innerHTML = '<div class="empty">Nenhuma refeição registrada por este aluno hoje ainda.</div>';
+      return;
+    }
+    const totals = rows.reduce((acc, r) => ({
+      kcal: acc.kcal + Number(r.kcal || 0),
+      proteina: acc.proteina + Number(r.proteina_g || 0),
+      carboidrato: acc.carboidrato + Number(r.carboidrato_g || 0),
+      gordura: acc.gordura + Number(r.gordura_g || 0),
+    }), { kcal: 0, proteina: 0, carboidrato: 0, gordura: 0 });
+    area.innerHTML = rows.map(r => `
+      <div class="food-log-row">
+        <div>
+          <div class="flr-name">${escapeHtml(r.nome_congelado)}</div>
+          <div class="flr-meta">${MEAL_LABELS[r.refeicao] || r.refeicao} · ${r.quantidade_g}g</div>
+        </div>
+        <div>${Math.round(r.kcal)}kcal</div>
+      </div>
+    `).join('') + `
+      <div class="food-log-total">
+        <span>Total do dia</span>
+        <span>${Math.round(totals.kcal)}kcal · P ${Math.round(totals.proteina)}g · C ${Math.round(totals.carboidrato)}g · G ${Math.round(totals.gordura)}g</span>
+      </div>
+    `;
+  }
 
   boot();
 </script>

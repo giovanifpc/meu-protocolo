@@ -93,6 +93,15 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### ✅ Banner "Detalhes do plano" revisado: lista completa + degradê por cor (2026-07-30, sessão seguinte)
+
+Usuário viu o banner (já implementado e ao vivo) e notou 2 problemas: (1) a lista de funcionalidades só mostrava o que é exclusivo Pro/Elite, então o card Starter parecia quase vazio — mas o Starter já inclui muita coisa (suporte 24/7 por IA, treino por IA, avaliação física completa, diário alimentar, ranking) que não estava listada em lugar nenhum; (2) pediu um degradê nos 3 cards, cada um na cor do respectivo plano.
+
+- **Lista expandida** (`perfil.html`, `planDetailsHtml()`): 5 itens novos marcados ✓ nos 3 planos — treino com IA, avaliação física completa, diário alimentar, suporte 24/7 por IA, ranking entre alunos. Cada um checado contra o código antes de entrar na lista (regra do banner desde o início): nenhum tem gate de plano (`generate-workout`, `avaliacoes.html`, `student_macro_goal`/`student_food_log`, `support-chat`, `rankingToggle`) — não é suposição, é o que o código realmente faz hoje.
+- **Degradê por plano**: reaproveitados os mesmos valores de cor já calibrados (contraste testado) do sistema de presets do aluno (`COLOR_PRESETS` em `aluno.html`) — Starter = verde (`#17812F`), Pro = laranja (`#BF5010`), Elite = roxo (`#5B3A9E`). Mesma técnica de degradê já usada em `.next-workout`/landing.html (`135deg`, cor no canto, `transparent` a partir de 60%) — nome do plano e borda do card também ganham a cor, plano atual do profissional ganha destaque extra (contorno mais forte na mesma cor).
+- Branch da sessão anterior (`claude/nutritracker-protocol-scope-q3e0bn`) já tinha sido mesclada e o trabalho concluído numa sessão local do PC (ver entrada logo abaixo) — este ajuste reiniciou o branch a partir da `main` atualizada antes de continuar (mesmo procedimento já usado antes quando isso acontece), sem perder o merge nem a migração pro R2 já feitos.
+- Validado só por `node --check` no JS extraído + checagem de IDs órfãos/tags balanceadas — não visto num navegador real nesta sessão.
+
 ### ✅ Checklist da sessão remota de 2026-07-29 fechado numa sessão local do PC (2026-07-30) — inclui migração completa dos gifs pro Cloudflare R2
 
 Executa item por item o checklist deixado pela sessão remota (ver seção logo abaixo, preservada por histórico) — branch mesclada, todas as migrations/deploys aplicados, nutritracker testado ponta a ponta, e a migração pro R2 (que lá estava só desenhada) foi implementada e concluída na íntegra.

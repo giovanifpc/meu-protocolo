@@ -57,10 +57,10 @@
   .plan-option .po-price small { font-size:10px; font-weight:600; color:var(--muted); }
   .plan-option button { width:100%; margin-top:8px; padding:7px 4px; font-size:11.5px; border-radius:8px; }
   .plan-details-link { width:100%; margin-top:6px; padding:6px 4px; font-size:10.5px; background:none; border:none; color:var(--muted); text-decoration:underline; cursor:pointer; font-family:var(--font); }
-  .plan-detail-card { border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:12px; background:var(--bg); }
-  .plan-detail-card.current { border-color:var(--primary); background:#EEF3FE; }
+  .plan-detail-card { border:1px solid rgba(var(--pdc-rgb,20,30,45),.18); border-radius:12px; padding:14px 16px; margin-bottom:12px; background:linear-gradient(135deg,rgba(var(--pdc-rgb,20,30,45),.14),transparent 60%),var(--card); }
+  .plan-detail-card.current { border-color:rgba(var(--pdc-rgb,20,30,45),.45); box-shadow:0 0 0 1px rgba(var(--pdc-rgb,20,30,45),.25); }
   .pdc-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
-  .pdc-name { font-size:15px; font-weight:800; }
+  .pdc-name { font-size:15px; font-weight:800; color:rgb(var(--pdc-rgb,30,42,58)); }
   .pdc-price { font-size:15px; font-weight:800; }
   .pdc-price small { font-size:10px; font-weight:600; color:var(--muted); }
   .pdc-features { list-style:none; margin:0; padding:0; font-size:12.5px; line-height:1.8; }
@@ -493,30 +493,38 @@
   // personalizada (perfil.html, whiteLabelLock), IA de interpretação de
   // relatório (relatorios.html, professional.plan==='elite'), cobrança
   // automática do aluno + taxa (mercadopago-charge-student, application_fee
-  // 1% só no Pro). NOTA: a cobrança automática hoje está disponível pra
-  // QUALQUER plano no código (nenhum gate de plano encontrado em
-  // financeiro.html nem nas Edge Functions de conectar/cobrar), incluindo
-  // Starter com taxa 0% igual o Elite — diferente do que a documentação de
-  // negócio descreve ("automação fora do Starter"). Refletido abaixo do
-  // jeito que o código realmente se comporta hoje, não do jeito descrito no
-  // planejamento — vale revisar com o usuário se isso é bug ou decisão.
+  // 1% só no Pro, bloqueada no Starter desde a correção de 2026-07-29).
+  // Os itens "universais" abaixo (treino IA, avaliação física, diário
+  // alimentar, suporte 24/7, ranking) foram checados um a um pelo código —
+  // nenhum tem gate de plano (generate-workow, avaliacoes.html,
+  // student_macro_goal/student_food_log, support-chat, rankingToggle em
+  // perfil.html) — sem eles a grade do Starter ficava sub-representada,
+  // mostrando só o que falta em vez do que já vem incluso.
+  const PLAN_COLOR_RGB = { starter: '23,129,47', pro: '191,80,16', elite: '91,58,158' };
+
   function planDetailsHtml() {
     const specs = {
-      starter: { alunos: 'Até 15 alunos', marca: false, ia: false, cobranca: false, taxa: '' },
-      pro: { alunos: 'Até 40 alunos', marca: true, ia: false, cobranca: true, taxa: 'taxa de 1% por cobrança' },
-      elite: { alunos: 'Alunos ilimitados', marca: true, ia: true, cobranca: true, taxa: 'sem taxa' },
+      starter: { marca: false, ia: false, cobranca: false, taxa: '' },
+      pro: { marca: true, ia: false, cobranca: true, taxa: 'taxa de 1% por cobrança' },
+      elite: { marca: true, ia: true, cobranca: true, taxa: 'sem taxa' },
     };
+    const alunosLabel = { starter: 'Até 15 alunos', pro: 'Até 40 alunos', elite: 'Alunos ilimitados' };
     return PLAN_ORDER.map((id) => {
       const s = specs[id];
       const isCurrent = professional.plan === id;
       return `
-        <div class="plan-detail-card ${isCurrent ? 'current' : ''}">
+        <div class="plan-detail-card pdc-${id} ${isCurrent ? 'current' : ''}" style="--pdc-rgb:${PLAN_COLOR_RGB[id]}">
           <div class="pdc-head">
             <span class="pdc-name">${PLAN_LABELS[id]}${isCurrent ? ' (atual)' : ''}</span>
             <span class="pdc-price">R$${planPriceFor(id)}<small>/mês</small></span>
           </div>
           <ul class="pdc-features">
-            <li class="yes">${s.alunos}</li>
+            <li class="yes">${alunosLabel[id]}</li>
+            <li class="yes">Treino personalizado com IA</li>
+            <li class="yes">Avaliação física completa (dobras, bioimpedância, fotos)</li>
+            <li class="yes">Diário alimentar do aluno</li>
+            <li class="yes">Suporte 24/7 por IA</li>
+            <li class="yes">Ranking entre alunos</li>
             <li class="${s.marca ? 'yes' : 'no'}">Marca personalizada (cor + logo)</li>
             <li class="${s.ia ? 'yes' : 'no'}">IA de interpretação de relatório</li>
             <li class="${s.cobranca ? 'yes' : 'no'}">Cobrança automática do aluno${s.cobranca ? `<small>${s.taxa}</small>` : ''}</li>

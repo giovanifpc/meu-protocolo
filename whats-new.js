@@ -7,31 +7,19 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.9.0',
+      version: '1.10.0',
       items: [
-        'Novo: cobrança automática! Conecte sua conta Mercado Pago em Financeiro e seus alunos passam a pagar sozinhos, todo mês, por cartão ou Pix — sem taxa no plano Elite, 1% no Pro.',
-        'Novo: "Trocar cartão atual" na sua própria assinatura, dentro de Perfil → Seu plano.',
-        'Receita em Financeiro agora mostra o bruto/taxa/líquido das cobranças automatizadas, além do que já era autodeclarado.',
-        'Novo: notificações push no sino ficam disponíveis também pra você, não só pro aluno — ative em Notificações, dentro do sino.',
-        'Novo: crie exercícios que não estão na biblioteca, direto na busca ao montar um treino — fica só na sua conta, nunca compartilhado com outros profissionais.',
-        'Novo: vincule uma imagem própria (além do vídeo do YouTube) a qualquer exercício, com recorte quadrado ou paisagem.',
-        'Novo: "Comparativos" em Avaliação física — escolha 2 avaliações e o app monta sozinho as fotos lado a lado e a tabela de variação de medidas; publique quando quiser que o aluno veja.',
-        'Novo: botão pra remover uma foto de avaliação física sem precisar substituir por outra.',
-        'Corrigido: upload de fotos de avaliação física, que às vezes não subia sem mostrar nenhum erro.',
-        'Fotos de avaliação física agora aparecem como miniatura de verdade (antes só mostrava "enviada").',
-        'Novo: sino de notificações fixo no topo de toda tela, com histórico de mensagem nova de aluno e aluno que respondeu a anamnese.',
-        '"Sair" saiu do topo (onde sumia em algumas telas) e agora fica dentro do menu ☰ lateral, igual nas 9 telas do painel.',
-        'Novo: ao cadastrar um aluno, aparece um banner com o WhatsApp preenchido e um botão "Enviar convite" — dá pra mandar na hora ou fechar e enviar depois.'
+        'Novo: diário alimentar do aluno (aba Nutri) — ele registra o que comeu e você acompanha, sem precisar configurar nada. A meta de calorias/macros fica travada até você preencher os dados de uma consulta real com nutricionista parceira (é exigência legal, não falha do app).',
+        'Gifs de exercício ficaram mais rápidos e confiáveis — migramos a hospedagem pra um servidor dedicado.',
+        'Corrigido: alguns treinos gerados por IA saíam sem gif de exercício.'
       ]
     },
     aluno: {
-      version: '1.4.0',
+      version: '1.5.0',
       items: [
-        'Novo: se seu personal ativar a cobrança automática, a aba Financeiro ganha cartão de crédito ou Pix gerado sozinho a cada mês — escolha em Financeiro.',
-        'Novo: quando seu personal publica um comparativo de avaliação física, ele aparece na tela de Avaliação física — fotos antes/depois e a variação de cada medida.',
-        'Novo: as fotos da sua avaliação física agora aparecem na tela de Avaliação física.',
-        'Nova aba "Financeiro" no menu lateral — veja o status da sua mensalidade e o Pix do seu personal, quando disponibilizado.',
-        'Novo: um card na Início lembra de responder a anamnese de saúde antes de começar a usar o app, se ainda não tiver respondido.'
+        'Novo: diário alimentar em Nutri — registre o que você comeu (busque ou cadastre o alimento) e veja o total de calorias e macros do dia, direto no app.',
+        'A meta de calorias/macros aparece quando seu personal liberar, depois de uma consulta com a nutricionista parceira dele.',
+        'Gifs de exercício ficaram mais rápidos e confiáveis.'
       ]
     }
   };

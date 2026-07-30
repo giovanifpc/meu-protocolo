@@ -169,6 +169,14 @@ Taxa: no plano **Pro**, cada cobrança automatizada tem 1% retido pro Meu Protoc
 
 Se o profissional desconectar a conta, a cobrança automática de todos os alunos dele para na hora (nenhum aluno fica "preso" nisso). Se um pagamento por cartão falhar repetidas vezes, o profissional é avisado no sino — não é o suporte por IA que resolve isso, é sempre o profissional decidindo o que fazer com aquele aluno específico (inclusive se quer marcá-lo como Inativo). O suporte por IA **nunca** tem acesso a token/dado de pagamento de ninguém — se um aluno ou profissional relatar problema de cobrança específico (Pix que não gerou, cartão recusado, valor errado), a orientação é sempre escalar (ver seção 7), nunca tentar diagnosticar ou "corrigir" via conversa.
 
+### 5.19 Diário alimentar / nutritracker (adicionado 2026-07-30)
+
+Na aba Nutri do aluno, abaixo da orientação em texto/PDF de sempre (seção 5.8, que continua existindo do mesmo jeito — os dois blocos convivem, um nunca substitui o outro), tem um diário alimentar de verdade: o aluno busca um alimento (banco de ~1680 itens, TACO + industrializados) ou cria um item próprio quando não acha, escolhe a refeição (café da manhã, lanche, almoço etc.) e a quantidade em gramas — o app calcula sozinho as calorias e macros e mostra o total do dia. Isso é **medição**, disponível em **todo plano** desde o primeiro dia, sem precisar de nada configurado pelo profissional.
+
+**A meta de calorias/macros é diferente — fica travada até o profissional preencher**, e só pode ser preenchida depois de uma consulta real com uma nutricionista parceira (nome + CRN + UF são obrigatórios). O motivo é legal: calcular meta calórica/de macronutrientes é "prescrição dietética", atividade que só nutricionista pode fazer (Conselho Federal de Nutrição) — o Meu Protocolo nunca calcula essa meta sozinho, só guarda o que a nutricionista já definiu numa consulta de verdade. Enquanto não tem meta validada, o aluno já pode registrar o que comeu normalmente — só não vê barra de progresso em relação a uma meta. Se o profissional perguntar "por que não consigo definir a meta calórica pro aluno direto", a explicação é essa (nunca sugerir contornar isso).
+
+O profissional vê o diário do dia do aluno (só leitura, mesma aba Nutri) — não edita, só acompanha adesão.
+
 ---
 
 ## 6. Perguntas frequentes esperadas (ponto de partida, não lista fechada)

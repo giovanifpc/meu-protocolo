@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.sentry-cdn.com https://sdk.mercadopago.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://drive.google.com https://img.youtube.com https://*.supabase.co https://*.mercadopago.com https://*.mlstatic.com; frame-src https://www.youtube-nocookie.com https://*.mercadopago.com; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co https://o4511757250199552.ingest.us.sentry.io https://*.mercadopago.com https://api.mercadopago.com; object-src 'none'; base-uri 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.sentry-cdn.com https://sdk.mercadopago.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://media.meuprotocolo.app https://img.youtube.com https://*.supabase.co https://*.mercadopago.com https://*.mlstatic.com; frame-src https://www.youtube-nocookie.com https://*.mercadopago.com; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co https://o4511757250199552.ingest.us.sentry.io https://*.mercadopago.com https://api.mercadopago.com; object-src 'none'; base-uri 'self';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#F8F9FA">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -3095,53 +3095,26 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     if (el) el.innerHTML = mediaImgMarkup(url, '', el.innerHTML);
   }
 
-  /* ---- MÍDIA DE EXERCÍCIO (fallback entre variações do link do Drive) ---- */
-  function driveFileId(url) {
-    const text = String(url || '');
-    let m = text.match(/[?&]id=([^&]+)/);
-    if (m) return decodeURIComponent(m[1]);
-    m = text.match(/\/file\/d\/([^/]+)/);
-    return m ? decodeURIComponent(m[1]) : '';
-  }
-  function exerciseMediaCandidates(url) {
-    const id = driveFileId(url);
-    if (!id) return [url];
-    return [
-      'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(id),
-      'https://drive.google.com/uc?export=view&id=' + encodeURIComponent(id),
-      'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w900',
-    ];
-  }
+  /* ---- MÍDIA DE EXERCÍCIO ----
+     Gifs migraram do Google Drive (hospedagem frágil, sem CDN de verdade)
+     pro Cloudflare R2 em 2026-07-30 — ver CLAUDE.md. Não precisa mais do
+     fallback entre 3 variações de URL do Drive; uma URL só (R2, com CDN de
+     verdade por baixo) basta. O timeout continua como rede de segurança
+     genérica (nunca custa nada ter), só não avança mais entre variações —
+     vai direto pro placeholder se a imagem não carregar. */
   function mediaImgMarkup(src, alt, fallbackHtml) {
-    const candidates = exerciseMediaCandidates(src);
-    return `<img src="${escapeHtml(candidates[0])}" alt="${escapeHtml(alt)}" loading="lazy" data-src-list="${encodeURIComponent(JSON.stringify(candidates))}" data-src-idx="0" data-fallback-html="${encodeURIComponent(fallbackHtml)}" onerror="swapExerciseImage(this)">`;
+    return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" loading="lazy" data-fallback-html="${encodeURIComponent(fallbackHtml)}" onerror="swapExerciseImage(this)">`;
   }
   function swapExerciseImage(img) {
-    try {
-      const list = JSON.parse(decodeURIComponent(img.getAttribute('data-src-list') || '[]'));
-      const idx = Number(img.getAttribute('data-src-idx') || 0) + 1;
-      if (list[idx]) {
-        img.setAttribute('data-src-idx', String(idx));
-        img.src = list[idx];
-        return;
-      }
-    } catch (e) {}
     const fallback = decodeURIComponent(img.getAttribute('data-fallback-html') || '');
     if (img.parentNode) img.parentNode.innerHTML = fallback || `<span class="ph">${ICONS.dumbbell}</span>`;
   }
 
-  // Achado real (2026-07-29): os gifs vêm de link direto do Google Drive
-  // (não é CDN de verdade), pesam na faixa de 1-7MB cada, e uma fração deles
-  // não dá erro nenhum — fica "pendurada" (nem carrega nem falha) por um
-  // tempo bem mais longo que o timeout nativo do navegador pra <img>. Sem
-  // isso, o retry entre as 3 variações de URL só avançava em cima de um
-  // erro definitivo (onerror) — uma conexão travada nunca avançava sozinha.
-  // Timeout explícito de 6s força o avanço pra próxima variação (ou pro
-  // fallback, se já for a última) bem mais rápido que esperar o navegador
-  // desistir por conta própria.
+  // Timeout explícito de 6s: uma imagem que trava (nem carrega, nem falha)
+  // não deveria esperar o timeout nativo do navegador, bem mais longo.
   function armImageTimeouts(root) {
     if (!root) return;
-    root.querySelectorAll('img[data-src-list]:not([data-armed])').forEach((img) => {
+    root.querySelectorAll('img[data-fallback-html]:not([data-armed])').forEach((img) => {
       img.setAttribute('data-armed', '1');
       const timer = setTimeout(() => {
         if (img.isConnected && (!img.complete || img.naturalWidth === 0)) swapExerciseImage(img);

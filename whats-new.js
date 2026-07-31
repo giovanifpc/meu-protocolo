@@ -10,6 +10,7 @@
       version: '1.11.0',
       items: [
         'Novo: campo de gênero (opcional) no cadastro do aluno — usado só pra calibrar o treino gerado por IA, nunca aparece pro aluno.',
+        'Painel de edição do aluno simplificado: um único botão "Salvar edição" pra nota, WhatsApp, gênero e mensalidade — antes eram 2 botões separados, fácil de confundir. "Marcar pago hoje" ganhou espaço próprio, separado da edição.',
         'Corrigido: treino gerado por IA podia incluir exercício fora de contexto (ex: exercício de glúteo aparecendo num treino de peito/tríceps sem motivo).',
         'Corrigido: logo recortada em formato Quadrado aparecia redonda no app do aluno.',
         'Novo: diário alimentar do aluno (aba Nutri) — ele registra o que comeu e você acompanha, sem precisar configurar nada. A meta de calorias/macros fica travada até você preencher os dados de uma consulta real com nutricionista parceira (é exigência legal, não falha do app).',

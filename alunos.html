@@ -68,6 +68,7 @@
   .btn.secondary { background:var(--bg); color:var(--text); border:1px solid var(--line); }
   .btn.danger { background:#FDEDEC; color:var(--danger); border:1px solid #F5C6C0; }
   .btn:disabled { opacity:.5; cursor:not-allowed; }
+  .payment-zone { margin-top:14px; padding-top:12px; border-top:1px dashed var(--line); }
   .danger-zone { margin-top:10px; padding-top:10px; border-top:1px dashed #F5C6C0; }
   .danger-zone p { font-size:12.5px; line-height:1.5; color:var(--danger); margin:0 0 10px; }
   .btn-icon { display:inline-flex; align-items:center; justify-content:center; }
@@ -277,15 +278,15 @@
         </div>
         <div class="notes-panel" id="notesPanel-${s.id}">
           <div class="avatar-preview" id="avatarPreview-${s.id}">${escapeHtml((s.nome || '?').trim().charAt(0).toUpperCase())}</div>
-          <div class="notes-sub-label">Status e nota privada<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('O que cada status faz', '<strong>Ativo</strong> é o normal, sem restrição.<br><br><strong>Pausado</strong> é só uma marcação sua — não muda nada pro aluno, ele continua acessando o app normalmente; útil pra organizar quem está temporariamente fora sem perder o controle.<br><br><strong>Inativo</strong> bloqueia o acesso de verdade — o aluno vê um aviso pra falar com você e não consegue mais usar o app, mas os dados dele continuam guardados até você decidir excluir.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></div>
-          <div class="status-hint">Inativo bloqueia o acesso do aluno de verdade — ele vê um aviso pra falar com você e não consegue mais usar o app. Pausado é só organização sua, não bloqueia nada.</div>
+
+          <div class="notes-sub-label">Status<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('O que cada status faz', '<strong>Ativo</strong> é o normal, sem restrição.<br><br><strong>Pausado</strong> é só uma marcação sua — não muda nada pro aluno, ele continua acessando o app normalmente; útil pra organizar quem está temporariamente fora sem perder o controle.<br><br><strong>Inativo</strong> bloqueia o acesso de verdade — o aluno vê um aviso pra falar com você e não consegue mais usar o app, mas os dados dele continuam guardados até você decidir excluir.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></div>
+          <div class="status-hint">Inativo bloqueia o acesso do aluno de verdade — ele vê um aviso pra falar com você e não consegue mais usar o app. Pausado é só organização sua, não bloqueia nada. Muda na hora, sem precisar de "Salvar edição".</div>
           <select data-role="note-status" data-student-id="${s.id}" data-prev-status="${s.status}">
             ${Object.entries(STATUS_LABELS).map(([v, l]) => `<option value="${v}" ${s.status === v ? 'selected' : ''}>${l}</option>`).join('')}
           </select>
-          <textarea data-role="note-text" data-student-id="${s.id}" placeholder="Nota privada sobre esse aluno (só você vê)...">${escapeHtml(note.nota || '')}</textarea>
-          <button class="btn small" style="padding:7px 12px;font-size:12px;" data-role="save-note" data-student-id="${s.id}">Salvar nota</button>
 
-          <div class="notes-sub-label">WhatsApp, gênero e mensalidade</div>
+          <div class="notes-sub-label">Editar dados do aluno</div>
+          <textarea data-role="note-text" data-student-id="${s.id}" placeholder="Nota privada sobre esse aluno (só você vê)...">${escapeHtml(note.nota || '')}</textarea>
           <div style="display:flex;gap:6px;">
             <input type="tel" data-role="telefone" data-student-id="${s.id}" placeholder="WhatsApp com DDD e país, ex: 5511999999999" value="${escapeHtml(s.telefone || '')}" style="flex:1;min-width:0;">
             <button class="btn small secondary" style="padding:7px 10px;font-size:11.5px;white-space:nowrap;flex-shrink:0;" data-role="copy-invite" data-student-id="${s.id}" data-name="${escapeHtml(s.nome)}" title="Abrir convite no WhatsApp (ou copiar o link, se não tiver WhatsApp cadastrado)">Enviar convite</button>
@@ -296,12 +297,17 @@
             <option value="F" ${s.genero === 'F' ? 'selected' : ''}>Gênero: Feminino</option>
           </select>
           <div class="billing-row">
-            <input type="number" step="0.01" data-role="mensalidade-valor" data-student-id="${s.id}" placeholder="Valor (R$)" value="${s.mensalidade_valor ?? ''}">
+            <input type="number" step="0.01" data-role="mensalidade-valor" data-student-id="${s.id}" placeholder="Valor da mensalidade (R$)" value="${s.mensalidade_valor ?? ''}">
             <input type="number" min="1" max="31" data-role="mensalidade-dia" data-student-id="${s.id}" placeholder="Dia venc. (1-31)" value="${s.mensalidade_dia_vencimento ?? ''}">
           </div>
-          <div class="billing-status">${s.ultimo_pagamento_em ? `Último pagamento: ${new Date(s.ultimo_pagamento_em + 'T00:00:00').toLocaleDateString('pt-BR')}` : 'Nenhum pagamento registrado ainda'}</div>
-          <button class="btn small secondary" style="padding:7px 12px;font-size:12px;margin-right:6px;" data-role="save-billing" data-student-id="${s.id}">Salvar WhatsApp/mensalidade</button>
-          <button class="btn small secondary" style="padding:7px 12px;font-size:12px;" data-role="mark-paid" data-student-id="${s.id}">Marcar pago hoje</button>
+          <button class="btn small" style="padding:7px 12px;font-size:12px;" data-role="save-edit" data-student-id="${s.id}">Salvar edição</button>
+          <div class="msg" id="editSaveMsg-${s.id}"></div>
+
+          <div class="payment-zone">
+            <div class="notes-sub-label">Pagamento</div>
+            <div class="billing-status">${s.ultimo_pagamento_em ? `Último pagamento: ${new Date(s.ultimo_pagamento_em + 'T00:00:00').toLocaleDateString('pt-BR')}` : 'Nenhum pagamento registrado ainda'}</div>
+            <button class="btn small secondary" style="padding:7px 12px;font-size:12px;" data-role="mark-paid" data-student-id="${s.id}">Marcar pago hoje</button>
+          </div>
 
           <div class="danger-zone" id="dangerZone-${s.id}" style="display:${s.status === 'inativo' ? 'block' : 'none'};">
             <div id="deleteStep1-${s.id}">
@@ -341,11 +347,8 @@
         }
       });
     });
-    list.querySelectorAll('[data-role="save-note"]').forEach(btn => {
-      btn.addEventListener('click', () => saveNote(btn.dataset.studentId));
-    });
-    list.querySelectorAll('[data-role="save-billing"]').forEach(btn => {
-      btn.addEventListener('click', () => saveBilling(btn.dataset.studentId));
+    list.querySelectorAll('[data-role="save-edit"]').forEach(btn => {
+      btn.addEventListener('click', () => saveStudentEdit(btn.dataset.studentId));
     });
     list.querySelectorAll('[data-role="mark-paid"]').forEach(btn => {
       btn.addEventListener('click', () => markPaid(btn.dataset.studentId));
@@ -417,35 +420,61 @@
     toast('Mensagem enviada.');
   }
 
-  async function saveBilling(studentId) {
+  // Um único botão salva tudo do painel de edição (nota privada + WhatsApp +
+  // gênero + mensalidade) numa tacada só — antes eram 2 botões separados
+  // ("Salvar nota" e "Salvar WhatsApp/mensalidade") e o usuário reportou
+  // confusão real: editava um campo, clicava no botão errado, achava que
+  // tinha salvo e não tinha. Status continua fora daqui de propósito — já é
+  // controle de acesso de verdade, salva sozinho na hora que muda (ver
+  // updateStudentStatus), nunca deveria esperar esse botão.
+  async function saveStudentEdit(studentId) {
+    const btn = document.querySelector(`[data-role="save-edit"][data-student-id="${studentId}"]`);
+    const msgEl = $('editSaveMsg-' + studentId);
+    btn.disabled = true;
+    msgEl.textContent = '';
+    msgEl.className = 'msg';
+
+    const nota = document.querySelector(`[data-role="note-text"][data-student-id="${studentId}"]`).value.trim();
     const telefone = document.querySelector(`[data-role="telefone"][data-student-id="${studentId}"]`).value.replace(/\D/g, '');
     const genero = document.querySelector(`[data-role="genero"][data-student-id="${studentId}"]`).value;
     const valorRaw = document.querySelector(`[data-role="mensalidade-valor"][data-student-id="${studentId}"]`).value;
     const diaRaw = document.querySelector(`[data-role="mensalidade-dia"][data-student-id="${studentId}"]`).value;
 
-    const payload = {
+    const notePayload = { professional_id: professional.id, student_id: studentId, nota };
+    const existingNote = notesByStudent[studentId];
+    const noteResult = existingNote
+      ? await supa.from('student_notes').update(notePayload).eq('id', existingNote.id)
+      : await supa.from('student_notes').insert(notePayload);
+
+    const studentsPayload = {
       telefone: telefone || null,
       genero: genero || null,
       mensalidade_valor: valorRaw ? parseFloat(valorRaw) : null,
       mensalidade_dia_vencimento: diaRaw ? parseInt(diaRaw, 10) : null,
     };
-    const { error } = await supa.from('students').update(payload).eq('id', studentId);
-    if (error) { toast('Erro ao salvar: ' + error.message); return; }
+    const studentsResult = await supa.from('students').update(studentsPayload).eq('id', studentId);
+
+    btn.disabled = false;
+    if (noteResult.error || studentsResult.error) {
+      msgEl.textContent = 'Erro ao salvar: ' + (noteResult.error?.message || studentsResult.error?.message);
+      msgEl.className = 'msg error';
+      return;
+    }
 
     // Se o aluno já tem cobrança automática por cartão ativa, sincroniza o
     // valor novo com o Mercado Pago (lacuna 4 do desenho de cobrança
     // automática) — sem isso, o cartão continuaria sendo cobrado no valor
     // antigo. Melhor esforço: não bloqueia o salvamento local se falhar.
     const student = studentsCache?.find(s => s.id === studentId);
-    if (student?.mp_charge_method === 'cartao' && payload.mensalidade_valor) {
+    if (student?.mp_charge_method === 'cartao' && studentsPayload.mensalidade_valor) {
       supa.functions.invoke('mercadopago-update-student-charge', {
-        body: { student_id: studentId, novo_valor: payload.mensalidade_valor },
+        body: { student_id: studentId, novo_valor: studentsPayload.mensalidade_valor },
       }).then(({ data, error: syncErr }) => {
-        if (syncErr || data?.error) toast('Mensalidade salva, mas falhou ao sincronizar com o Mercado Pago: ' + (data?.error || syncErr?.message));
+        if (syncErr || data?.error) toast('Edição salva, mas falhou ao sincronizar mensalidade com o Mercado Pago: ' + (data?.error || syncErr?.message));
       }).catch(() => {});
     }
 
-    toast('WhatsApp/mensalidade salvos.');
+    toast('Edição salva.');
     await loadStudents();
   }
 
@@ -481,22 +510,8 @@
 
   function todayISO() { return new Date().toISOString().slice(0, 10); }
 
-  async function saveNote(studentId) {
-    const nota = document.querySelector(`[data-role="note-text"][data-student-id="${studentId}"]`).value.trim();
-    const existing = notesByStudent[studentId];
-
-    const payload = { professional_id: professional.id, student_id: studentId, nota };
-    const result = existing
-      ? await supa.from('student_notes').update(payload).eq('id', existing.id)
-      : await supa.from('student_notes').insert(payload);
-
-    if (result.error) { toast('Erro ao salvar: ' + result.error.message); return; }
-    toast('Nota salva.');
-    await loadStudents();
-  }
-
   // Status agora é controle de acesso de verdade (não só organização) —
-  // salva na hora, sem esperar o botão "Salvar nota", pra nunca dar a
+  // salva na hora, sem esperar o botão "Salvar edição", pra nunca dar a
   // impressão de que "Inativo" já bloqueou o aluno quando na real ainda
   // não foi salvo.
   async function updateStudentStatus(sel) {

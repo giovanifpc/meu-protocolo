@@ -1528,7 +1528,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     // profissional ainda ativa (deixada por outra aba) não pode cair num
     // "não encontramos seu cadastro" sem saída; redireciona pro lugar certo,
     // mesmo princípio das travas já existentes em index.html/onboarding.html.
-    if (session.user.email === 'meuprotocolo1@gmail.com') { window.location.href = 'master.html'; return; }
+    if (session.user.email === 'meuprotocolo1@gmail.com') { window.__mpSuppressWhatsNew = true; window.location.href = 'master.html'; return; }
     $('settingsEmailText').textContent = session.user.email;
 
     const { data: st, error } = await supa
@@ -1540,7 +1540,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     if (error) { renderHomeError('Erro ao carregar seus dados: ' + error.message); return; }
     if (!st) {
       const { data: pro } = await supa.from('professionals').select('id').eq('email', session.user.email).maybeSingle();
-      if (pro) { window.location.href = 'index.html'; return; }
+      if (pro) { window.__mpSuppressWhatsNew = true; window.location.href = 'index.html'; return; }
       renderHomeError('Não encontramos seu cadastro. Fale com seu personal trainer.');
       return;
     }
@@ -2508,10 +2508,34 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       : escapeHtml((student.nome || '?').trim().charAt(0).toUpperCase());
   }
 
+  // Mesmo cache de URL assinada já usado em alunos.html (painel do
+  // profissional) — sem isso, cada reabertura do app (fechar/abrir o PWA)
+  // pedia uma assinatura nova pro Supabase, e como a assinatura muda a
+  // cada chamada mesmo pro mesmo arquivo, o navegador nunca reconhecia
+  // como "a mesma imagem" e baixava a foto inteira de novo.
+  function getCachedSignedUrl(cacheKey) {
+    try {
+      const raw = sessionStorage.getItem(cacheKey);
+      if (!raw) return null;
+      const { url, exp } = JSON.parse(raw);
+      if (Date.now() < exp) return url;
+    } catch {}
+    return null;
+  }
+  function setCachedSignedUrl(cacheKey, url, ttlMs) {
+    try { sessionStorage.setItem(cacheKey, JSON.stringify({ url, exp: Date.now() + ttlMs })); } catch {}
+  }
+
   async function loadAvatar() {
-    const { data, error } = await supa.storage.from(AVATAR_BUCKET).createSignedUrl(avatarPath(), 3600);
-    if (error || !data) { setAvatarImg(null); return; }
-    setAvatarImg(data.signedUrl);
+    const cacheKey = 'mp_avatar_url_' + student.id;
+    let url = getCachedSignedUrl(cacheKey);
+    if (!url) {
+      const { data, error } = await supa.storage.from(AVATAR_BUCKET).createSignedUrl(avatarPath(), 3600);
+      if (error || !data) { setAvatarImg(null); return; }
+      url = data.signedUrl;
+      setCachedSignedUrl(cacheKey, url, 55 * 60 * 1000); // folga da validade real (1h)
+    }
+    setAvatarImg(url);
   }
 
   $('avatarEditBtn').addEventListener('click', () => $('avatarFileInput').click());
@@ -2605,6 +2629,11 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       btn.disabled = false;
       if (error) { toast('Erro ao salvar foto: ' + error.message); return; }
       closeCropModal();
+      // Arquivo trocou no mesmo path (upsert) — a URL assinada antiga em
+      // cache continuaria "válida" mas apontando pra versão velha, então
+      // precisa invalidar antes de recarregar, senão a foto nova só
+      // apareceria depois dos 55min de cache expirarem.
+      try { sessionStorage.removeItem('mp_avatar_url_' + student.id); } catch {}
       await loadAvatar();
       toast('Foto de perfil atualizada.');
     }, 'image/jpeg', 0.85);

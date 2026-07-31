@@ -154,7 +154,7 @@
     if (!session) { window.location.href = 'login.html'; return; }
     // Mesma trava de onboarding.html — sessão do master nunca deve renderizar
     // o painel de profissional, mesmo que uma linha em professionals exista.
-    if (session.user.email === 'meuprotocolo1@gmail.com') { window.location.href = 'master.html'; return; }
+    if (session.user.email === 'meuprotocolo1@gmail.com') { window.__mpSuppressWhatsNew = true; window.location.href = 'master.html'; return; }
 
     const { data: pro, error } = await supa.from('professionals').select('*').eq('email', session.user.email).maybeSingle();
     if (error) {
@@ -166,11 +166,13 @@
       // Mesmo motivo da trava do e-mail master, agora pra sessão de ALUNO:
       // localStorage compartilhado entre abas/PWAs pode trazer a sessão de
       // um aluno pra cá (ex: reabrir o PWA do painel depois de logar como
-      // aluno em outra aba) — sem essa checagem, cairia direto no onboarding
-      // de profissional pedindo nome/negócio pro e-mail de um aluno de
-      // verdade. Bug real relatado em 2026-07-31.
+      // aluno em outra aba, ou um PWA instalado com start_url apontando pra
+      // index.html por engano) — sem essa checagem, cairia direto no
+      // onboarding de profissional pedindo nome/negócio pro e-mail de um
+      // aluno de verdade. Bug real relatado em 2026-07-31.
       const { data: stu } = await supa.from('students').select('id').eq('email', session.user.email).maybeSingle();
-      if (stu) { window.location.href = 'aluno.html'; return; }
+      if (stu) { window.__mpSuppressWhatsNew = true; window.location.href = 'aluno.html'; return; }
+      window.__mpSuppressWhatsNew = true;
       window.location.href = 'onboarding.html';
       return;
     }

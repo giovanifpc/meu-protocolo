@@ -20,8 +20,9 @@
       ]
     },
     aluno: {
-      version: '1.5.0',
+      version: '1.5.1',
       items: [
+        'Corrigido: sua foto de perfil recarregava do zero toda vez que você reabria o app — agora fica em cache e aparece na hora.',
         'Novo: diário alimentar em Nutri — registre o que você comeu (busque ou cadastre o alimento) e veja o total de calorias e macros do dia, direto no app.',
         'A meta de calorias/macros aparece quando seu personal liberar, depois de uma consulta com a nutricionista parceira dele.',
         'Gifs de exercício ficaram mais rápidos e confiáveis.'
@@ -95,6 +96,23 @@
     overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
   }
 
-  if (document.body) render();
-  else document.addEventListener('DOMContentLoaded', render);
+  // Espera um instante antes de pintar — dá tempo do boot() da própria
+  // página confirmar que a sessão é mesmo desta superfície antes do banner
+  // aparecer. Sem isso, uma sessão de ALUNO abrindo `index.html` por engano
+  // (ex: PWA instalado com start_url errado — atalho antigo apontando pra
+  // index.html em vez de aluno.html) mostra o changelog do PROFISSIONAL por
+  // um instante, antes do redirect pra aluno.html acontecer (2026-07-31,
+  // relatado pelo usuário: "vi o banner do profissional por um momento
+  // dentro do PWA do aluno"). A página que sabe que vai redirecionar
+  // deve setar `window.__mpSuppressWhatsNew = true` antes de navegar —
+  // ver index.html/aluno.html boot().
+  function maybeRender() {
+    if (window.__mpSuppressWhatsNew) return;
+    render();
+  }
+  function schedule() {
+    setTimeout(maybeRender, 350);
+  }
+  if (document.body) schedule();
+  else document.addEventListener('DOMContentLoaded', schedule);
 })();

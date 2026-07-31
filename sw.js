@@ -7,7 +7,7 @@
 // percebe que este arquivo mudou (e reativa um SW novo) se os BYTES dele
 // mudarem — por isso, sempre que uma mudança valer a pena forçar o
 // recarregamento de abas já abertas, bump este número junto do deploy.
-const CACHE_NAME = 'meu-protocolo-v18';
+const CACHE_NAME = 'meu-protocolo-v19';
 const PRECACHE_URLS = ['/aluno.html', '/manifest.json', '/icons/icon-192-v2.png', '/icons/icon-512-v2.png'];
 
 self.addEventListener('install', (event) => {

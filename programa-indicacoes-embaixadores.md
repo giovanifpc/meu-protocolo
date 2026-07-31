@@ -1,5 +1,7 @@
 # Programa de Indicações e Embaixadores – Meu Protocolo
 
+> **Nome oficial do programa: "Clube de Embaixadores"** (definido pelo usuário em 2026-07-31) — este título e o nome do arquivo ficam como referência histórica do documento original recebido, mas qualquer UI/copy/schema implementado deve usar "Clube de Embaixadores".
+>
 > **Status: escopo desenhado, NADA implementado ainda** (registrado em 2026-07-31). Este documento é a especificação recebida do usuário, preservada como veio — ver a entrada correspondente em `CLAUDE.md` (seção "Status atual") pra como isso se relaciona com o programa de indicação simples que **já está em produção** hoje, e pra uma lista de pontos que precisam de decisão antes de implementar.
 
 ## Objetivo

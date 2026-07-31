@@ -521,7 +521,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     <p>Pra usar o Meu Protocolo, você precisa ler e aceitar os termos abaixo. Seu profissional só vê os dados de saúde que você registrar aqui (anamnese, avaliações) — nunca compartilhamos com terceiros.</p>
     <label class="consent-check">
       <input type="checkbox" id="consentCheckbox">
-      <span>Li e aceito os <a href="termos.html" target="_blank">Termos de Uso</a> e a <a href="privacidade.html" target="_blank">Política de Privacidade</a>, incluindo o tratamento dos meus dados de saúde.</span>
+      <span>Li e aceito os <a href="termos.html">Termos de Uso</a> e a <a href="privacidade.html">Política de Privacidade</a>, incluindo o tratamento dos meus dados de saúde.</span>
     </label>
     <button id="consentBtn" disabled>Continuar</button>
   </div>
@@ -1522,6 +1522,12 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   async function boot() {
     const { data: { session } } = await supa.auth.getSession();
     if (!session) { window.location.href = 'login.html'; return; }
+    // localStorage de sessão é compartilhado entre abas/PWAs do mesmo
+    // navegador — reabrir o app do aluno com uma sessão de master ou de
+    // profissional ainda ativa (deixada por outra aba) não pode cair num
+    // "não encontramos seu cadastro" sem saída; redireciona pro lugar certo,
+    // mesmo princípio das travas já existentes em index.html/onboarding.html.
+    if (session.user.email === 'meuprotocolo1@gmail.com') { window.location.href = 'master.html'; return; }
     $('settingsEmailText').textContent = session.user.email;
 
     const { data: st, error } = await supa
@@ -1531,7 +1537,12 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       .maybeSingle();
 
     if (error) { renderHomeError('Erro ao carregar seus dados: ' + error.message); return; }
-    if (!st) { renderHomeError('Não encontramos seu cadastro. Fale com seu personal trainer.'); return; }
+    if (!st) {
+      const { data: pro } = await supa.from('professionals').select('id').eq('email', session.user.email).maybeSingle();
+      if (pro) { window.location.href = 'index.html'; return; }
+      renderHomeError('Não encontramos seu cadastro. Fale com seu personal trainer.');
+      return;
+    }
     student = st;
 
     // Defesa em profundidade: login.html já bloqueia um login novo com

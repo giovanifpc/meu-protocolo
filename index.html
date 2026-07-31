@@ -162,7 +162,18 @@
       document.querySelector('main').innerHTML = `<div class="card"><p style="color:var(--danger)">Erro ao carregar sua conta: ${escapeHtml(error.message)}</p></div>`;
       return;
     }
-    if (!pro) { window.location.href = 'onboarding.html'; return; }
+    if (!pro) {
+      // Mesmo motivo da trava do e-mail master, agora pra sessão de ALUNO:
+      // localStorage compartilhado entre abas/PWAs pode trazer a sessão de
+      // um aluno pra cá (ex: reabrir o PWA do painel depois de logar como
+      // aluno em outra aba) — sem essa checagem, cairia direto no onboarding
+      // de profissional pedindo nome/negócio pro e-mail de um aluno de
+      // verdade. Bug real relatado em 2026-07-31.
+      const { data: stu } = await supa.from('students').select('id').eq('email', session.user.email).maybeSingle();
+      if (stu) { window.location.href = 'aluno.html'; return; }
+      window.location.href = 'onboarding.html';
+      return;
+    }
 
     professional = pro;
     $('profName').textContent = pro.display_name;

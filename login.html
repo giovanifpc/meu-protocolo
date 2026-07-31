@@ -52,10 +52,12 @@
   .msg.error { color:#C0392B; }
   .msg.ok { color:var(--accent); }
   .back-link { display:block; text-align:center; margin-top:16px; font-size:13px; color:var(--muted); cursor:pointer; text-decoration:underline; }
+  .as-badge { display:none; align-items:center; gap:6px; width:fit-content; background:rgba(45,107,228,.1); color:var(--primary); font-size:12px; font-weight:700; padding:5px 12px; border-radius:999px; margin-bottom:12px; }
 </style>
 </head>
 <body>
   <div class="card">
+    <div class="as-badge" id="asBadge"></div>
     <h1>Meu Protocolo</h1>
     <p class="hint" id="stepHint">Digite seu e-mail para receber um código de acesso.</p>
 
@@ -87,6 +89,20 @@
   const $ = (id) => document.getElementById(id);
   const msgBox = $('msgBox');
   let pendingEmail = '';
+
+  // Rótulo só decorativo (landing.html/landing-aluno.html mandam ?as=... na
+  // hora de linkar pra cá) — nunca decide nada sozinho, é só um sinal visual
+  // pra quem está entrando saber que chegou no lugar certo. Quem realmente
+  // decide profissional/aluno/master continua sendo o back-end, depois do
+  // código OTP confirmado (ver verifyOtpBtn abaixo) — sem link de landing
+  // (ex: alguém usando um link antigo/cru de login.html), a tela segue
+  // neutra, sem nenhum rótulo.
+  const asParam = new URLSearchParams(location.search).get('as');
+  if (asParam === 'profissional' || asParam === 'aluno') {
+    const badge = $('asBadge');
+    badge.textContent = asParam === 'aluno' ? 'Entrando como aluno' : 'Entrando como personal trainer';
+    badge.style.display = 'flex';
+  }
 
   function showMsg(text, type) {
     msgBox.textContent = text;

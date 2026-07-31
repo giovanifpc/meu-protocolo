@@ -93,6 +93,17 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### ✅ Fluxo de entrada (landing → login → onboarding) ganha rótulo visual de "quem é você" (2026-07-31, mesma sessão)
+
+Usuário relatou confusão pessoal com a quantidade de telas do funil de entrada (landing.html/landing-aluno.html → login.html → onboarding.html) — via `AskUserQuestion`, escopo fechado: o problema é falta de clareza de qual tela é pra quem (não quantidade de telas em si), e o foco é o usuário final (profissional/aluno), não só documentação interna.
+
+- **Mapeado o fluxo real antes de mexer** (útil registrar aqui): as duas landing pages sempre mandaram pro mesmo `login.html` genérico, que nunca soube nem perguntou "profissional ou aluno" — descobre isso sozinho no back-end, só depois do código OTP confirmado. `onboarding.html` só existe pra profissional novo (aluno nunca passa por ali — já é cadastrado pelo profissional antes do primeiro login), mas por ser o destino padrão de "e-mail nunca visto", qualquer sessão trocada que escapasse das travas (ver os 2 bugs de vazamento de sessão corrigidos essa semana) caía lá pedindo nome de negócio, sem nenhum aviso de que aquela tela é só pra isso.
+- **Decisão: mudança só de sinalização visual, zero mudança na lógica de roteamento** — a decisão de pra onde mandar depois do OTP continua 100% no back-end (a mesma lógica robusta de sempre), pra não abrir uma superfície nova de bug bem na semana em que 3 bugs de sessão trocada foram corrigidos.
+- **`landing.html`/`landing-aluno.html`**: os botões "Começar agora"/"Entrar" agora linkam pra `login.html?as=profissional`/`login.html?as=aluno` em vez de `login.html` cru.
+- **`login.html`**: lê `?as=` e mostra um selo pequeno acima do título ("Entrando como personal trainer"/"Entrando como aluno") — **só decorativo**, nunca usado pra decidir nada; sem o parâmetro (link antigo/cru), a tela segue neutra como sempre foi.
+- **`onboarding.html`**: ganhou o mesmo selo, só que fixo (sempre "Cadastro de personal trainer", já que essa tela é sempre só isso) — deixa explícito antes mesmo de pedir o nome, então mesmo alguém que caia ali por engano percebe na hora que não é o lugar certo.
+- Validado só por `node --check`/checagem de balanceamento de `<div>` nos 4 arquivos tocados — não visto num navegador real nesta sessão.
+
 ### 🔧 2 bugs reais: banner de novidades errado piscando no PWA do aluno + cache da foto estendido pro próprio app do aluno (2026-07-31, mesma sessão)
 
 Dois relatos do usuário testando as duas pontas ao mesmo tempo (profissional no Firefox, aluno no PWA):

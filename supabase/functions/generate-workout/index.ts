@@ -56,6 +56,49 @@ function aplicarVetoPorNivel(workouts: any[], nivel: string) {
   }));
 }
 
+// Rede de segurança contra exercício fora de contexto (ex: "Glúteo na
+// polia" aparecendo do nada num treino de "Peito e Tríceps") — garantia por
+// código, não só por instrução no prompt (mesmo princípio de
+// aplicarVetoPorNivel acima). Detecta o(s) grupo(s) musculares que o NOME
+// do treino declara e remove qualquer exercício de um grupo claramente
+// diferente. Heurística por palavra-chave, deliberadamente conservadora:
+// só age quando consegue detectar grupo tanto no título quanto no
+// exercício — na dúvida, não filtra (evita falso positivo derrubando um
+// exercício válido só porque o nome não bateu com nenhuma palavra-chave).
+const GRUPOS_KEYWORDS: Record<string, string[]> = {
+  peito: ['peito', 'peitoral', 'supino', 'crucifixo', 'cross over', 'crossover', 'voador', 'peck deck'],
+  triceps: ['tríceps', 'triceps'],
+  costas: ['costas', 'dorsal', 'puxada', 'remada', 'pulldown', 'levantamento terra', 'barra fixa', 'pull-up', 'pulley'],
+  biceps: ['bíceps', 'biceps', 'rosca'],
+  ombro: ['ombro', 'deltoide', 'deltóide', 'desenvolvimento', 'elevação lateral', 'elevação frontal', 'arnold press', 'encolhimento'],
+  perna: ['perna', 'quadríceps', 'quadriceps', 'posterior de coxa', 'isquiotibial', 'agachamento', 'leg press', 'cadeira extensora', 'cadeira flexora', 'panturrilha', 'afundo', 'passada', 'stiff', 'hack machine', 'avanço'],
+  gluteo: ['glúteo', 'gluteo', 'elevação pélvica', 'hip thrust', 'coice', 'quatro apoios', 'abdução de quadril', 'abdutora'],
+  abdomen: ['abdôm', 'abdom', 'prancha', 'oblíquo', 'obliquo', 'abdominal'],
+};
+
+function detectarGrupos(texto: string): string[] {
+  const t = (texto || '').toLowerCase();
+  return Object.entries(GRUPOS_KEYWORDS)
+    .filter(([, kws]) => kws.some((k) => t.includes(k)))
+    .map(([g]) => g);
+}
+
+function filtrarExerciciosForaDeContexto(workouts: any[]) {
+  return workouts.map((w) => {
+    const gruposDoDia = detectarGrupos(w.name || '');
+    // Sem grupo detectável no título (ex: "Full Body", "Treino A" genérico
+    // sem foco declarado) — não há base pra decidir, não filtra nada.
+    if (!gruposDoDia.length) return w;
+    const exercises = (w.exercises || []).filter((ex: any) => {
+      if (ex.tipo === 'cardio') return true; // cardio nunca é filtrado por grupo muscular
+      const gruposDoExercicio = detectarGrupos(ex.nome || '');
+      if (!gruposDoExercicio.length) return true; // nome sem palavra-chave reconhecida — não bloqueia
+      return gruposDoExercicio.some((g) => gruposDoDia.includes(g));
+    });
+    return { ...w, exercises };
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -85,7 +128,7 @@ Deno.serve(async (req) => {
     if (!professional) throw new Error('Profissional não encontrado.');
 
     const { data: student, error: studentErr } = await supa
-      .from('students').select('id, nome').eq('id', student_id).maybeSingle();
+      .from('students').select('id, nome, genero').eq('id', student_id).maybeSingle();
     if (studentErr || !student) throw new Error('Aluno não encontrado ou sem permissão pra acessá-lo.');
 
     const { data: anamnese } = await supa
@@ -142,11 +185,14 @@ Deno.serve(async (req) => {
     // (~7-9min por exercício considerando séries+descanso+transição).
     const exerciciosPorSessao = Math.max(3, Math.min(9, Math.round(duracaoSessao / 8)));
 
+    const generoTexto = student.genero === 'M' ? 'Masculino' : student.genero === 'F' ? 'Feminino' : 'Não informado';
+
     const prompt = `Você é um preparador físico de elite montando um protocolo de treino de musculação pro aluno ${student.nome}.
 
 DADOS DO ALUNO
 Objetivo: ${objetivoFinal}
 Nível: ${nivelFinal}
+Gênero: ${generoTexto}
 Anamnese/saúde:
 ${anamneseTexto}
 
@@ -163,6 +209,8 @@ ${historyResumo || 'Sem histórico ainda — é aluno novo ou sem sessões regis
 
 REGRAS DE MONTAGEM (siga rigorosamente)
 1. Gere exatamente ${freq} treinos (id "A", "B", "C"... até a letra necessária), com divisão de grupos musculares coerente com a frequência escolhida (ex: 2x = full body ou upper/lower; 3x = ABC; 4x = ABCD; 5-6x = divisão mais isolada por grupo).
+1b. CRÍTICO — nunca inclua um exercício de grupo muscular fora do que o nome do treino declara. Ex: um treino chamado "Peito e Tríceps" NUNCA pode ter um exercício de glúteo, perna ou costas misturado "de brinde" — isso é um erro grave. Cada exercício dentro de um treino precisa pertencer a algum dos grupos musculares citados no "name" daquele treino (exceto o item de cardio opcional da regra 9, que não tem grupo muscular).
+1c. Se o gênero do aluno for informado (Masculino/Feminino), use isso só como um leve ajuste de ênfase/seleção dentro do que já é fisiologicamente coerente — nunca como estereótipo rígido nem tema/cor. Nada de incluir exercício isolado de um grupo alheio ao foco do treino do dia só por causa do gênero (isso continua proibido pela regra 1b); o ajuste é sutil, dentro dos exercícios que já fazem sentido pro treino: ex. alguma prioridade extra pra glúteo/posterior de coxa em dias de perna pra alunas que buscam hipertrofia de membros inferiores, ou ênfase em peito/costas/ombro pros objetivos mais comuns de alunos. Se não informado, monte sem nenhum viés de gênero.
 2. Cada exercício pode receber uma "tecnica" de intensificação (um destes valores exatos, ou null se não se aplica): "Drop-Set", "Rest-Pause", "Cluster", "Myo-Reps", "Pirâmide Crescente", "Pirâmide Decrescente", "Super Slow", "Bi-Set", "Tri-Set", "Negativo".
 3. Aplique técnica com moderação e critério — nunca em todos os exercícios. Prefira aplicar no ÚLTIMO exercício isolador de cada treino (papel de "finalizador"), nunca no primeiro exercício composto pesado do treino.
 4. Para nível "iniciante": NÃO use "Drop-Set", "Cluster", "Rest-Pause" nem "Negativo" (mais arriscadas/exigentes tecnicamente) — prefira "Pirâmide Crescente", "Bi-Set" ou nenhuma técnica.
@@ -216,7 +264,8 @@ Responda APENAS com um JSON válido, sem texto antes ou depois, exatamente neste
     }
 
     const suggestion = JSON.parse(jsonMatch[0]);
-    suggestion.workouts = aplicarVetoPorNivel(suggestion.workouts || [], nivelFinal);
+    suggestion.workouts = filtrarExerciciosForaDeContexto(suggestion.workouts || []);
+    suggestion.workouts = aplicarVetoPorNivel(suggestion.workouts, nivelFinal);
     return jsonResponse(suggestion);
   } catch (err) {
     return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 400);

@@ -124,6 +124,14 @@
         <input type="email" id="newStudentEmail" placeholder="aluno@email.com">
       </div>
       <div class="field">
+        <label>Gênero (opcional)<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Pra que serve o gênero', 'Usado só como sinal de calibração no <strong>treino gerado por IA</strong> — ajuda a evitar exercício fora de contexto (ex: um exercício tipicamente feminino aparecendo num protocolo masculino) e ajusta sutilmente a ênfase de grupos musculares. Nunca é obrigatório, e o profissional sempre revisa/ajusta o resultado antes de publicar.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></label>
+        <select id="newStudentGenero">
+          <option value="">Prefiro não informar</option>
+          <option value="M">Masculino</option>
+          <option value="F">Feminino</option>
+        </select>
+      </div>
+      <div class="field">
         <label>WhatsApp (opcional)</label>
         <input type="tel" id="newStudentTelefone" placeholder="Com DDD e país, ex: 5511999999999">
       </div>
@@ -277,11 +285,16 @@
           <textarea data-role="note-text" data-student-id="${s.id}" placeholder="Nota privada sobre esse aluno (só você vê)...">${escapeHtml(note.nota || '')}</textarea>
           <button class="btn small" style="padding:7px 12px;font-size:12px;" data-role="save-note" data-student-id="${s.id}">Salvar nota</button>
 
-          <div class="notes-sub-label">WhatsApp e mensalidade</div>
+          <div class="notes-sub-label">WhatsApp, gênero e mensalidade</div>
           <div style="display:flex;gap:6px;">
             <input type="tel" data-role="telefone" data-student-id="${s.id}" placeholder="WhatsApp com DDD e país, ex: 5511999999999" value="${escapeHtml(s.telefone || '')}" style="flex:1;min-width:0;">
             <button class="btn small secondary" style="padding:7px 10px;font-size:11.5px;white-space:nowrap;flex-shrink:0;" data-role="copy-invite" data-student-id="${s.id}" data-name="${escapeHtml(s.nome)}" title="Abrir convite no WhatsApp (ou copiar o link, se não tiver WhatsApp cadastrado)">Enviar convite</button>
           </div>
+          <select data-role="genero" data-student-id="${s.id}">
+            <option value="" ${!s.genero ? 'selected' : ''}>Gênero: prefiro não informar</option>
+            <option value="M" ${s.genero === 'M' ? 'selected' : ''}>Gênero: Masculino</option>
+            <option value="F" ${s.genero === 'F' ? 'selected' : ''}>Gênero: Feminino</option>
+          </select>
           <div class="billing-row">
             <input type="number" step="0.01" data-role="mensalidade-valor" data-student-id="${s.id}" placeholder="Valor (R$)" value="${s.mensalidade_valor ?? ''}">
             <input type="number" min="1" max="31" data-role="mensalidade-dia" data-student-id="${s.id}" placeholder="Dia venc. (1-31)" value="${s.mensalidade_dia_vencimento ?? ''}">
@@ -406,11 +419,13 @@
 
   async function saveBilling(studentId) {
     const telefone = document.querySelector(`[data-role="telefone"][data-student-id="${studentId}"]`).value.replace(/\D/g, '');
+    const genero = document.querySelector(`[data-role="genero"][data-student-id="${studentId}"]`).value;
     const valorRaw = document.querySelector(`[data-role="mensalidade-valor"][data-student-id="${studentId}"]`).value;
     const diaRaw = document.querySelector(`[data-role="mensalidade-dia"][data-student-id="${studentId}"]`).value;
 
     const payload = {
       telefone: telefone || null,
+      genero: genero || null,
       mensalidade_valor: valorRaw ? parseFloat(valorRaw) : null,
       mensalidade_dia_vencimento: diaRaw ? parseInt(diaRaw, 10) : null,
     };
@@ -522,6 +537,7 @@
       return;
     }
     const telefone = $('newStudentTelefone').value.replace(/\D/g, '') || null;
+    const genero = $('newStudentGenero').value || null;
     const mensalidadeValor = $('newStudentMensalidadeValor').value ? Number($('newStudentMensalidadeValor').value) : null;
     const mensalidadeDia = $('newStudentMensalidadeDia').value ? Number($('newStudentMensalidadeDia').value) : null;
 
@@ -531,6 +547,7 @@
       nome,
       email,
       telefone,
+      genero,
       mensalidade_valor: mensalidadeValor,
       mensalidade_dia_vencimento: mensalidadeDia,
     }).select().single();
@@ -542,6 +559,7 @@
     $('newStudentName').value = '';
     $('newStudentEmail').value = '';
     $('newStudentTelefone').value = '';
+    $('newStudentGenero').value = '';
     $('newStudentMensalidadeValor').value = '';
     $('newStudentMensalidadeDia').value = '';
     await loadStudents();

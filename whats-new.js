@@ -7,11 +7,13 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.10.0',
+      version: '1.11.0',
       items: [
+        'Novo: campo de gênero (opcional) no cadastro do aluno — usado só pra calibrar o treino gerado por IA, nunca aparece pro aluno.',
+        'Corrigido: treino gerado por IA podia incluir exercício fora de contexto (ex: exercício de glúteo aparecendo num treino de peito/tríceps sem motivo).',
+        'Corrigido: logo recortada em formato Quadrado aparecia redonda no app do aluno.',
         'Novo: diário alimentar do aluno (aba Nutri) — ele registra o que comeu e você acompanha, sem precisar configurar nada. A meta de calorias/macros fica travada até você preencher os dados de uma consulta real com nutricionista parceira (é exigência legal, não falha do app).',
-        'Gifs de exercício ficaram mais rápidos e confiáveis — migramos a hospedagem pra um servidor dedicado.',
-        'Corrigido: alguns treinos gerados por IA saíam sem gif de exercício.'
+        'Gifs de exercício ficaram mais rápidos e confiáveis — migramos a hospedagem pra um servidor dedicado.'
       ]
     },
     aluno: {

@@ -84,7 +84,9 @@ SaaS de gestão para personal trainers autônomos brasileiros. O profissional as
 
 ### 5.4 Gestão de alunos
 
-Cada aluno tem: nome, e-mail, telefone (opcional), valor e dia de vencimento da mensalidade (opcional, é só o profissional acompanhando quando o *aluno* deve pagar *ele*, não tem nada a ver com a cobrança do Meu Protocolo), status (ativo/pausado/inativo), nota privada do profissional, foto de perfil.
+Cada aluno tem: nome, e-mail, telefone (opcional), gênero (opcional, Masculino/Feminino/prefiro não informar), valor e dia de vencimento da mensalidade (opcional, é só o profissional acompanhando quando o *aluno* deve pagar *ele*, não tem nada a ver com a cobrança do Meu Protocolo), status (ativo/pausado/inativo), nota privada do profissional, foto de perfil.
+
+O campo de gênero é opcional e serve só pra calibrar o treino gerado por IA (evita exercício fora de contexto, ex. um exercício focado em glúteo aparecendo num treino de peito sem motivo — ver 5.5) — nunca aparece pro aluno, não afeta nada além da geração de treino, e pode ser editado a qualquer momento no painel expansível do aluno em Alunos.
 
 O app **não processa pagamento de aluno pra profissional** — só ajuda o profissional a lembrar quem está com mensalidade atrasada, com um botão pronto pra abrir o WhatsApp com mensagem sugerida. O dinheiro nunca passa pelo Meu Protocolo nessa relação. Desde 2026-07-24 o profissional também pode exibir o próprio QR/chave Pix pro aluno dentro do app (ver 5.12) — isso não muda esse fato, é só mais fácil o aluno ver o Pix sem precisar pedir por fora.
 
@@ -94,7 +96,7 @@ Ao cadastrar um aluno novo (desde 2026-07-27), aparece um banner com o WhatsApp 
 
 Dois jeitos de montar o treino de um aluno:
 - **Manual**: profissional monta do zero — título, periodização, adiciona treinos (A, B, C...), busca exercício na biblioteca (~1550 exercícios com GIF de execução), define séries/reps/descanso.
-- **Por IA**: um assistente pergunta objetivo, nível do aluno, periodização desejada, frequência semanal e duração da sessão — a IA gera o protocolo inteiro (exercícios, divisão, técnicas de intensificação), considerando automaticamente a anamnese de saúde do aluno (lesões, restrições) sem o profissional precisar redigitar nada. O resultado cai na tela de edição normal pra revisão antes de publicar — nada é publicado automaticamente sem o profissional confirmar.
+- **Por IA**: um assistente pergunta objetivo, nível do aluno, periodização desejada, frequência semanal e duração da sessão — a IA gera o protocolo inteiro (exercícios, divisão, técnicas de intensificação), considerando automaticamente a anamnese de saúde do aluno (lesões, restrições) e o gênero cadastrado (calibra ênfase, evita exercício fora de contexto) sem o profissional precisar redigitar nada. O resultado cai na tela de edição normal pra revisão antes de publicar — nada é publicado automaticamente sem o profissional confirmar.
 
 **Periodização**: o sistema calcula sozinho como sets/reps/descanso evoluem semana a semana, a partir de uma técnica escolhida (Linear, Ondulatória diária, Ondulatória semanal, Em blocos, Reversa, ou Manual/sem progressão automática).
 

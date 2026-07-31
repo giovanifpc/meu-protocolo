@@ -108,7 +108,7 @@ Ao criar um treino novo por cima de um já existente, o anterior não é apagado
 
 ### 5.6 App do aluno
 
-O aluno usa um app separado, instalável na tela inicial do celular (PWA). Ele vê o próximo treino do seu ciclo, executa marcando séries feitas (com carga e reps), tem timer de descanso automático, e ao final vê um resumo com avaliação de humor. Também acompanha evolução de carga (gráfico), histórico de treinos, avaliação física (se o profissional já registrou alguma) e orientação nutricional. Ganha "conquistas" (badges) por marcos como primeiro treino, sequência de semanas treinando, etc.
+O aluno usa um app separado, instalável na tela inicial do celular (PWA). Ele vê o próximo treino do seu ciclo, executa marcando séries feitas (com carga e reps), tem timer de descanso automático, e ao final vê um resumo com avaliação de humor. Se a máquina de um exercício estiver ocupada, o botão "Lista" (rodapé da execução, desde 2026-07-31) mostra todos os exercícios do treino com check nos concluídos — toca em qualquer um pra pular direto pra ele, sem perder o controle do que já fez; "Próximo" passa a pular sozinho quem já foi concluído, em vez de seguir só a ordem original. Também acompanha evolução de carga (gráfico), histórico de treinos, avaliação física (se o profissional já registrou alguma) e orientação nutricional. Ganha "conquistas" (badges) por marcos como primeiro treino, sequência de semanas treinando, etc.
 
 Desde 2026-07-27, no primeiro acesso (antes de responder a anamnese de saúde), a Início mostra um card de boas-vindas pedindo pra responder a anamnese antes de começar a usar o app — não bloqueia o resto do app, é só um lembrete que fica ali até o aluno responder.
 

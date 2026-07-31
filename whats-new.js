@@ -20,8 +20,9 @@
       ]
     },
     aluno: {
-      version: '1.5.1',
+      version: '1.6.0',
       items: [
+        'Novo: durante o treino, botão "Lista" mostra todos os exercícios com check nos concluídos — toque em qualquer um pra pular direto pra ele. Útil quando a máquina do próximo exercício está ocupada: faz outro primeiro e volta depois sem perder o controle.',
         'Corrigido: sua foto de perfil recarregava do zero toda vez que você reabria o app — agora fica em cache e aparece na hora.',
         'Novo: diário alimentar em Nutri — registre o que você comeu (busque ou cadastre o alimento) e veja o total de calorias e macros do dia, direto no app.',
         'A meta de calorias/macros aparece quando seu personal liberar, depois de uma consulta com a nutricionista parceira dele.',

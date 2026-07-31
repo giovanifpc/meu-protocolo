@@ -93,6 +93,15 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### ✅ Botão "Editar" ganha destaque (canto superior direito do card) + dropdown/dropup ao abrir/salvar (2026-07-31, mesma sessão)
+
+Confirmado pelo usuário: aplicou a `supabase_54` manualmente pelo SQL Editor do painel Supabase (sem precisar do PC) e testou "Salvar edição" com sucesso. Dois ajustes de UX pedidos em seguida: (1) o ícone de lápis (editar) estava "enterrado" no fim da fileira de botões de ação, sem destaque — pediu um botão azul, fixo no canto superior direito do card, à frente do nome/e-mail; (2) depois de salvar, o painel de edição continuava aberto — pediu que "Editar" abra o painel (dropdown) e "Salvar edição" feche (dropup).
+
+- **`alunos.html`**: o botão de editar (`data-role="toggle-notes"`, mesmo `data-role`/handler de sempre, só mudou de lugar e estilo) saiu de dentro de `.student-actions` e virou um botão circular azul (`.edit-fab`, reaproveita `.btn` + `.btn-icon` pra cor/ícone, só adiciona `position:absolute;top:12px;right:12px`) — `.student-item` ganhou `position:relative` e `.student-row` ganhou `padding-right:46px` pra reservar espaço e o texto nunca ficar embaixo do botão.
+- **Dropup real**: `saveStudentEdit()` agora remove a classe `open` do painel assim que o salvamento tem sucesso, antes mesmo do `loadStudents()` recarregar a lista — fecha na hora, feedback imediato. "Editar" continua alternando abrir/fechar (clique de novo fecha sem salvar, útil pra desistir de uma edição).
+- `whats-new.js` (mesma versão `1.11.0`, ainda não vista pelo usuário) e `sw.js` `CACHE_NAME` `v14`→`v15` ganharam mais uma linha/bump pra refletir esse ajuste.
+- Validado só por `node --check`/checagem de `<div>`/IDs órfãos — não visto num navegador real nesta sessão.
+
 ### 🔧 Bug real: editor de aluno tinha 2 botões de salvar que confundiam e um dava erro de coluna — painel consolidado num só "Salvar edição" (2026-07-31, mesma sessão)
 
 Reportado pelo usuário com print de verdade: tentou editar o gênero de um aluno já cadastrado, clicou "Salvar WhatsApp/mensalidade" (o botão que agora também grava `genero`) e recebeu `Could not find the 'genero' column of 'students' in the schema cache` — confirma que a `supabase_54` (seção anterior) ainda não foi aplicada em produção, como já esperado. Aproveitando o relato, pediu pra resolver um problema de UX mais antigo: o painel de edição tinha **dois botões de salvar separados** ("Salvar nota" e "Salvar WhatsApp/mensalidade"), fácil de editar um campo, clicar no botão errado e achar que salvou sem ter salvo. Também apontou que "Marcar pago hoje" ficava solto, misturado visualmente com os campos de valor/vencimento da mensalidade.

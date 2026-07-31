@@ -35,10 +35,12 @@
   main { max-width:720px; margin:0 auto; padding:20px 20px 90px; }
   .card { background:var(--card-grad); border:1px solid rgba(20,30,45,.04); box-shadow:var(--shadow-card); border-radius:var(--radius-lg); padding:16px 18px; margin-bottom:16px; }
   .card h2 { font-size:15px; margin:0 0 12px; }
-  .student-item { background:var(--card); border:1px solid rgba(20,30,45,.18); border-radius:var(--radius); box-shadow:0 3px 10px rgba(20,30,45,.09); padding:14px; margin-bottom:18px; }
+  .student-item { position:relative; background:var(--card); border:1px solid rgba(20,30,45,.18); border-radius:var(--radius); box-shadow:0 3px 10px rgba(20,30,45,.09); padding:14px; margin-bottom:18px; }
   .student-item:last-child { margin-bottom:0; }
-  .student-row { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+  .student-row { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; padding-right:46px; }
   .student-actions { display:flex; gap:6px; flex-wrap:wrap; }
+  .edit-fab { position:absolute; top:12px; right:12px; width:38px; height:38px; border-radius:50%; padding:0; box-shadow:0 3px 10px rgba(45,107,228,.4); z-index:2; flex-shrink:0; }
+  .edit-fab svg { width:17px; height:17px; }
   .student-name-row { display:flex; align-items:center; gap:8px; }
   .student-name { font-weight:600; font-size:14px; }
   .student-email { font-size:12px; color:var(--muted); }
@@ -254,6 +256,7 @@
       const note = notesByStudent[s.id] || { nota: '' };
       return `
       <div class="student-item">
+        <button class="btn btn-icon edit-fab" data-role="toggle-notes" data-student-id="${s.id}" title="Editar aluno" aria-label="Editar aluno"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
         <div class="student-row">
           <div class="student-name-row">
             <span class="status-dot ${s.status}" title="${STATUS_LABELS[s.status]}"></span>
@@ -267,7 +270,6 @@
             <a class="btn secondary" style="padding:7px 12px;font-size:12px;" href="avaliacoes.html?student_id=${s.id}">Avaliação</a>
             <a class="btn secondary" style="padding:7px 12px;font-size:12px;" href="nutri.html?student_id=${s.id}">Nutri</a>
             <button class="btn secondary btn-icon" style="padding:7px 10px;" data-role="toggle-msg" data-student-id="${s.id}" title="Enviar mensagem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
-            <button class="btn secondary btn-icon" style="padding:7px 10px;" data-role="toggle-notes" data-student-id="${s.id}" title="Nota privada e status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
           </div>
         </div>
         <div class="notes-panel" id="msgPanel-${s.id}">
@@ -475,6 +477,10 @@
     }
 
     toast('Edição salva.');
+    // Dropup: fecha o painel de edição na hora, sem esperar o reload da
+    // lista terminar — feedback imediato de que salvou e recolheu.
+    const panel = $('notesPanel-' + studentId);
+    if (panel) panel.classList.remove('open');
     await loadStudents();
   }
 

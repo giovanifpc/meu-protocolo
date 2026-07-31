@@ -93,6 +93,15 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### 🔧 Bug real: crop "Quadrado" da logo era ignorado — banner do aluno sempre mostrava círculo (2026-07-31, mesma sessão)
+
+Reportado pelo usuário: trocou a logo pra uma versão recortada em Quadrado (`#cropShapeToggle` em `perfil.html`, ferramenta já existia desde antes), mas o banner da Início em `aluno.html` continuou mostrando a logo dentro de um círculo.
+
+- **Causa raiz**: o recorte em si sempre funcionou certo — `logoCropConfirmBtn` já gera um PNG opaco (Quadrado) ou com cantos transparentes via `ctx.clip()` circular (Círculo), dependendo de `cropState.shape`. O bug estava nos containers que **exibem** a logo depois: `.pro-avatar` (`aluno.html`, banner da Início) e `.student-preview-frame .sp-avatar` (`perfil.html`, modal "Visualizar como aluno") tinham `border-radius:50%` fixo no CSS, forçando qualquer imagem — inclusive uma já recortada em quadrado — a aparecer redonda.
+- **Corrigido nos dois arquivos**: classe nova `has-logo`, aplicada só quando existe uma imagem de verdade (nunca no fallback de inicial do nome, que continua circular de propósito) — sobrescreve pra `border-radius:var(--radius-lg)` em vez de `50%`, deixando a transparência já embutida no PNG pelo crop decidir a forma final (quadrado com cantos levemente arredondados, ou círculo, dependendo do que o profissional escolheu).
+- **Checado `.drawer-avatar`** (avatar pequeno no menu lateral do aluno) como parte da revisão de ponta a ponta — não tinha o mesmo bug: nunca recebe a logo, só mostra a inicial do nome via `textContent` (`$('drawerAvatar').textContent = ...`), então seu `border-radius:50%` fixo está correto e não precisou de mudança.
+- Validado só por `node --check` no JS extraído dos dois arquivos + checagem de balanceamento de `<div>`/`</div>` — não visto num navegador real nesta sessão (mesma limitação de sempre pra sessão remota sem acesso a login/banco ao vivo).
+
 ### 🔧 Bug real: sessão de ALUNO vazou pro onboarding de profissional (mesma classe do bug do master, 2026-07-31)
 
 Reportado pelo usuário, reproduzido de verdade: estava logado como profissional no PWA, acessou `landing-aluno.html` numa conta nova e fez login como aluno na mesma sessão de navegador (localStorage é global por origem, não por aba/PWA — mesma causa raiz já documentada no bug do master em 2026-07-27). Ao reabrir o PWA do profissional depois, caiu direto no onboarding pedindo nome de negócio — pro e-mail do aluno que acabara de logar. Usuário não chegou a digitar/enviar o nome, então não deve ter criado profissional fantasma desta vez, mas vale um `select` rápido em `professionals` pelo e-mail desse aluno de teste quando for aplicar, só pra confirmar.

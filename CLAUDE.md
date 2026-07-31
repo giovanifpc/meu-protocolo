@@ -93,6 +93,31 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### ⏳ Pendência: perguntar pro Mercado Pago se o dono da aplicação pode conectar conta própria via Mercado Pago Connect (2026-07-31, mesma sessão)
+
+Usuário quer usar o próprio Meu Protocolo pra gerenciar os próprios alunos de personal trainer, cobrando mensalidade automática deles — mas levantou uma preocupação real e ainda sem resposta: ele é dono do CPF tanto da conta que é dona da Aplicação Mercado Pago (recebe a assinatura SaaS de todos os profissionais) quanto de qualquer conta que ele conectasse via Mercado Pago Connect como "profissional" pra receber dos próprios alunos — mesmo padrão que o Mercado Pago/Mercado Livre pune com banimento permanente de CPF em caso de autotransação/venda pra si mesmo, mesmo sem dinheiro real trocando de mãos na aparência de conexão. **Decisão: não implementar nada disso sem confirmação oficial do Mercado Pago antes** — risco de derrubar a conta que sustenta a cobrança de toda a plataforma é grande demais pra arriscar sem essa confirmação.
+
+**Ação pendente pro usuário** (fora do código, ele mesmo vai fazer "em outro momento"): abrir um chamado técnico no canal de desenvolvedores do Mercado Pago, `https://www.mercadopago.com.br/developers/pt/support/center` (seção de suporte técnico/tickets — fica vinculado à Aplicação "Meu Protocolo" já cadastrada lá, diferente do SAC genérico de conta pessoal), com o texto abaixo:
+
+> Olá, tenho uma dúvida sobre política de uso do Mercado Pago Connect (marketplace) antes de habilitar uma funcionalidade em produção, e prefiro confirmar com vocês antes de implementar.
+>
+> **Contexto**: tenho uma aplicação registrada (Meu Protocolo) que é um sistema de gestão para personal trainers autônomos. O funcionamento tem duas partes:
+>
+> 1. Os personal trainers que usam meu sistema pagam uma assinatura mensal, que cai na minha própria conta Mercado Pago (a mesma conta dona da aplicação).
+> 2. Cada personal trainer pode, opcionalmente, conectar a própria conta Mercado Pago (via Mercado Pago Connect) pra cobrar automaticamente a mensalidade dos próprios alunos dele, com uma pequena taxa ficando pra mim.
+>
+> **A dúvida**: eu também sou personal trainer e gostaria de usar meu próprio sistema pra gerenciar meus próprios alunos — incluindo cobrar a mensalidade deles automaticamente, do mesmo jeito que qualquer outro personal trainer que usa a plataforma faria.
+>
+> Isso significaria que eu, como dono da aplicação, também conectaria uma conta Mercado Pago via Mercado Pago Connect pra receber pagamentos de terceiros reais (meus próprios alunos de personal trainer — pessoas de fora, sem nenhuma relação com a empresa). Não haveria nenhum pagamento de assinatura da minha própria conta de personal trainer pra minha conta de dono da aplicação (essa conta específica ficaria isenta dessa cobrança).
+>
+> Minha preocupação é: como o CPF que é dono da aplicação seria o mesmo CPF conectado como vendedor dentro do próprio marketplace dela, isso pode ser identificado como uma prática irregular ou de risco (mesmo os pagamentos recebidos sendo de clientes reais e legítimos, sem nenhuma simulação)?
+>
+> Gostaria de uma confirmação de vocês antes de habilitar isso, pra não colocar a conta principal (que sustenta a cobrança de todos os outros usuários da plataforma) em risco.
+>
+> Fico no aguardo.
+
+**Solução provisória, já disponível hoje sem nenhum código novo**: usar o Pix manual (QR + chave copia-e-cola) pros próprios alunos — mesmo mecanismo que qualquer Starter já usa, zero conexão OAuth, zero risco de vinculação de conta. Cobrança automática pra si mesmo fica pendente até a resposta do Mercado Pago (ou até uma alternativa sem OAuth ser desenhada — ver discussão em andamento na mesma sessão sobre uma possível cobrança direta via a própria conta da plataforma, sem Mercado Pago Connect).
+
 ### ✅ Fluxo de entrada (landing → login → onboarding) ganha rótulo visual de "quem é você" (2026-07-31, mesma sessão)
 
 Usuário relatou confusão pessoal com a quantidade de telas do funil de entrada (landing.html/landing-aluno.html → login.html → onboarding.html) — via `AskUserQuestion`, escopo fechado: o problema é falta de clareza de qual tela é pra quem (não quantidade de telas em si), e o foco é o usuário final (profissional/aluno), não só documentação interna.

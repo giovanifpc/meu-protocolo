@@ -226,12 +226,42 @@
     await loadStudents();
   }
 
+  // Cada página do profissional (index/alunos/treinos...) é um documento
+  // HTML separado — trocar de aba recarrega a página do zero, então uma
+  // URL assinada guardada só em variável JS se perde a cada navegação. Sem
+  // esse cache, toda vez que o painel de um aluno é reaberto (mesmo sem
+  // nada ter mudado) o app pedia uma URL assinada NOVA — e como o Supabase
+  // gera uma assinatura diferente a cada chamada, mesmo pro mesmo arquivo,
+  // o navegador nunca reconhecia como "a mesma imagem" e baixava tudo de
+  // novo. `sessionStorage` sobrevive à troca de página (só é limpo ao
+  // fechar a aba), então a mesma URL assinada — e o cache HTTP da imagem
+  // que vem junto dela — é reaproveitada até pouco antes de expirar de
+  // verdade.
+  function getCachedSignedUrl(cacheKey) {
+    try {
+      const raw = sessionStorage.getItem(cacheKey);
+      if (!raw) return null;
+      const { url, exp } = JSON.parse(raw);
+      if (Date.now() < exp) return url;
+    } catch {}
+    return null;
+  }
+  function setCachedSignedUrl(cacheKey, url, ttlMs) {
+    try { sessionStorage.setItem(cacheKey, JSON.stringify({ url, exp: Date.now() + ttlMs })); } catch {}
+  }
+
   async function loadStudentAvatarPreview(studentId) {
     const el = $('avatarPreview-' + studentId);
     if (!el) return;
-    const { data, error } = await supa.storage.from('student-avatars').createSignedUrl(`${studentId}/avatar.jpg`, 3600);
-    if (error || !data) return;
-    el.innerHTML = `<img src="${data.signedUrl}" alt="">`;
+    const cacheKey = 'mp_avatar_url_' + studentId;
+    let url = getCachedSignedUrl(cacheKey);
+    if (!url) {
+      const { data, error } = await supa.storage.from('student-avatars').createSignedUrl(`${studentId}/avatar.jpg`, 3600);
+      if (error || !data) return;
+      url = data.signedUrl;
+      setCachedSignedUrl(cacheKey, url, 55 * 60 * 1000); // guarda com folga da validade real (1h)
+    }
+    el.innerHTML = `<img src="${url}" alt="">`;
   }
 
   const STATUS_LABELS = { ativo: 'Ativo', pausado: 'Pausado', inativo: 'Inativo' };

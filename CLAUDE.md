@@ -93,6 +93,16 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### 🔧 Bug real: foto de perfil do aluno recarregava do zero toda vez que o profissional trocava de página (2026-07-31, mesma sessão)
+
+Reportado pelo usuário: toda vez que abria o painel "Editar" de um aluno, a foto de perfil aparecia carregando visivelmente, de forma lenta — mesmo já tendo visto essa mesma foto minutos antes.
+
+- **Causa raiz**: cada página do painel do profissional (`index.html`/`alunos.html`/`treinos.html`/...) é um documento HTML separado — trocar de aba é sempre um reload completo, não navegação de SPA. `loadStudentAvatarPreview()` pedia uma URL assinada nova (`createSignedUrl`) toda vez que o painel de um aluno era aberto pela primeira vez **naquele carregamento de página** — e como o Supabase gera uma assinatura diferente a cada chamada (mesmo pro mesmo arquivo, sem nada ter mudado), a URL final também mudava sempre. Pro navegador, URL diferente = recurso diferente = nunca reaproveita o cache de imagem já baixado, então baixava a foto inteira de novo a cada reabertura da página.
+- **Corrigido**: a URL assinada agora fica guardada em `sessionStorage` (sobrevive à troca de página dentro da mesma aba, some só ao fechar a aba) por 55min de uma validade real de 60min — enquanto válida, reaproveita a mesma URL em vez de pedir uma nova, e como a URL fica idêntica, o cache HTTP normal do navegador passa a funcionar de verdade (carregamento instantâneo nas vezes seguintes).
+- **Trade-off aceito conscientemente**: se o aluno trocar de foto enquanto o profissional está no meio dessa janela de cache (até 55min), o profissional pode continuar vendo a foto antiga até a cache expirar ou fechar a aba — não há hoje nenhum sinal (timestamp de upload, canal realtime) pro profissional saber que precisa invalidar antes disso. Risco baixo (troca de foto não é evento frequente) e não vale a complexidade de resolver agora.
+- **Mesma causa raiz provavelmente afeta outras imagens assinadas do app** (logo do profissional em `aluno.html`/`perfil.html`/`financeiro.html`, QR Pix, fotos de avaliação física, mídia de exercício) — não tocadas nesta leva, já que o relato foi especificamente sobre a foto do aluno; registrado aqui como candidato a mesma correção se o usuário notar lentidão parecida em algum desses lugares.
+- Validado só por `node --check` no JS extraído — não visto num navegador real nesta sessão (sem como medir o ganho de velocidade de verdade sem acesso a rede/banco ao vivo).
+
 ### ✅ Botão "Editar" ganha destaque (canto superior direito do card) + dropdown/dropup ao abrir/salvar (2026-07-31, mesma sessão)
 
 Confirmado pelo usuário: aplicou a `supabase_54` manualmente pelo SQL Editor do painel Supabase (sem precisar do PC) e testou "Salvar edição" com sucesso. Dois ajustes de UX pedidos em seguida: (1) o ícone de lápis (editar) estava "enterrado" no fim da fileira de botões de ação, sem destaque — pediu um botão azul, fixo no canto superior direito do card, à frente do nome/e-mail; (2) depois de salvar, o painel de edição continuava aberto — pediu que "Editar" abra o painel (dropdown) e "Salvar edição" feche (dropup).

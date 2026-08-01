@@ -1,6 +1,8 @@
 # Escopo: Aluno de Teste (preview ao vivo) + Banner personalizado (Elite)
 
-> **Status: escopo desenhado, NADA implementado ainda** (registrado em 2026-08-01). Motivado por uma dor real do profissional: hoje ele não tem nenhum jeito de ver como o app do aluno realmente fica depois de configurar cor/logo — só uma prévia estática reduzida (`perfil.html`, modal "Visualizar como aluno"), que não é o app de verdade, não reage a interação, não mostra dark mode, não mostra as telas com dado real. Isso ficou ainda mais evidente ao desenhar a ideia de banner personalizado (Elite) — julgar se um logo continua legível sobre uma foto de capa arbitrária só dá pra fazer vendo o app de verdade, ao vivo.
+> **Status: escopo FECHADO, pronto pra implementação — nenhuma decisão pendente.** Desenhado em 2026-08-01, perguntas em aberto (seção 4) resolvidas em 2026-08-02. Motivado por uma dor real do profissional: hoje ele não tem nenhum jeito de ver como o app do aluno realmente fica depois de configurar cor/logo — só uma prévia estática reduzida (`perfil.html`, modal "Visualizar como aluno"), que não é o app de verdade, não reage a interação, não mostra dark mode, não mostra as telas com dado real. Isso ficou ainda mais evidente ao desenhar a ideia de banner personalizado (Elite) — julgar se um logo continua legível sobre uma foto de capa arbitrária só dá pra fazer vendo o app de verdade, ao vivo.
+>
+> **Próxima sessão começa direto na seção 6 (checklist de implementação, em ordem)** — não precisa reler o resto pra decidir nada, só pra consultar detalhe de cada item ao codar.
 
 ---
 
@@ -112,15 +114,44 @@ Motivou a criação do aluno de teste (só dá pra julgar como um banner fica de
 
 ---
 
-## 4. Perguntas em aberto (não decidir agora, retomar quando a implementação começar)
+## 4. Perguntas em aberto — todas resolvidas em 2026-08-02
 
-1. Vale um pequeno aviso ao gerar treino por IA pro aluno de teste, avisando que isso consome uma chamada real à API da Claude (custo real, mesmo sendo aluno fictício)? Ou deixar sem aviso, já que é exatamente o tipo de coisa que o profissional quer testar de verdade?
-2. Mensagens com aluno de teste ficam visíveis na inbox marcadas como teste (decisão atual, seção 2.6) ou seria melhor escondidas completamente da lista? Registrado como decisão tomada, mas vale confirmar com o usuário antes de codar.
-3. O card "Aluno de teste" em `alunos.html` deveria mostrar algum indicador de "já foi promovido alguma vez" ou esse histórico não importa (já que promover apaga o estado de teste pra sempre, sem log)?
-4. Formato exato de aspect ratio do banner (16:9 vs 21:9) — decidir olhando como fica na prática, provavelmente durante a implementação mesmo, usando o próprio aluno de teste pra julgar.
+1. ~~Aviso de custo de IA ao gerar treino de teste?~~ — **Decidido: não avisar.** É exatamente o tipo de coisa que o profissional quer testar de verdade (qualidade do treino gerado); um aviso de custo antes disso só atrapalharia o fluxo sem mudar a decisão de ninguém.
+2. ~~Mensagens com aluno de teste: visíveis marcadas ou escondidas?~~ — **Decidido: visíveis na inbox normal, com uma tag "TESTE" clara** (confirma a decisão que já estava registrada na seção 2.6) — útil pra testar o fluxo de mensagens de verdade, sem risco de confundir com conversa real.
+3. Indicador de "já foi promovido alguma vez" no card — **decidido não implementar**: promover apaga o estado de teste pra sempre sem log (seção 2.9), e não há motivo de negócio real pra rastrear isso. Se um profissional promover e criar um aluno de teste novo depois, o card simplesmente não carrega histórico nenhum — comportamento aceito.
+4. Aspect ratio do banner (16:9 vs 21:9) — **fica pra decidir durante a implementação**, olhando como cada proporção fica na prática dentro do próprio app (usar o Aluno de Teste recém-criado pra julgar, é literalmente o caso de uso que motivou essa feature existir). Não é uma decisão que bloqueia começar a codar — só precisa ser resolvida antes de fechar a etapa 6.6 do checklist abaixo.
 
 ## 5. Fora de escopo desta leva
 
-- Nenhuma decisão de arquitetura foi implementada — esquema (`is_test`, índice único, gates de plano) e telas descritas aqui são desenho, não código.
 - Não cobre a criação de mais de 1 aluno de teste por profissional (decisão deliberada, ver seção 2.2).
 - Não cobre uso do aluno de teste como ferramenta de onboarding automatizado pro profissional (ex: "aluno de teste pré-criado pra todo profissional novo") — se isso fizer sentido no futuro, é uma decisão separada.
+
+## 6. Checklist de implementação, em ordem
+
+Pensado pra minimizar retrabalho — schema e as travas de segurança vêm primeiro (é o que todo o resto depende), a parte mais sensível (modo sudo) vem antes das pontas soltas menores, e o banner (feature independente) fica por último. Próximo número de migration livre: **`supabase_58_...sql`**.
+
+1. **Migration `supabase_58_aluno_teste.sql`**:
+   - `alter table students add column is_test boolean not null default false;`
+   - `alter table students add constraint students_email_required_unless_test check (is_test or email is not null);` (email hoje é `not null` — vira condicional).
+   - Índice único parcial: `create unique index students_one_test_per_professional on students (professional_id) where is_test;` — garantia real de "1 por profissional", não só checagem client-side.
+   - Atualizar `get_student_ranking()`/`get_professional_student_ranking()` (supabase_26/supabase_55): adicionar `and not s.is_test` (ou `and not st.is_test`, conferir o alias usado) nas CTEs que agregam por aluno.
+   - Nenhuma RPC nova precisa ser criada pro modo sudo em si (seção 2.4) — é leitura direta já coberta pela RLS existente de `students`.
+2. **`alunos.html` — criação e gestão do aluno de teste** (seções 2.2, 2.3, 2.8, 2.9):
+   - Checkbox "Este é um aluno de teste" no form de "Adicionar aluno" — esconde WhatsApp/mensalidade/gênero, e-mail vira opcional.
+   - Bloqueio de criar um 2º aluno de teste (mensagem clara, além da constraint de banco).
+   - Banner de convite pós-cadastro (`if (!novoAluno.is_test)`) — não deve aparecer pra aluno de teste.
+   - Card separado "Aluno de teste" (fora da lista normal), com "Navegar como este aluno" (`aluno.html?sudo_student_id=...`), "Editar", "Excluir" (reaproveita fluxo já existente), "Transformar em aluno de verdade" (formulário de e-mail obrigatório + WhatsApp/mensalidade opcionais, `update` atômico tirando `is_test`).
+   - Contagem de alunos (limite do plano) e qualquer outra query de "quantos alunos" nesta página: `and not is_test`.
+3. **`aluno.html` — modo sudo** (seções 2.4, 2.5, 2.6 — a parte mais sensível, revisar com cuidado extra):
+   - `boot()`: branch novo pra `?sudo_student_id=`, resolvendo só com `is_test = true` + posse do profissional — nunca cria sessão nova.
+   - Faixa fixa "Modo teste — navegando como {nome}" + "Sair do modo teste" (`window.location.href='alunos.html'`, nunca `signOut()`).
+   - **Cuidado crítico já identificado**: o botão "Sair" normal (Configurações) precisa ficar oculto ou trocado em modo sudo — não pode chamar `supa.auth.signOut()`, senão desloga a conta real do profissional.
+   - Esconder em modo sudo: aba Financeiro inteira, toggle de notificações push, tela de consentimento LGPD (nunca aparece).
+4. **`mensagens.html`**: tag "TESTE" na inbox quando a conversa for com o aluno de teste (decisão confirmada, item 2 da seção 4).
+5. **`index.html`**: stat-cards de "alunos"/"treinos essa semana" e a lista de alertas ("nunca treinou"/mensalidade atrasada) — excluir aluno de teste de todas (`and not is_test`).
+6. **Banner personalizado Elite** (seção 3, feature independente — só depois do Aluno de Teste estar funcionando, já que é a ferramenta usada pra julgar o resultado):
+   - Upload em `perfil.html`, gate Elite (upload E exibição), reaproveitando o bucket `professional-logos` (path `{professional_id}/banner.jpg`, sem coluna nova).
+   - Crop com proporção larga nova (16:9 ou 21:9 — decidir olhando o resultado real, ver item 4 da seção 4).
+   - Exibição em `aluno.html` com scrim escuro obrigatório sobre a foto (`linear-gradient(rgba(0,0,0,.15),rgba(0,0,0,.35)), url(banner)`) — nunca a foto pura.
+   - Botão "Remover banner" — volta pro degradê de cor do preset.
+7. **Testar ponta a ponta antes de considerar fechado** (login real, banco real — mesma prática já estabelecida no projeto): criar aluno de teste, bloquear tentativa de criar um 2º, entrar em modo sudo e confirmar que Financeiro/push/LGPD somem, confirmar que "Sair" das Configurações não desloga o profissional real, confirmar exclusão do ranking/contagens/alertas, promover pra aluno real preservando protocolo/anamnese, e só então testar o banner Elite com o próprio aluno de teste.

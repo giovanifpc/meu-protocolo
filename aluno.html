@@ -286,9 +286,12 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .finish-stat .fs-num{font-size:24px;font-weight:800;color:var(--primary)}
 .finish-stat .fs-lbl{font-size:10px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
 .finish-actions{width:100%;display:flex;flex-direction:column;gap:11px}
-.rating-btn{flex:1;max-width:96px;padding:16px 4px;border-radius:16px;border:2px solid var(--line);background:var(--card);color:var(--text);font-size:26px;cursor:pointer;font-family:var(--font)}
-.rating-btn.selected{border-color:var(--primary);background:rgba(var(--primary-rgb),.06)}
-.rating-btn small{display:block;font-size:11px;margin-top:6px;color:var(--muted);font-weight:600}
+.rpe-scale{display:flex;gap:5px;justify-content:center;margin-bottom:14px}
+.rpe-btn{flex:1;max-width:32px;aspect-ratio:1;border:none;border-radius:8px;color:#fff;font-weight:800;font-size:12.5px;cursor:pointer;padding:0;opacity:.5;transition:transform .12s ease,opacity .12s ease}
+.rpe-btn.selected{opacity:1;transform:scale(1.2);box-shadow:0 4px 10px -3px rgba(0,0,0,.4)}
+.rpe-note{width:100%;min-height:64px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;font-family:var(--font);color:var(--text);background:var(--card);resize:vertical;line-height:1.4}
+.rpe-note:focus{outline:none;border-color:var(--primary)}
+.rpe-note::placeholder{color:var(--faint)}
 
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#23263a;color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:300;opacity:0;transition:.3s;pointer-events:none;max-width:90%;text-align:center}
 .toast svg{width:14px;height:14px;vertical-align:-2px;display:inline-block}
@@ -341,6 +344,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .hist-meta{font-size:12px;color:var(--muted);margin-top:8px;display:flex;gap:16px;flex-wrap:wrap}
 .hist-meta-ico{display:inline-flex;align-items:center;gap:4px}
 .hist-meta-ico svg{width:13px;height:13px;flex-shrink:0}
+.hist-rpe-badge{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:5px;color:#fff;font-size:10px;font-weight:800}
 .hist-photos{display:flex;gap:8px;margin-top:10px}
 .hist-photos img{width:52px;height:68px;object-fit:cover;border-radius:8px;border:1px solid var(--card-border);cursor:pointer}
 .cmp-back-btn{background:none;border:none;color:var(--primary);font-family:var(--font);font-size:13px;font-weight:700;padding:0 0 12px;cursor:pointer}
@@ -478,6 +482,18 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .ci-choice-row{display:flex;gap:8px}
 .ci-choice{flex:1;padding:12px 4px;border-radius:12px;border:2px solid var(--line);background:var(--card-2);color:var(--text);font-size:22px;cursor:pointer;font-family:var(--font)}
 .ci-choice.selected{border-color:var(--primary);background:rgba(var(--primary-rgb),.06)}
+
+.warmup-card{max-width:380px;max-height:min(84vh,640px);overflow-y:auto}
+.warmup-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:16px}
+.warmup-head h3{text-align:left;margin-bottom:0}
+.warmup-head .ci-sub{text-align:left;margin-bottom:0}
+.warmup-head-ico{flex-shrink:0;width:38px;height:38px;border-radius:50%;background:rgba(var(--primary-rgb),.1);color:var(--primary);display:flex;align-items:center;justify-content:center}
+.warmup-head-ico svg{width:20px;height:20px}
+.warmup-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.warmup-item{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 8px;display:flex;flex-direction:column;gap:5px}
+.warmup-num{width:20px;height:20px;border-radius:50%;background:var(--primary);color:#fff;font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.warmup-name{font-size:12px;font-weight:700;line-height:1.25}
+.warmup-time{font-size:10.5px;color:var(--accent-dim);font-weight:700}
 .ci-choice small{display:block;font-size:10.5px;margin-top:4px;color:var(--muted);font-weight:600}
 .ci-input-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .ci-input-row input{flex:1;background:var(--card-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:15px;color:var(--text);font-family:var(--font);text-align:center}
@@ -878,12 +894,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     <div class="finish-stat"><div class="fs-num" id="fsTime">0</div><div class="fs-lbl">minutos</div></div>
   </div>
   <div id="finishRating" style="margin:0 0 8px">
-    <div style="font-size:13px;color:var(--muted);margin-bottom:14px;text-align:center">Como foi o treino de hoje?</div>
-    <div style="display:flex;justify-content:center;gap:14px">
-      <button class="rating-btn" data-val="cansado" onclick="rateWorkout(this)">😴<small>Cansado</small></button>
-      <button class="rating-btn" data-val="normal" onclick="rateWorkout(this)">😐<small>Normal</small></button>
-      <button class="rating-btn" data-val="otimo" onclick="rateWorkout(this)">💪<small>Ótimo</small></button>
-    </div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:2px;text-align:center">Intensidade percebida do treino</div>
+    <div style="font-size:11px;color:var(--faint);margin-bottom:12px;text-align:center">1 = tranquilo &nbsp;·&nbsp; 10 = no limite</div>
+    <div class="rpe-scale" id="rpeScale"></div>
+    <textarea id="ratingNoteInput" class="rpe-note" placeholder="Observação sobre o treino (opcional). Ex: senti dor no ombro direito no supino, joelho incomodou no agachamento, treino mais fraco hoje por causa do sono..." oninput="updateRatingNote(this.value)"></textarea>
   </div>
   <div class="finish-actions" style="margin-top:24px">
     <button class="btn btn-primary" onclick="goHome()">Ir para o início</button>
@@ -1063,6 +1077,23 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   </div>
 </div>
 
+<div class="checkin-overlay" id="warmupOverlay">
+  <div class="checkin-card warmup-card">
+    <div class="warmup-head">
+      <span class="warmup-head-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20c2-4 4-6 8-6s6 2 8 6"/><circle cx="12" cy="6" r="3"/></svg></span>
+      <div>
+        <h3 style="margin:0">Alongamento pré-treino</h3>
+        <p class="ci-sub" style="margin:4px 0 0">Prepare o corpo antes de começar — leva menos de 3 minutos.</p>
+      </div>
+    </div>
+    <div class="warmup-grid" id="warmupList"></div>
+    <div class="crop-actions" style="flex-direction:column;gap:10px;margin-top:18px">
+      <button class="btn btn-primary" type="button" onclick="confirmWarmup(true)">Fiz o alongamento — Iniciar treino</button>
+      <button class="btn btn-ghost" type="button" onclick="confirmWarmup(false)">Pular alongamento</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1222,7 +1253,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   let foodLogToday = []; // student_food_log do dia local do aluno
   let foodPickedItem = null; // item de food_library selecionado no meio do fluxo "Adicionar refeição"
   let foodSearchDebounce = null;
-  let state = { workoutIndex:0, currentExercise:0, sessionData:[], startTime:null, restInterval:null, restEndsAt:null, restLabel:null, restTotal:0, rating:null, overviewMode:'preview' };
+  let state = { workoutIndex:0, currentExercise:0, sessionData:[], startTime:null, restInterval:null, restEndsAt:null, restLabel:null, restTotal:0, rating:null, ratingNote:'', warmup:null, finishSessionUid:null, finishRecordDetail:null, overviewMode:'preview' };
 
   function toast(msg, isHtml) {
     const t = $('toast');
@@ -2378,12 +2409,12 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       container.innerHTML = `<div class="empty-state"><div class="es-ico">${ICONS.clipboard}</div><div class="es-txt">Seus treinos aparecerão aqui.<br>Comece o primeiro quando estiver pronto.</div></div>`;
       return;
     }
-    const ratingMap = { cansado: '😴', normal: '😐', otimo: '💪' };
     container.innerHTML = history.map(h => {
       const d = new Date(h.completed_at);
       const incomplete = !!(h.detail && h.detail.incomplete);
       const rating = h.detail && h.detail.rating;
       const setsDone = h.detail && h.detail.sets_done != null ? h.detail.sets_done : '-';
+      const warmupDone = !!(h.detail && h.detail.warmup && h.detail.warmup.done);
       return `
         <div class="hist-item ${incomplete ? 'hist-incomplete' : ''}">
           <div class="hist-top">
@@ -2394,10 +2425,24 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
             <span class="hist-meta-ico">${ICONS.calendar} ${d.toLocaleDateString('pt-BR')}</span>
             <span class="hist-meta-ico">${incomplete ? ICONS.warning : ICONS.check} ${setsDone} séries</span>
             <span class="hist-meta-ico">${ICONS.clock} ${h.minutes} min</span>
-            ${rating ? `<span>${ratingMap[rating] || ''}</span>` : ''}
+            ${warmupDone ? `<span class="hist-meta-ico" title="Fez o alongamento">${ICONS.activity}</span>` : ''}
+            ${ratingBadgeHtml(rating)}
           </div>
         </div>`;
     }).join('');
+  }
+  // Rating pode vir em 2 formatos: número 1-10 (escala nova, RPE) ou uma
+  // das 3 strings antigas ('cansado'/'normal'/'otimo', formato descontinuado
+  // em 2026-08-01) — sessões antigas nunca são migradas, então os dois
+  // precisam continuar renderizando certo pra sempre.
+  const LEGACY_RATING_EMOJI = { cansado: '😴', normal: '😐', otimo: '💪' };
+  function ratingBadgeHtml(rating) {
+    if (rating == null || rating === '') return '';
+    if (typeof rating === 'number') {
+      const color = RPE_COLORS[Math.min(10, Math.max(1, rating)) - 1];
+      return `<span class="hist-rpe-badge" style="background:${color}">${rating}</span>`;
+    }
+    return LEGACY_RATING_EMOJI[rating] ? `<span>${LEGACY_RATING_EMOJI[rating]}</span>` : '';
   }
 
   function buildLoadChart(container) {
@@ -3333,6 +3378,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         sessionData: state.sessionData,
         startTime: state.startTime,
         rating: state.rating,
+        warmup: state.warmup,
         restEndsAt: state.restEndsAt,
         restTotal: state.restTotal,
         restLabel: state.restLabel,
@@ -3396,6 +3442,9 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     state.sessionData = saved.sessionData;
     state.startTime = saved.startTime;
     state.rating = saved.rating || null;
+    state.warmup = saved.warmup || null;
+    state.finishSessionUid = null;
+    state.finishRecordDetail = null;
     state.restTotal = saved.restTotal || 0;
     state.restLabel = saved.restLabel || null;
     state.restEndsAt = saved.restEndsAt || null;
@@ -3433,7 +3482,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       clearPersistedSession();
       const idx = pendingConflictWorkoutIndex;
       pendingConflictWorkoutIndex = null;
-      if (idx != null) { state.workoutIndex = idx; startWorkoutFresh(); }
+      if (idx != null) { state.workoutIndex = idx; beginFreshWorkout(); }
     }
   }
 
@@ -3446,14 +3495,46 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       openSessionConflict(state.workoutIndex, savedWorkout);
       return;
     }
-    startWorkoutFresh();
+    beginFreshWorkout();
   }
-  function startWorkoutFresh() {
+
+  /* ---- ALONGAMENTO PRÉ-TREINO ----
+     Aparece como banner flutuante sempre que um treino é iniciado do zero
+     (nunca numa retomada — a escolha já foi feita quando a sessão nasceu,
+     ver state.warmup restaurado em resumeSessionFromStorage). Rotina
+     própria, sem copiar conteúdo/imagem de nenhum app de referência —
+     texto e lista são originais deste projeto. */
+  const STRETCH_ROUTINE = [
+    { nome: 'Rotação de tornozelo', tempo: '20s cada lado' },
+    { nome: 'Agachamento livre (mobilidade de quadril)', tempo: '30s' },
+    { nome: 'Alongamento de panturrilha na parede', tempo: '20s cada lado' },
+    { nome: 'Rotação de tronco em pé', tempo: '20s cada lado' },
+    { nome: 'Círculos com os braços', tempo: '20s' },
+    { nome: 'Elevação de joelho ao peito', tempo: '20s cada lado' },
+  ];
+  function beginFreshWorkout() {
+    $('warmupList').innerHTML = STRETCH_ROUTINE.map((s, i) => `
+      <div class="warmup-item">
+        <div class="warmup-num">${i + 1}</div>
+        <div class="warmup-name">${escapeHtml(s.nome)}</div>
+        <div class="warmup-time">${escapeHtml(s.tempo)}</div>
+      </div>`).join('');
+    $('warmupOverlay').classList.add('show');
+  }
+  function confirmWarmup(done) {
+    $('warmupOverlay').classList.remove('show');
+    startWorkoutFresh(done);
+  }
+  function startWorkoutFresh(warmupDone) {
     hideNav();
     const w = protocol.workouts[state.workoutIndex];
     state.currentExercise = 0;
     state.startTime = Date.now();
     state.rating = null;
+    state.ratingNote = '';
+    state.finishSessionUid = null;
+    state.finishRecordDetail = null;
+    state.warmup = { done: !!warmupDone };
     state.restEndsAt = null; state.restLabel = null; state.restTotal = 0;
     state.sessionData = w.exercises.map(ex => {
       if (isCardioExercise(ex)) {
@@ -3785,7 +3866,13 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         sets_done: setsDone,
         exercises_done: exDone,
         cardio_minutes: cardioMinutes,
-        rating: state.rating,
+        // A avaliação de intensidade/observação só é escolhida DEPOIS desta
+        // tela aparecer (ver buildRpeScale/selectRpe/updateRatingNote) — nunca
+        // dá pra mandar aqui de verdade, sempre entra null e é preenchida por
+        // um update() separado assim que o aluno escolhe algo.
+        rating: null,
+        rating_note: null,
+        warmup: state.warmup || null,
         exercises: state.sessionData.map((sd,i) => sd.type === 'cardio'
           ? { nome: w.exercises[i].nome, tipo: 'cardio', done: !!sd.done, targetMinutes: sd.targetMinutes, minutesDone: Number(sd.minutesDone) || 0 }
           : { nome: w.exercises[i].nome, skipped: !!sd.skipped, sets: sd.sets.map(s => ({ done: s.done, carga: s.carga, reps: s.reps, doneAt: s.doneAt || null })) })
@@ -3798,10 +3885,21 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       // Não limpa a sessão persistida: "só finaliza quando realmente
       // finalizar" — se o salvamento falhou (rede, etc.), o progresso
       // continua guardado pra tentar de novo, nunca é descartado em silêncio.
+      // finishSessionUid explicitamente null: sem isso, uma tentativa
+      // anterior bem-sucedida deixaria o valor antigo lá, e escolher uma
+      // intensidade agora atualizaria por engano a sessão ERRADA (a de antes).
+      state.finishSessionUid = null;
       toast('Erro ao salvar treino: ' + error.message);
     } else {
       clearPersistedSession();
       state.startTime = null;
+      // Guardado pra quando o aluno escolher intensidade/observação na
+      // própria tela Finish (sempre DEPOIS deste insert) — persistFinishRating()
+      // usa isso pra atualizar exatamente esta linha, e como é a mesma
+      // referência de objeto que acabou de ir pro banco, o array `history`
+      // (linha de baixo) já reflete a edição ao vivo, sem precisar recarregar.
+      state.finishSessionUid = record.session_uid;
+      state.finishRecordDetail = record.detail;
       history.unshift(record);
       const newBadges = BADGES.filter(b => !earnedBefore.includes(b.id) && b.test());
       newBadges.forEach((b,i) => setTimeout(() => toast(`${b.ico} Conquista: ${escapeHtml(b.name)}`, true), 1200 + i * 2000));
@@ -3840,13 +3938,46 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       title.textContent = 'Treino concluído';
       quote.textContent = '"' + quotes[Math.floor(Math.random()*quotes.length)] + '"';
     }
-    document.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('selected'));
+    state.rating = null;
+    state.ratingNote = '';
+    $('ratingNoteInput').value = '';
+    buildRpeScale();
     showScreen('finish');
   }
-  function rateWorkout(btn) {
-    document.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    state.rating = btn.dataset.val;
+
+  /* ---- INTENSIDADE PERCEBIDA (RPE 1-10) + OBSERVAÇÃO ----
+     Degradê verde->vermelho calculado por HSL (nunca hardcoded cor por
+     cor) — hue 142 (mesmo tom do --accent do app) até 0 (vermelho puro),
+     10 passos. Escolher um número ou digitar a observação salva na hora
+     (update direto na sessão recém-inserida, via session_uid) — nunca
+     dependeu de um botão "salvar" separado, pra não perder o dado se o
+     aluno só fechar o app depois de finalizar. */
+  const RPE_COLORS = Array.from({ length: 10 }, (_, i) => `hsl(${Math.round(142 - 142 * (i / 9))},68%,42%)`);
+  function buildRpeScale() {
+    $('rpeScale').innerHTML = RPE_COLORS.map((c, i) => {
+      const val = i + 1;
+      return `<button type="button" class="rpe-btn" style="background:${c}" data-val="${val}" onclick="selectRpe(${val})">${val}</button>`;
+    }).join('');
+  }
+  function selectRpe(val) {
+    state.rating = val;
+    document.querySelectorAll('.rpe-btn').forEach(b => b.classList.toggle('selected', Number(b.dataset.val) === val));
+    persistFinishRating();
+  }
+  let ratingNoteDebounce = null;
+  function updateRatingNote(val) {
+    state.ratingNote = val;
+    clearTimeout(ratingNoteDebounce);
+    ratingNoteDebounce = setTimeout(persistFinishRating, 700);
+  }
+  async function persistFinishRating() {
+    if (!state.finishSessionUid || !state.finishRecordDetail) return;
+    state.finishRecordDetail.rating = state.rating;
+    state.finishRecordDetail.rating_note = (state.ratingNote || '').trim() || null;
+    const { error } = await supa.from('training_history')
+      .update({ detail: state.finishRecordDetail })
+      .eq('session_uid', state.finishSessionUid);
+    if (error) console.error('Falha ao salvar avaliação do treino:', error.message);
   }
 
   async function doLogout() {

@@ -35,7 +35,16 @@ type HistoryRow = {
   completed_at: string;
   workout_name: string;
   minutes: number;
-  detail: { incomplete?: boolean; rating?: string; exercises?: { nome: string; sets?: { done?: boolean; carga?: string }[] }[] } | null;
+  detail: {
+    incomplete?: boolean;
+    // rating virou escala numérica 1-10 (RPE) em 2026-08-01 — sessões mais
+    // antigas ainda guardam uma das 3 strings do formato descontinuado
+    // ('cansado'/'normal'/'otimo'), nunca migradas retroativamente.
+    rating?: number | string;
+    rating_note?: string;
+    warmup?: { done?: boolean } | null;
+    exercises?: { nome: string; sets?: { done?: boolean; carga?: string }[] }[];
+  } | null;
 };
 
 function resumoAdesao(history: HistoryRow[]) {
@@ -44,14 +53,29 @@ function resumoAdesao(history: HistoryRow[]) {
   const adherence = history.length ? Math.round((completed.length / history.length) * 100) : 0;
   const last = history[0];
   const daysSinceLast = last ? Math.floor((now.getTime() - new Date(last.completed_at).getTime()) / 86400000) : null;
-  const ratingCounts: Record<string, number> = {};
-  history.forEach((h) => { const r = h.detail?.rating; if (r) ratingCounts[r] = (ratingCounts[r] || 0) + 1; });
+
+  const numericRatings = history.map((h) => h.detail?.rating).filter((r): r is number => typeof r === 'number');
+  const legacyRatingCounts: Record<string, number> = {};
+  history.forEach((h) => { const r = h.detail?.rating; if (typeof r === 'string' && r) legacyRatingCounts[r] = (legacyRatingCounts[r] || 0) + 1; });
+
+  const withWarmup = history.filter((h) => h.detail?.warmup && typeof h.detail.warmup.done === 'boolean');
+  const warmupDone = withWarmup.filter((h) => h.detail?.warmup?.done).length;
+
+  const observacoesRecentes = history
+    .filter((h) => h.detail?.rating_note)
+    .slice(0, 5)
+    .map((h) => ({ data: h.completed_at, observacao: h.detail!.rating_note }));
+
   return {
     total_sessoes: history.length,
     sessoes_completas: completed.length,
     adesao_pct: adherence,
     dias_desde_ultima_sessao: daysSinceLast,
-    avaliacoes_pos_treino: ratingCounts,
+    intensidade_percebida_media_rpe: numericRatings.length ? +(numericRatings.reduce((a, b) => a + b, 0) / numericRatings.length).toFixed(1) : null,
+    intensidade_percebida_n_avaliacoes: numericRatings.length,
+    avaliacoes_pos_treino_formato_antigo: Object.keys(legacyRatingCounts).length ? legacyRatingCounts : undefined,
+    alongamento_pre_treino: withWarmup.length ? { feito: warmupDone, total: withWarmup.length, pct: Math.round((warmupDone / withWarmup.length) * 100) } : null,
+    observacoes_recentes_do_aluno: observacoesRecentes.length ? observacoesRecentes : undefined,
   };
 }
 
@@ -177,8 +201,8 @@ ${JSON.stringify(dados, null, 2)}
 
 Escreva uma interpretação em texto corrido, em português do Brasil, curta e direta (o profissional lê isso entre um atendimento e outro — sem enrolação, sem markdown, sem asteriscos, sem títulos numerados). Organize em 4 blocos curtos, cada um com um cabeçalho simples em maiúsculas seguido de quebra de linha (ex: "ADESÃO E CONSISTÊNCIA"):
 
-1. ADESÃO E CONSISTÊNCIA — o que os números de frequência/sessões completas/tempo desde a última sessão revelam sobre o hábito do aluno.
-2. SINAIS DE BEM-ESTAR — o que os dados de água e sono sugerem (só comente o que os dados realmente mostram; se não houver registro suficiente, diga isso em vez de inventar).
+1. ADESÃO E CONSISTÊNCIA — o que os números de frequência/sessões completas/tempo desde a última sessão revelam sobre o hábito do aluno. Se houver dado de alongamento pré-treino (adesao.alongamento_pre_treino), comente também esse hábito.
+2. SINAIS DE BEM-ESTAR — o que os dados de água e sono sugerem, e o que a intensidade percebida média (RPE, adesao.intensidade_percebida_media_rpe) e as observações recentes do próprio aluno (adesao.observacoes_recentes_do_aluno) revelam — principalmente se alguma observação mencionar dor, desconforto ou dificuldade recorrente, isso é um sinal de atenção real e deve ser destacado. Só comente o que os dados realmente mostram; se não houver registro suficiente, diga isso em vez de inventar.
 3. EVOLUÇÃO FÍSICA E DE CARGA — leitura do progresso de peso/%gordura entre avaliações e da evolução de carga por exercício, se houver dado suficiente.
 4. SUGESTÃO PRÁTICA — uma recomendação concreta e acionável pro profissional considerar na próxima sessão ou ajuste de protocolo, coerente com tudo acima e respeitando qualquer lesão/restrição da anamnese.
 

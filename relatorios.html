@@ -218,6 +218,17 @@
     lines.push(`Total de sessões registradas: ${history.length}`);
     lines.push(`Sessões completas: ${completed.length} (${adherence}%) · Incompletas: ${incomplete}`);
     lines.push(`Última sessão: ${last ? `${fmtDate(last.completed_at)} (há ${daysSinceLast} dia(s))` : 'nunca treinou'}`);
+
+    const withWarmup = history.filter(h => h.detail?.warmup && typeof h.detail.warmup.done === 'boolean');
+    if (withWarmup.length) {
+      const warmupDone = withWarmup.filter(h => h.detail.warmup.done).length;
+      lines.push(`Alongamento pré-treino: feito em ${warmupDone} de ${withWarmup.length} treino(s) (${Math.round((warmupDone / withWarmup.length) * 100)}%)`);
+    }
+    const numericRatings = history.map(h => h.detail?.rating).filter(r => typeof r === 'number');
+    if (numericRatings.length) {
+      const avgRpe = numericRatings.reduce((a, b) => a + b, 0) / numericRatings.length;
+      lines.push(`Intensidade média percebida (RPE): ${avgRpe.toFixed(1)}/10 (baseado em ${numericRatings.length} avaliação(ões))`);
+    }
     lines.push('');
 
     lines.push('== EVOLUÇÃO DE CARGA ==');
@@ -245,12 +256,21 @@
     if (!history.length) {
       lines.push('Nenhuma sessão registrada ainda.');
     } else {
-      const ratingMap = { cansado: 'Cansado', normal: 'Normal', otimo: 'Ótimo' };
+      // Avaliação virou escala numérica 1-10 (RPE) em 2026-08-01 — sessões
+      // mais antigas ainda guardam uma das 3 strings antigas, nunca migradas.
+      const LEGACY_RATING_MAP = { cansado: 'Cansado', normal: 'Normal', otimo: 'Ótimo' };
+      const ratingText = (r) => {
+        if (r == null || r === '') return null;
+        return typeof r === 'number' ? `${r}/10` : (LEGACY_RATING_MAP[r] || String(r));
+      };
       history.forEach(h => {
         const setsDone = h.detail?.sets_done ?? '-';
         const status = h.detail?.incomplete ? 'Incompleto' : 'Completo';
-        const rating = h.detail?.rating ? ` · Avaliação: ${ratingMap[h.detail.rating] || h.detail.rating}` : '';
-        lines.push(`${fmtDate(h.completed_at)} — Treino ${h.workout_id} (${h.workout_name}) — ${setsDone} séries, ${h.minutes}min — ${status}${rating}`);
+        const rt = ratingText(h.detail?.rating);
+        const rating = rt ? ` · Intensidade: ${rt}` : '';
+        const warmup = h.detail?.warmup ? (h.detail.warmup.done ? ' · Alongou antes' : ' · Não alongou antes') : '';
+        lines.push(`${fmtDate(h.completed_at)} — Treino ${h.workout_id} (${h.workout_name}) — ${setsDone} séries, ${h.minutes}min — ${status}${rating}${warmup}`);
+        if (h.detail?.rating_note) lines.push(`  Observação do aluno: ${h.detail.rating_note}`);
       });
     }
 

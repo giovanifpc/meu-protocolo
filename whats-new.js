@@ -27,8 +27,10 @@
       ]
     },
     aluno: {
-      version: '1.8.0',
+      version: '1.9.0',
       items: [
+        'Novo: ao iniciar um treino, aparece um alongamento pré-treino rápido (menos de 3 minutos) — faça ou pule, sua escolha fica registrada no seu histórico.',
+        'Novo: no fim do treino, a avaliação de "como foi" virou uma escala de 1 a 10 (intensidade percebida), com espaço opcional pra descrever algo sobre o treino — útil pra avisar o personal de uma dor ou desconforto pontual.',
         'Novo: o treino iniciado agora fica salvo mesmo se você fechar o app no meio — ao voltar, a Início mostra "Continuar" e retoma exatamente de onde parou. Só termina de verdade quando você finaliza.',
         'Corrigido: pular 2 ou mais exercícios sem marcar nenhuma série podia travar o treino num loop, sem nunca deixar finalizar — agora cada exercício pulado fica marcado e o botão "Finalizar treino" aparece normalmente.',
         'Novo: o timer de descanso toca um som quando termina (além da vibração), e nunca mais fica errado se você sair do app e voltar no meio do descanso.',

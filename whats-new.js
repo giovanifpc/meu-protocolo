@@ -31,7 +31,7 @@
       version: '1.10.0',
       items: [
         'Corrigido: a aba onde você clica em "Instalar" continuava logada depois — se ficasse aberta, podia derrubar sua sessão no app instalado sem nenhum aviso. Agora, assim que o app termina de instalar, aparece um recado claro pra fechar essa aba.',
-        'Novo: ao iniciar um treino, aparece um alongamento pré-treino rápido (menos de 3 minutos) — faça ou pule, sua escolha fica registrada no seu histórico.',
+        'Novo: ao iniciar um treino, aparece um guia de alongamento pré-treino (10 min, com ilustração de cada movimento) — faça ou pule, sua escolha fica registrada no seu histórico.',
         'Novo: no fim do treino, a avaliação de "como foi" virou uma escala de 1 a 10 (intensidade percebida), com espaço opcional pra descrever algo sobre o treino — útil pra avisar o personal de uma dor ou desconforto pontual.',
         'Novo: o treino iniciado agora fica salvo mesmo se você fechar o app no meio — ao voltar, a Início mostra "Continuar" e retoma exatamente de onde parou. Só termina de verdade quando você finaliza.',
         'Corrigido: pular 2 ou mais exercícios sem marcar nenhuma série podia travar o treino num loop, sem nunca deixar finalizar — agora cada exercício pulado fica marcado e o botão "Finalizar treino" aparece normalmente.',

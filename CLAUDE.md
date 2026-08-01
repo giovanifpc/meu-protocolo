@@ -93,6 +93,15 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### 🚨 Incidente real: tentativa de correção de performance derrubou o site inteiro em produção — revertido (2026-08-01, mesma sessão)
+
+Depois de investigar a reclamação de lentidão/piscada na troca de tela (ver entrada seguinte), a correção aplicada (`defer` nos scripts de `<head>` de 15 páginas) foi publicada em produção e **quebrou tudo** — profissional reportou "está tudo parado... nem o login... responde".
+
+- **Causa do incidente**: `defer` em `<script>` **inline** (sem `src` — o script principal de cada página, que faz `supa = supabase.createClient(...)`, e o de registro do Service Worker) é **ignorado pelos navegadores** — só tem efeito em `<script src="...">`. O raciocínio original assumia (errado) que adicionar `defer` no `<script>` inline preservaria a ordem de execução relativa ao SDK do Supabase (também deferido) — na prática, o script inline continuava executando **imediatamente durante o parse**, antes do SDK deferido (que só roda depois do parse completo) ter carregado. `supabase.createClient(...)` era chamado com `supabase` ainda `undefined` — travava a inicialização de toda página, incluindo `login.html`.
+- **Cronologia**: correção publicada ~01:05 UTC, usuário reportou o problema poucos minutos depois, revertido via `git revert` e confirmado em produção (checagem direta via `curl` no HTML servido por `meuprotocolo.app`) às ~01:16 UTC. E-mail do Sentry sobre fim de trial (mencionado pelo usuário como possível causa) **não tinha relação** — coincidência de timing, só afeta captura de erro, não bloqueia carregamento do site.
+- **Lição registrada**: qualquer mudança de ordem/timing de carregamento de script (`defer`/`async`/reordenar `<script>`) é terreno perigoso demais pra ir direto pra produção sem teste visual num navegador real — o raciocínio sobre a especificação HTML pode parecer sólido e ainda assim estar errado num detalhe (como o `defer` em inline scripts ser silenciosamente ignorado). Esse tipo de mudança fica proibido de ir direto pra `main` numa sessão remota sem navegador — só retomar numa sessão com acesso a navegador de verdade pra testar antes do deploy, ou pedir validação explícita do usuário antes de publicar.
+- Estado atual: revertido por completo, site de volta ao comportamento de antes de hoje (scripts sem `defer`, com o problema original de lentidão ainda presente, sem correção nova aplicada).
+
 ### 🆕 Técnica de intensificação editável no criador manual + "Ranking do mês" movido pro topo de `alunos.html` (2026-08-01, mesma sessão)
 
 Dois pedidos do usuário na mesma mensagem.

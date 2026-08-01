@@ -144,9 +144,15 @@
   @keyframes panelDrop { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
   .panel-drop { animation:panelDrop .22s ease; transform-origin:top center; }
 
-  .header-summary-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-  .header-summary-title { font-size:15px; font-weight:800; }
-  .header-summary-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+  /* Cabeçalho do protocolo (título + periodização) precisa ficar
+     visualmente separado dos blocos de treino que ele produz — sem isso,
+     um card branco genérico se confunde com "Treino A"/"Treino B" logo
+     abaixo, mesmo estando sempre no topo. Tom azul (cor de marca/controle
+     do app, nunca usada nos blocos em si) + rótulo deixando explícito que
+     essa área é a configuração, não mais um bloco. */
+  .protocol-header-card { background:linear-gradient(135deg,rgba(45,107,228,.07),rgba(45,107,228,.02)); border:1px solid rgba(45,107,228,.22); border-radius:var(--radius-lg); padding:16px 18px; margin-bottom:16px; box-shadow:0 1px 2px rgba(20,30,45,.04); }
+  .protocol-header-eyebrow { display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--primary); margin-bottom:12px; }
+  .protocol-header-eyebrow svg { width:13px; height:13px; }
 
   .modal-overlay { position:fixed; inset:0; z-index:400; background:rgba(15,20,28,.55); display:none; align-items:center; justify-content:center; padding:24px; }
   .modal-overlay.show { display:flex; }
@@ -334,14 +340,8 @@
     </div>
 
     <div id="builderArea" style="display:none;">
-      <div class="card">
-        <div id="headerSummary" class="header-summary-row" style="display:none;">
-          <div>
-            <div class="header-summary-title" id="headerSummaryTitle"></div>
-            <div class="header-summary-sub" id="headerSummarySub"></div>
-          </div>
-          <button class="btn secondary small" id="headerEditToggleBtn" type="button">Editar</button>
-        </div>
+      <div class="protocol-header-card">
+        <div class="protocol-header-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>Configuração do protocolo</div>
         <div id="headerEditFields">
           <div class="field">
             <label>Título do protocolo</label>
@@ -554,7 +554,6 @@
   let stashedViewMode = 'none';
   let pendingCommitAction = null; // função a rodar depois que o modal "o que fazer com o treino atual" for resolvido
   let currentAnamnese = null;
-  let headerEditOpen = false; // cabeçalho do treino já salvo mostra resumo compacto por padrão; true = campos editáveis abertos
 
   const PERIODIZATION_LABELS = {
     manual: 'Nenhuma (manual)', linear: 'Linear', ondulatoria_diaria: 'Ondulatória diária',
@@ -790,7 +789,6 @@
     creationMode = null;
     creationConfirmed = false;
     stashedProtocol = null;
-    headerEditOpen = false;
     currentProtocol = data;
     currentProtocol.workouts = (data.workouts || []).map(w => ({ ...w, _uid: uid() }));
     viewMode = 'edit';
@@ -1143,7 +1141,6 @@
     creationMode = null;
     creationConfirmed = false;
     stashedProtocol = null;
-    headerEditOpen = false;
     renderProtocol();
     $('creationButtons').style.display = 'block';
     showViewMode();
@@ -1159,34 +1156,7 @@
     $('aiWizardArea').style.display = viewMode === 'wizard' ? 'block' : 'none';
     $('builderArea').style.display = viewMode === 'edit' ? 'block' : 'none';
     $('creationEmptyState').style.display = viewMode === 'none' ? 'block' : 'none';
-    updateHeaderMode();
   }
-
-  // Cabeçalho (título/periodização) do builder tem dois formatos: resumo
-  // compacto (só título + parâmetros + botão Editar) quando é o treino já
-  // salvo sendo exibido, e os campos completos quando é uma criação nova em
-  // andamento (creationMode ativo) ou quando o profissional pede pra editar
-  // o resumo. Sem isso, o mesmo formulário aparecendo tanto pro treino
-  // salvo quanto pro rascunho novo fazia a animação de entrada parecer que
-  // tinha "zerado" o que já existia.
-  function updateHeaderMode() {
-    const isExistingView = viewMode === 'edit' && creationMode === null && !!(currentProtocol && currentProtocol.id);
-    const showSummary = isExistingView && !headerEditOpen;
-    $('headerSummary').style.display = showSummary ? 'flex' : 'none';
-    $('headerEditFields').style.display = showSummary ? 'none' : 'block';
-    if (showSummary) {
-      $('headerSummaryTitle').textContent = currentProtocol.titulo || 'Protocolo de treino';
-      const label = PERIODIZATION_LABELS[currentProtocol.periodizacao] || PERIODIZATION_LABELS.manual;
-      const usesDuration = !['manual', 'ondulatoria_diaria'].includes(currentProtocol.periodizacao);
-      $('headerSummarySub').textContent = label + (usesDuration && currentProtocol.duracao_semanas ? ` — ${currentProtocol.duracao_semanas} semanas` : '');
-    }
-  }
-
-  $('headerEditToggleBtn').addEventListener('click', () => {
-    headerEditOpen = !headerEditOpen;
-    updateHeaderMode();
-    if (headerEditOpen) playDropAnimation($('headerEditFields'));
-  });
 
   function updateCreationButtonsActiveState() {
     $('newManualBtn').classList.toggle('active', creationMode === 'manual');
@@ -1234,7 +1204,6 @@
     currentProtocol = stashedProtocol || currentProtocol;
     viewMode = stashedViewMode;
     stashedProtocol = null;
-    headerEditOpen = false;
     renderProtocol();
     showViewMode();
     updateCreationButtonsActiveState();
@@ -1734,7 +1703,6 @@
     $('duracaoInput').value = currentProtocol.duracao_semanas || PERIODIZATION_DEFAULT_WEEKS[currentProtocol.periodizacao] || 4;
     updatePeriodizationUI();
     renderWorkouts();
-    updateHeaderMode();
   }
 
   function updatePeriodizationUI() {
@@ -1766,8 +1734,6 @@
       });
     });
     renderWorkouts();
-    headerEditOpen = false;
-    updateHeaderMode();
     toast('Periodização aplicada — confira e ajuste as semanas se quiser.');
   });
 
@@ -2141,8 +2107,7 @@
       creationMode = null;
       creationConfirmed = false;
       stashedProtocol = null;
-      headerEditOpen = false;
-      updateCreationButtonsActiveState();
+        updateCreationButtonsActiveState();
     }
     renderProtocol();
     await updateDraftsArea(currentProtocol.student_id);

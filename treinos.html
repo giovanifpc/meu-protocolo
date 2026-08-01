@@ -89,6 +89,8 @@
   .video-link-btn { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; margin-left:6px; padding:0; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--faint); cursor:pointer; vertical-align:-6px; }
   .video-link-btn.linked { background:#E7F7F1; border-color:var(--accent); color:var(--accent-dim); }
   .tecnica-chip { display:inline-block; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.3px; color:var(--primary); background:rgba(45,107,228,.1); padding:2px 8px; border-radius:6px; margin-bottom:4px; border:none; cursor:pointer; font-family:var(--font); }
+  .tecnica-row { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
+  .tecnica-select { font-size:11px; font-weight:700; color:var(--primary); background:rgba(45,107,228,.08); border:1px solid rgba(45,107,228,.25); border-radius:6px; padding:3px 6px; font-family:var(--font); cursor:pointer; max-width:170px; }
   .ex-note { font-size:11.5px; color:var(--muted); flex:1 1 100%; margin:-2px 0 4px; }
   .ex-fields { display:flex; align-items:center; gap:4px; }
   .ex-field-input { width:44px; padding:5px 4px; text-align:center; border:1px solid var(--line); border-radius:6px; font-size:12px; font-family:var(--font); }
@@ -1789,10 +1791,22 @@
   }
   window.openPeriodizacaoHelp = openPeriodizacaoHelp;
 
-  function renderTecnicaAndNote(ex) {
-    const chip = ex.tecnica ? `<button type="button" class="tecnica-chip" onclick="openTecnicaHelp(event)">${escapeHtml(ex.tecnica)}</button><br>` : '';
+  // Antes só existia como chip somente-leitura (a técnica só vinha de
+  // treino gerado por IA) — agora é um select editável, disponível também
+  // pra quem monta o bloco manualmente. Sem veto de nível aqui (diferente
+  // do gerado por IA): é escolha deliberada do profissional, não uma
+  // sugestão de modelo que precisa de rede de segurança.
+  const TECNICA_OPTIONS = ['Drop-Set', 'Rest-Pause', 'Cluster', 'Myo-Reps', 'Pirâmide Crescente', 'Pirâmide Decrescente', 'Super Slow', 'Bi-Set', 'Tri-Set', 'Negativo'];
+  function renderTecnicaAndNote(ex, w, i) {
+    const optsHtml = ['<option value="">Sem técnica</option>']
+      .concat(TECNICA_OPTIONS.map(t => `<option value="${escapeHtml(t)}" ${ex.tecnica === t ? 'selected' : ''}>${escapeHtml(t)}</option>`))
+      .join('');
+    const tecnicaRow = `<div class="tecnica-row">
+      <select class="tecnica-select" data-role="tecnica" data-workout-id="${w._uid}" data-idx="${i}">${optsHtml}</select>
+      <button type="button" class="help-q-btn" aria-label="Ajuda" onclick="openTecnicaHelp(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button>
+    </div>`;
     const note = ex.note ? `<div class="ex-note">${escapeHtml(ex.note)}</div>` : '';
-    return chip + note;
+    return tecnicaRow + note;
   }
 
   function renderVideoIconBtn(ex) {
@@ -1824,7 +1838,7 @@
       const wk = weeks[0];
       return `
         <div class="exercise-row exercise-row-edit">
-          <div class="ex-name-col">${renderTecnicaAndNote(ex)}${escapeHtml(ex.nome)}${renderVideoIconBtn(ex)}</div>
+          <div class="ex-name-col">${renderTecnicaAndNote(ex, w, i)}${escapeHtml(ex.nome)}${renderVideoIconBtn(ex)}</div>
           <div class="ex-fields">
             <input type="number" min="1" class="ex-field-input" value="${escapeHtml(wk.sets)}" data-role="wk-sets" data-workout-id="${w._uid}" data-idx="${i}" data-week="0" title="Séries">
             <span class="ex-field-x">×</span>
@@ -1838,7 +1852,7 @@
     return `
       <div class="exercise-row-multi">
         <div class="ex-name-row">
-          <div class="ex-name-col">${renderTecnicaAndNote(ex)}${escapeHtml(ex.nome)}${renderVideoIconBtn(ex)}</div>
+          <div class="ex-name-col">${renderTecnicaAndNote(ex, w, i)}${escapeHtml(ex.nome)}${renderVideoIconBtn(ex)}</div>
           <button class="btn danger small" data-role="remove-exercise" data-workout-id="${w._uid}" data-idx="${i}">×</button>
         </div>
         <div class="week-grid">
@@ -1940,6 +1954,15 @@
         if (e.target.dataset.role === 'wk-sets') wk.sets = Number(e.target.value) || 1;
         if (e.target.dataset.role === 'wk-reps') wk.reps = e.target.value;
         if (e.target.dataset.role === 'wk-rest') wk.rest = Number(e.target.value) || 0;
+      });
+    });
+    container.querySelectorAll('[data-role="tecnica"]').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const w = currentProtocol.workouts.find(x => x._uid === e.target.dataset.workoutId);
+        if (!w) return;
+        const ex = w.exercises[Number(e.target.dataset.idx)];
+        if (!ex) return;
+        ex.tecnica = e.target.value || null;
       });
     });
     container.querySelectorAll('[data-role="search-input"]').forEach(inp => {

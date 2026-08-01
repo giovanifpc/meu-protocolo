@@ -93,6 +93,14 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### 🆕 Técnica de intensificação editável no criador manual + "Ranking do mês" movido pro topo de `alunos.html` (2026-08-01, mesma sessão)
+
+Dois pedidos do usuário na mesma mensagem.
+
+- **Técnica de intensificação (Drop-Set, Rest-Pause, Pirâmide etc.) agora é editável no criador manual, não só no gerado por IA**: até aqui `.tecnica-chip` era só leitura — o campo `ex.tecnica` só nascia via `generate-workout` (a IA decide, código nunca escrevia nele). Reportado pelo usuário: "o treino de I.a cria e adiciona essas técnicas nos blocos, mas o criador manual não oferece a opção". `renderTecnicaAndNote(ex, w, i)` (`treinos.html`) trocou o chip por um `<select data-role="tecnica">` com as mesmas 10 técnicas do prompt da IA (Drop-Set/Rest-Pause/Cluster/Myo-Reps/Pirâmide Crescente/Pirâmide Decrescente/Super Slow/Bi-Set/Tri-Set/Negativo) + "Sem técnica", editável em qualquer exercício de qualquer bloco — manual ou gerado por IA. Listener delegado novo (`[data-role="tecnica"]`, mesmo padrão de `wk-sets`/`wk-reps`/`wk-rest`) grava direto em `ex.tecnica` sem re-renderizar a lista inteira. **Sem veto de nível aqui** (diferente do que `aplicarVetoPorNivel` faz pro treino gerado por IA) — decisão deliberada: é escolha manual e consciente do profissional, não uma sugestão de modelo que precisa de rede de segurança contra erro.
+- **"Ranking do mês" movido pro topo de `alunos.html`**, antes de "Meus alunos" (era depois). Motivo do usuário: a lista de alunos pode chegar a centenas de linhas, o que empurraria o ranking pra bem longe do topo da tela. Card fica agora logo abaixo de "Adicionar aluno", puramente reordenação de HTML — nenhuma mudança de lógica/RPC, `loadProfessionalRanking()`/`loadStudents()` continuam do jeito que estavam.
+- Validado só por `node --check`/checagem de IDs órfãos/balanceamento de `<div>` nos 2 arquivos — não visto num navegador real nesta sessão.
+
 ### 🔧 2 bugs reais em `treinos.html`: letra de treino duplicada/pulada + criador de exercício sem campo de observação (2026-08-01)
 
 Reportado pelo usuário com print de verdade (app da aluna): lista de treinos mostrando A, B, C, E, E — "D" nunca apareceu e "E" apareceu duas vezes.

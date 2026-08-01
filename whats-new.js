@@ -7,8 +7,10 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.11.0',
+      version: '1.12.0',
       items: [
+        'Novo: técnica de intensificação (Drop-Set, Rest-Pause, Pirâmide etc.) agora pode ser escolhida direto no criador manual de treino, não só no gerado por IA.',
+        'O painel de ranking na aba Alunos subiu pro topo da página — não fica mais escondido depois de uma lista de alunos longa.',
         'Corrigido: treino gerado por IA podia numerar os treinos errado (ex: A, B, C, E, E, pulando o "D") — a letra agora é sempre calculada certa, nunca repete nem pula.',
         'Novo: o criador de exercício ganhou campo de observação de execução (opcional) — a mesma orientação que aparece embaixo das séries no app do aluno.',
         'Novo: painel de ranking na aba Alunos — veja o placar mensal dos seus alunos (treinos, medalhas, recordes) mesmo com o ranking ainda desligado pra eles.',

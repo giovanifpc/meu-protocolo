@@ -508,6 +508,10 @@
         <label>Grupo muscular</label>
         <select id="customExerciseGrupoInput"></select>
       </div>
+      <div class="field" id="customExerciseNotaField">
+        <label>Observação de execução (opcional)</label>
+        <textarea id="customExerciseNotaInput" rows="2" placeholder="Ex: cotovelos próximos ao corpo, descida controlada..."></textarea>
+      </div>
       <div id="customExerciseModalMsg" class="msg" style="display:none;font-size:12px;color:var(--danger);margin:-8px 0 12px;"></div>
       <div class="modal-actions">
         <button class="btn" id="customExerciseSaveBtn" type="button">Criar</button>
@@ -964,8 +968,13 @@
           weeks: [base],
         });
       }
-      // garantia por código, não só instrução de prompt: cardio nunca fica no meio
-      workouts.push({ _uid: uid(), id: w.id || String.fromCharCode(65 + workouts.length), name: w.name, exercises: sortCardioLast(exercises) });
+      // garantia por código, não só instrução de prompt: cardio nunca fica no meio.
+      // O "id" (A, B, C...) também é sempre calculado pela posição real no
+      // array, nunca copiado do que a IA respondeu — ela já errou isso na
+      // prática (2 treinos com id "E", nenhum com "D"), então confiar no
+      // texto dela pra algo que já temos como calcular de forma exata é
+      // risco desnecessário.
+      workouts.push({ _uid: uid(), id: String.fromCharCode(65 + workouts.length), name: w.name, exercises: sortCardioLast(exercises) });
     }
 
     lastCreationSource = 'ia';
@@ -1581,6 +1590,12 @@
     populateCustomExerciseGrupoSelect(seed.grupo_muscular);
     $('customExerciseSaveBtn').textContent = mode === 'edit' ? 'Salvar alterações' : 'Criar';
     $('customExerciseDeleteBtn').style.display = mode === 'edit' ? 'inline-block' : 'none';
+    // A observação vive no exercício DENTRO do treino (mesmo campo "note"
+    // que a IA já preenche), não em exercise_library (biblioteca
+    // compartilhada, sem coluna pra isso) — só faz sentido pedir na
+    // criação, quando o exercício está sendo adicionado ao treino atual.
+    $('customExerciseNotaField').style.display = mode === 'create' ? 'block' : 'none';
+    $('customExerciseNotaInput').value = '';
     $('customExerciseModalMsg').style.display = 'none';
     $('customExerciseDuplicateHint').style.display = 'none';
     $('customExerciseModalOverlay').classList.add('show');
@@ -1610,7 +1625,8 @@
         return;
       }
       if (grupo && !muscleGroups.includes(grupo)) { muscleGroups.push(grupo); muscleGroups.sort(); }
-      addExerciseToWorkout(workoutId, data);
+      const nota = $('customExerciseNotaInput').value.trim();
+      addExerciseToWorkout(workoutId, data, nota);
       resultsBox.style.display = 'none';
       pendingCustomExercise = null;
       $('customExerciseModalOverlay').classList.remove('show');
@@ -1991,7 +2007,7 @@
     });
   }
 
-  function addExerciseToWorkout(workoutId, ex) {
+  function addExerciseToWorkout(workoutId, ex, note) {
     const w = currentProtocol.workouts.find(x => x._uid === workoutId);
     if (!w) return;
     insertBeforeTrailingCardio(w, {
@@ -2000,6 +2016,7 @@
       exercise_ref: ex.exercise_ref,
       media: ex.gif_url,
       mediaType: 'img',
+      note: note || '',
       weeks: [defaultWeek()],
     });
     renderWorkouts();

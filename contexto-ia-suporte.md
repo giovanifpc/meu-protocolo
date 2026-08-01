@@ -161,7 +161,7 @@ O painel do profissional tem um sino fixo no topo de toda tela (ao lado do menu 
 
 ### 5.17 Exercício personalizado (adicionado 2026-07-27)
 
-Na busca de exercício (montar treino), se o profissional não achar o que precisa, tem a opção "Criar exercício novo" — só nome + grupo muscular. Esse exercício fica **só na conta de quem criou**, nunca aparece nem fica buscável pra outro profissional (diferente da biblioteca padrão, com ~1550 itens, essa sim compartilhada com todo mundo). O profissional que criou pode editar (nome/grupo muscular) ou apagar depois, clicando no ícone de lápis ao lado do exercício quando ele aparece na busca — apagar não afeta treinos que já usam esse exercício. Vídeo/imagem também podem ser vinculados a um exercício criado, do mesmo jeito que a qualquer outro da biblioteca (ver seção 5.14).
+Na busca de exercício (montar treino), se o profissional não achar o que precisa, tem a opção "Criar exercício novo" — nome + grupo muscular + observação de execução opcional (a mesma orientação que aparece embaixo das séries no app do aluno). Esse exercício fica **só na conta de quem criou**, nunca aparece nem fica buscável pra outro profissional (diferente da biblioteca padrão, com ~1550 itens, essa sim compartilhada com todo mundo). O profissional que criou pode editar (nome/grupo muscular — a observação não, ela é por treino, não fica salva na biblioteca) ou apagar depois, clicando no ícone de lápis ao lado do exercício quando ele aparece na busca — apagar não afeta treinos que já usam esse exercício. Vídeo/imagem também podem ser vinculados a um exercício criado, do mesmo jeito que a qualquer outro da biblioteca (ver seção 5.14).
 
 ### 5.18 Cobrança automática da mensalidade — aluno → profissional (adicionado 2026-07-28)
 

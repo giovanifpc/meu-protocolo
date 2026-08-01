@@ -9,6 +9,8 @@
     profissional: {
       version: '1.11.0',
       items: [
+        'Corrigido: treino gerado por IA podia numerar os treinos errado (ex: A, B, C, E, E, pulando o "D") — a letra agora é sempre calculada certa, nunca repete nem pula.',
+        'Novo: o criador de exercício ganhou campo de observação de execução (opcional) — a mesma orientação que aparece embaixo das séries no app do aluno.',
         'Novo: painel de ranking na aba Alunos — veja o placar mensal dos seus alunos (treinos, medalhas, recordes) mesmo com o ranking ainda desligado pra eles.',
         'Novo: campo de gênero (opcional) no cadastro do aluno — usado só pra calibrar o treino gerado por IA, nunca aparece pro aluno.',
         'Painel de edição do aluno simplificado: um único botão "Salvar edição" pra nota, WhatsApp, gênero e mensalidade — antes eram 2 botões separados, fácil de confundir. "Marcar pago hoje" ganhou espaço próprio, separado da edição.',

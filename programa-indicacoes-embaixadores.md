@@ -3,6 +3,8 @@
 > **Nome oficial do programa: "Clube de Embaixadores"** (definido pelo usuário em 2026-07-31) — este título e o nome do arquivo ficam como referência histórica do documento original recebido, mas qualquer UI/copy/schema implementado deve usar "Clube de Embaixadores".
 >
 > **Status: escopo desenhado, NADA implementado ainda** (registrado em 2026-07-31). Este documento é a especificação recebida do usuário, preservada como veio — ver a entrada correspondente em `CLAUDE.md` (seção "Status atual") pra como isso se relaciona com o programa de indicação simples que **já está em produção** hoje, e pra uma lista de pontos que precisam de decisão antes de implementar.
+>
+> **Atualização 2026-08-01**: o Fundador 1 (Otávio) pediu o acompanhamento do ranking especificamente porque viu a necessidade de premiar os primeiros colocados — isso reabriu essa pendência com 3 refinamentos (indicação de aluno fica em aberto por hora; prêmio direto do profissional pro aluno, ex. mensalidade grátis, entra na lista ANTES da indicação de aluno; o modelo de níveis permanentes/gratuidade recorrente deste documento deve se estender também a alunos indicados ativos, não só a profissionais indicados) — ver entrada "⏳ Pendência refinada..." no topo de `CLAUDE.md`. Ainda nada implementado.
 
 ## Objetivo
 

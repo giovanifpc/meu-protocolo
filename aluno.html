@@ -201,6 +201,9 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .coach-note{background:linear-gradient(135deg,rgba(var(--primary-rgb),.06),var(--card));border-left:3px solid var(--primary);border-radius:10px;padding:13px 15px;margin-top:14px}
 .coach-note .cn-lbl{font-size:10px;color:var(--primary);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
 .coach-note .cn-txt{font-size:13px;color:var(--text);line-height:1.5}
+.tecnica-chip{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:#2D6BE4;background:rgba(45,107,228,.1);padding:2px 8px;border-radius:6px;font-family:var(--font);margin-bottom:2px}
+.tecnica-note{border-left-color:#2D6BE4}
+.tecnica-note .cn-lbl{color:#2D6BE4}
 
 .cardio-panel{background:linear-gradient(135deg,rgba(var(--primary-rgb),.08),transparent 55%),var(--card-grad);border:1px solid rgba(var(--primary-rgb),.16);box-shadow:var(--shadow-card);border-radius:var(--radius);padding:18px;margin-bottom:14px}
 .cardio-kicker{font-size:10px;color:var(--primary);font-weight:800;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px}
@@ -3193,6 +3196,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       if (isCurrent) rowClasses.push('current');
       if (interactive) rowClasses.push('clickable');
       const onclickAttr = interactive ? ` onclick="jumpToExerciseFromList(${i})"` : '';
+      const tecnicaChip = (!isCardioExercise(ex) && ex.tecnica) ? `<span class="tecnica-chip">${escapeHtml(ex.tecnica)}</span> ` : '';
       const meta = isCardioExercise(ex)
         ? `Cardio · meta ${exerciseTargetMinutes(ex) || 30} min`
         : (() => { const cfg = exerciseWeekConfig(ex); return `${cfg.sets}x${escapeHtml(String(cfg.reps))}${cfg.nota ? ' · ' + escapeHtml(cfg.nota) : ''} · descanso ${cfg.rest}s`; })();
@@ -3201,7 +3205,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         ${numOrCheck}
         <div class="ex-thumb" data-thumb-idx="${i}">${mediaThumb(ex)}</div>
         <div class="ex-li-info">
-          <div class="eli-name">${escapeHtml(ex.nome)}</div>
+          <div class="eli-name">${tecnicaChip}${escapeHtml(ex.nome)}</div>
           <div class="eli-sets">${meta}</div>
         </div>
       </div>`;
@@ -3334,6 +3338,23 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     });
   }
 
+  // Mesmo texto (resumido, em tom de instrução direta) já usado no banner
+  // de ajuda do profissional (treinos.html, TECNICA_HELP_BODY) — o aluno
+  // nunca tinha nenhuma explicação de como executar a técnica escolhida,
+  // só via essa mesma nomenclatura sem contexto (quando via algo).
+  const TECNICA_TIPS = {
+    'Drop-Set': 'Ao chegar na falha, reduza a carga e continue a série sem descansar.',
+    'Rest-Pause': 'Ao chegar perto da falha, pause 10-15s e continue com a mesma carga.',
+    'Cluster': 'Divida a série em mini-blocos, com um descanso bem curto entre eles.',
+    'Myo-Reps': 'Faça uma série de ativação e, em seguida, várias mini-séries curtas.',
+    'Pirâmide Crescente': 'A carga aumenta a cada série — comece mais leve.',
+    'Pirâmide Decrescente': 'A carga diminui a cada série — comece mais pesado.',
+    'Super Slow': 'Execute bem mais devagar que o normal, controlando toda a fase do movimento.',
+    'Bi-Set': 'Faça esse exercício seguido de outro, sem descanso entre os dois.',
+    'Tri-Set': 'Faça esse exercício seguido de mais dois, sem descanso entre eles.',
+    'Negativo': 'Foque na descida do movimento, bem devagar — peça ajuda de alguém se precisar.',
+  };
+
   function renderExercise() {
     const w = protocol.workouts[state.workoutIndex];
     const i = state.currentExercise;
@@ -3376,6 +3397,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         </div>
       </div>`).join('');
 
+    const tecnicaHtml = ex.tecnica ? `<div class="coach-note tecnica-note"><div class="cn-lbl"><span class="tecnica-chip">${escapeHtml(ex.tecnica)}</span></div><div class="cn-txt">${escapeHtml(TECNICA_TIPS[ex.tecnica] || 'Técnica de intensificação — siga a orientação do seu personal.')}</div></div>` : '';
     const noteHtml = ex.note ? `<div class="coach-note"><div class="cn-lbl">Orientação</div><div class="cn-txt">${escapeHtml(ex.note)}</div></div>` : '';
 
     $('execBody').innerHTML = `
@@ -3384,6 +3406,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       <div class="exec-media">${media}</div>
       <div class="sets-head"><span class="sh-title">Séries</span><span class="sh-target">Meta: ${cfg.sets}x${escapeHtml(String(cfg.reps))}${cfg.nota ? ' · ' + escapeHtml(cfg.nota) : ''} · descanso ${cfg.rest}s</span></div>
       ${setsHtml}
+      ${tecnicaHtml}
       ${noteHtml}`;
     armImageTimeouts($('execBody'));
     if (customImgPath) resolveCustomExerciseImage(customImgPath, '.exec-media');

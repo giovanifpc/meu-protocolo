@@ -3,6 +3,8 @@
 ### Foco: Retenção, Crescimento do Profissional e Diferenciação Competitiva
 
 > **Status: escopo recebido, NADA implementado ainda** (registrado em 2026-07-31). Documento preservado como veio do usuário — ver a entrada correspondente em `CLAUDE.md` (seção "Status atual") pra como cada item se relaciona com features já existentes ou já pendentes, e pra observações antes de qualquer implementação.
+>
+> **Atualização 2026-08-01**: item 1 (Programa de Indicação do Profissional pros próprios alunos) fica deliberadamente em aberto por hora — o usuário pediu pra priorizar antes dele um item novo, ainda sem desenho: uma forma do profissional premiar o aluno diretamente (ex. mensalidade grátis), motivada pelo Fundador 1 (Otávio) ter pedido o acompanhamento do ranking justamente pra poder premiar os primeiros colocados. Precisa desenhar como o profissional vai **gerir** essas premiações antes de implementar qualquer coisa. Ver entrada "⏳ Pendência refinada..." no topo de `CLAUDE.md`.
 
 ---
 

@@ -7,8 +7,11 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.12.0',
+      version: '1.13.0',
       items: [
+        'Corrigido: a observação de execução só era editável pra exercício criado na hora — agora é editável em qualquer exercício do bloco, incluindo os buscados na biblioteca.',
+        'Corrigido: a técnica de intensificação escolhida não aparecia pro aluno em lugar nenhum — agora ele vê o mesmo selo azul, com uma explicação de como executar aquela técnica.',
+        'Ajuste visual em Montar Treino: separação mais clara entre blocos de treino e entre exercícios do mesmo bloco, e a busca de exercício ganhou um título deixando claro que ela adiciona mais exercícios ao bloco atual.',
         'Novo: técnica de intensificação (Drop-Set, Rest-Pause, Pirâmide etc.) agora pode ser escolhida direto no criador manual de treino, não só no gerado por IA.',
         'Corrigido: treino gerado por IA podia numerar os treinos errado (ex: A, B, C, E, E, pulando o "D") — a letra agora é sempre calculada certa, nunca repete nem pula.',
         'Novo: o criador de exercício ganhou campo de observação de execução (opcional) — a mesma orientação que aparece embaixo das séries no app do aluno.',
@@ -24,8 +27,9 @@
       ]
     },
     aluno: {
-      version: '1.6.0',
+      version: '1.7.0',
       items: [
+        'Novo: quando seu personal configura uma técnica de intensificação (Drop-Set, Rest-Pause etc.) num exercício, agora você vê um selo indicando qual é e uma explicação de como executá-la.',
         'Novo: durante o treino, botão "Lista" mostra todos os exercícios com check nos concluídos — toque em qualquer um pra pular direto pra ele. Útil quando a máquina do próximo exercício está ocupada: faz outro primeiro e volta depois sem perder o controle.',
         'Corrigido: sua foto de perfil recarregava do zero toda vez que você reabria o app — agora fica em cache e aparece na hora.',
         'Novo: diário alimentar em Nutri — registre o que você comeu (busque ou cadastre o alimento) e veja o total de calorias e macros do dia, direto no app.',

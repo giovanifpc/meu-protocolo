@@ -12,14 +12,14 @@
 <title>Meu Protocolo — Financeiro</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://js.sentry-cdn.com/dd3ca3ee7a720284b2a9bf8240b29158.min.js" crossorigin="anonymous" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="https://js.sentry-cdn.com/dd3ca3ee7a720284b2a9bf8240b29158.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="support-widget.js" defer></script>
 <script src="assistant-hints.js" defer></script>
 <script src="whats-new.js" defer></script>
 <script src="notif-bell.js" defer></script>
 <script src="help-banner.js" defer></script>
-<script defer>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch((e) => console.error('Falha ao registrar service worker:', e)); let __swReloaded = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (__swReloaded) return; __swReloaded = true; window.location.reload(); }); }</script>
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch((e) => console.error('Falha ao registrar service worker:', e)); let __swReloaded = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (__swReloaded) return; __swReloaded = true; window.location.reload(); }); }</script>
 <style>
   :root {
     --bg:#F8F9FA; --primary:#2D6BE4; --accent:#1E8C64; --accent-dim:#146B4D; --text:#1E2A3A;
@@ -256,7 +256,7 @@
   </div>
 </div>
 
-<script defer>
+<script>
   const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';
   const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

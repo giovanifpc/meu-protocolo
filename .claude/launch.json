@@ -6,6 +6,13 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["serve", "-l", "5511", "."],
       "port": 5511
+    },
+    {
+      "name": "static-site-test",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "."],
+      "port": 3000,
+      "autoPort": true
     }
   ]
 }

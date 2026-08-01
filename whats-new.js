@@ -26,8 +26,12 @@
       ]
     },
     aluno: {
-      version: '1.7.0',
+      version: '1.8.0',
       items: [
+        'Novo: o treino iniciado agora fica salvo mesmo se você fechar o app no meio — ao voltar, a Início mostra "Continuar" e retoma exatamente de onde parou. Só termina de verdade quando você finaliza.',
+        'Corrigido: pular 2 ou mais exercícios sem marcar nenhuma série podia travar o treino num loop, sem nunca deixar finalizar — agora cada exercício pulado fica marcado e o botão "Finalizar treino" aparece normalmente.',
+        'Novo: o timer de descanso toca um som quando termina (além da vibração), e nunca mais fica errado se você sair do app e voltar no meio do descanso.',
+        'Treino marcado rápido demais pra ser real (bem abaixo do tempo mínimo plausível) não conta ponto no ranking do mês — continua salvo normalmente no seu histórico.',
         'Novo: quando seu personal configura uma técnica de intensificação (Drop-Set, Rest-Pause etc.) num exercício, agora você vê um selo indicando qual é e uma explicação de como executá-la.',
         'Novo: durante o treino, botão "Lista" mostra todos os exercícios com check nos concluídos — toque em qualquer um pra pular direto pra ele. Útil quando a máquina do próximo exercício está ocupada: faz outro primeiro e volta depois sem perder o controle.',
         'Corrigido: sua foto de perfil recarregava do zero toda vez que você reabria o app — agora fica em cache e aparece na hora.',

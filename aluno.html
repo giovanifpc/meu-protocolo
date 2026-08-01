@@ -120,6 +120,13 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .nw-schedule.today{color:var(--primary-dim)}
 .nw-schedule.upcoming{color:var(--muted);font-weight:500}
 
+.active-session-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:16px}
+.asb-title{display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:800;color:var(--warn-text)}
+.asb-title svg{width:15px;height:15px}
+.asb-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.asb-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.asb-abandon{background:none;border:none;color:var(--muted);font-size:12px;text-decoration:underline;cursor:pointer;padding:4px}
+
 .stat-row{display:flex;gap:12px;margin-bottom:6px}
 .stat-card{flex:1;background:var(--card-grad);border:1px solid var(--card-border);box-shadow:var(--shadow-card);border-radius:var(--radius);padding:16px 14px;text-align:center}
 .stat-card .sc-num{font-size:27px;font-weight:800;color:var(--primary);line-height:1;letter-spacing:-.3px}
@@ -190,6 +197,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .exec-pseg{flex:1;height:3px;background:var(--elev);border-radius:2px;transition:.3s}
 .exec-pseg.done{background:var(--accent)}
 .exec-pseg.active{background:var(--primary)}
+.exec-pseg.skipped{background:var(--warn-text)}
 .exec-body{flex:1;overflow-y:auto;padding:8px 18px 120px}
 .exec-counter{font-size:12px;color:var(--faint);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
 .exec-name{font-size:25px;font-weight:800;line-height:1.15;margin-bottom:16px}
@@ -259,6 +267,8 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .ex-list-item.current{border-color:rgba(var(--primary-rgb),.45);background:linear-gradient(135deg,rgba(var(--primary-rgb),.07),transparent 60%),var(--card-grad)}
 .ex-li-check{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .ex-li-check svg{width:13px;height:13px}
+.ex-li-check.ex-li-skip{background:var(--warn-bg);color:var(--warn-text)}
+.ex-list-item.skipped{border-color:var(--warn-border)}
 
 /* FINISH */
 #finish{justify-content:center;align-items:center;text-align:center;padding:40px 28px}
@@ -1041,6 +1051,18 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   </div>
 </div>
 
+<div class="checkin-overlay" id="sessionConflictOverlay">
+  <div class="checkin-card">
+    <h3>Treino em andamento</h3>
+    <p class="ci-sub" id="sessionConflictMsg">Você tem um treino em andamento.</p>
+    <div class="crop-actions" style="flex-direction:column;gap:10px;margin-top:18px">
+      <button class="btn btn-primary" type="button" onclick="resolveSessionConflict('resume')">Continuar treino em andamento</button>
+      <button class="btn btn-ghost" type="button" onclick="resolveSessionConflict('discard')">Descartar e iniciar este</button>
+      <button class="btn btn-ghost" type="button" onclick="closeSessionConflict()" style="color:var(--muted)">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1066,6 +1088,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     doorExit: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`,
     fileText: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>`,
     check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+    skip: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="18" y2="12"/></svg>`,
     lock: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`,
     star: `<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.1 8.6 22 9.6 17 14.6 18.2 21.5 12 18.2 5.8 21.5 7 14.6 2 9.6 8.9 8.6"/></svg>`,
     repeat: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>`,
@@ -1199,7 +1222,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   let foodLogToday = []; // student_food_log do dia local do aluno
   let foodPickedItem = null; // item de food_library selecionado no meio do fluxo "Adicionar refeição"
   let foodSearchDebounce = null;
-  let state = { workoutIndex:0, currentExercise:0, sessionData:[], startTime:null, restInterval:null, restRemaining:0, restTotal:0, rating:null, overviewMode:'preview' };
+  let state = { workoutIndex:0, currentExercise:0, sessionData:[], startTime:null, restInterval:null, restEndsAt:null, restLabel:null, restTotal:0, rating:null, overviewMode:'preview' };
 
   function toast(msg, isHtml) {
     const t = $('toast');
@@ -1924,6 +1947,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     `;
     container.innerHTML = `
       ${heroHtml}
+      ${activeSessionBannerHtml()}
       ${anamneseBannerHtml()}
       <div class="section-label" style="margin-top:0">Hoje</div>
       ${statGridHtml()}
@@ -3189,10 +3213,16 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     listEl.innerHTML = w.exercises.map((ex, i) => {
       const sd = interactive ? state.sessionData[i] : null;
       const done = interactive && isExerciseDone(sd);
+      const skipped = interactive && !done && !!sd.skipped;
       const isCurrent = interactive && i === state.currentExercise;
-      const numOrCheck = done ? `<span class="ex-li-check">${ICONS.check}</span>` : `<div class="ex-li-num">${i+1}</div>`;
+      const numOrCheck = done
+        ? `<span class="ex-li-check">${ICONS.check}</span>`
+        : skipped
+          ? `<span class="ex-li-check ex-li-skip" title="Pulado">${ICONS.skip}</span>`
+          : `<div class="ex-li-num">${i+1}</div>`;
       const rowClasses = ['ex-list-item'];
       if (done) rowClasses.push('done');
+      if (skipped) rowClasses.push('skipped');
       if (isCurrent) rowClasses.push('current');
       if (interactive) rowClasses.push('clickable');
       const onclickAttr = interactive ? ` onclick="jumpToExerciseFromList(${i})"` : '';
@@ -3282,24 +3312,161 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     return `<span class="ph">${ICONS.dumbbell}</span>`;
   }
 
+  /* ---- PERSISTÊNCIA DA SESSÃO ----
+     Um treino iniciado passa a sobreviver a fechar o app/trocar de tela —
+     "só finaliza quando a pessoa realmente finalizar" (finishWorkout()).
+     Guardado em localStorage (sobrevive a fechar o app de verdade, ao
+     contrário de sessionStorage) sob uma chave fixa por aparelho — sem
+     sincronia entre dispositivos por ora, decisão deliberada de manter
+     escopo pequeno até aparecer uma necessidade real de retomar em outro
+     celular. */
+  const ACTIVE_SESSION_KEY = 'mp_active_session_v1';
+  function persistSession() {
+    if (!state.startTime) return; // sem sessão em andamento, nada a guardar
+    try {
+      localStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify({
+        studentId: student.id,
+        protocolId: protocol.id,
+        workoutIndex: state.workoutIndex,
+        workoutId: protocol.workouts[state.workoutIndex]?.id,
+        currentExercise: state.currentExercise,
+        sessionData: state.sessionData,
+        startTime: state.startTime,
+        rating: state.rating,
+        restEndsAt: state.restEndsAt,
+        restTotal: state.restTotal,
+        restLabel: state.restLabel,
+      }));
+    } catch (e) { /* localStorage indisponível/cheio — sessão só não sobrevive a fechar o app */ }
+  }
+  function clearPersistedSession() {
+    try { localStorage.removeItem(ACTIVE_SESSION_KEY); } catch (e) {}
+  }
+  function loadPersistedSessionRaw() {
+    try {
+      const raw = localStorage.getItem(ACTIVE_SESSION_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || parsed.studentId !== student.id) return null;
+      return parsed;
+    } catch (e) { return null; }
+  }
+  // Confere que a sessão salva ainda faz sentido contra o protocolo carregado
+  // agora (o profissional pode ter publicado um protocolo novo enquanto o
+  // aluno tinha um treino pendente) — se não bater, a sessão é descartada
+  // silenciosamente, sem erro pro aluno.
+  function findPersistedSessionWorkout(saved) {
+    if (!saved || !protocol || saved.protocolId !== protocol.id) return null;
+    const w = protocol.workouts[saved.workoutIndex];
+    if (!w || w.id !== saved.workoutId) return null;
+    return w;
+  }
+
+  function activeSessionBannerHtml() {
+    const saved = loadPersistedSessionRaw();
+    const w = findPersistedSessionWorkout(saved);
+    if (!saved || !w) return '';
+    const mins = Math.max(1, Math.round((Date.now() - saved.startTime) / 60000));
+    const timeLabel = mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h${String(mins % 60).padStart(2, '0')}`;
+    return `
+      <div class="active-session-banner">
+        <div class="asb-txt">
+          <div class="asb-title">${ICONS.hourglass} Treino em andamento</div>
+          <div class="asb-sub">${escapeHtml(w.name)} · começou há ${timeLabel}</div>
+        </div>
+        <div class="asb-actions">
+          <button class="btn btn-primary" style="padding:9px 18px;font-size:13.5px" onclick="resumeSessionFromStorage()">Continuar</button>
+          <button class="asb-abandon" onclick="abandonActiveSession()">Abandonar</button>
+        </div>
+      </div>`;
+  }
+  function abandonActiveSession() {
+    if (!confirm('Isso vai apagar todo o progresso desse treino em andamento — nenhuma série marcada fica salva. Quer mesmo abandonar?')) return;
+    clearPersistedSession();
+    toast('Treino abandonado.');
+    buildHomeDashboard();
+  }
+  function resumeSessionFromStorage() {
+    const saved = loadPersistedSessionRaw();
+    const w = findPersistedSessionWorkout(saved);
+    if (!saved || !w) { clearPersistedSession(); toast('Essa sessão não está mais disponível.'); return; }
+    hideNav();
+    state.workoutIndex = saved.workoutIndex;
+    state.currentExercise = Math.min(saved.currentExercise, saved.sessionData.length - 1);
+    state.sessionData = saved.sessionData;
+    state.startTime = saved.startTime;
+    state.rating = saved.rating || null;
+    state.restTotal = saved.restTotal || 0;
+    state.restLabel = saved.restLabel || null;
+    state.restEndsAt = saved.restEndsAt || null;
+    $('execWoName').textContent = w.name;
+    buildExecProgress();
+    renderExercise();
+    showScreen('exec');
+    if (state.restEndsAt) {
+      if (Date.now() >= state.restEndsAt) { state.restEndsAt = null; state.restLabel = null; persistSession(); }
+      else {
+        $('restNext').textContent = state.restLabel || 'Próxima série';
+        $('restBar').classList.add('show');
+        updateRestUI();
+        armRestInterval();
+      }
+    }
+  }
+
+  /* ---- CONFLITO: já existe um treino em andamento (outro) ---- */
+  let pendingConflictWorkoutIndex = null;
+  function openSessionConflict(newIdx, savedWorkout) {
+    pendingConflictWorkoutIndex = newIdx;
+    const newW = protocol.workouts[newIdx];
+    $('sessionConflictMsg').textContent = `Você tem "${savedWorkout.name}" em andamento. Quer continuar esse treino ou descartar o progresso e começar "${newW.name}"?`;
+    $('sessionConflictOverlay').classList.add('show');
+  }
+  function closeSessionConflict() {
+    pendingConflictWorkoutIndex = null;
+    $('sessionConflictOverlay').classList.remove('show');
+  }
+  function resolveSessionConflict(action) {
+    $('sessionConflictOverlay').classList.remove('show');
+    if (action === 'resume') { resumeSessionFromStorage(); return; }
+    if (action === 'discard') {
+      clearPersistedSession();
+      const idx = pendingConflictWorkoutIndex;
+      pendingConflictWorkoutIndex = null;
+      if (idx != null) { state.workoutIndex = idx; startWorkoutFresh(); }
+    }
+  }
+
   /* ---- INICIAR TREINO ---- */
   function startWorkout() {
+    const saved = loadPersistedSessionRaw();
+    const savedWorkout = findPersistedSessionWorkout(saved);
+    if (savedWorkout) {
+      if (savedWorkout.id === protocol.workouts[state.workoutIndex]?.id) { resumeSessionFromStorage(); return; }
+      openSessionConflict(state.workoutIndex, savedWorkout);
+      return;
+    }
+    startWorkoutFresh();
+  }
+  function startWorkoutFresh() {
     hideNav();
     const w = protocol.workouts[state.workoutIndex];
     state.currentExercise = 0;
     state.startTime = Date.now();
     state.rating = null;
+    state.restEndsAt = null; state.restLabel = null; state.restTotal = 0;
     state.sessionData = w.exercises.map(ex => {
       if (isCardioExercise(ex)) {
-        return { type: 'cardio', done: false, minutesDone: '', targetMinutes: exerciseTargetMinutes(ex) };
+        return { type: 'cardio', done: false, skipped: false, minutesDone: '', targetMinutes: exerciseTargetMinutes(ex) };
       }
       const cfg = exerciseWeekConfig(ex);
-      return { type: 'strength', sets: Array.from({ length: Number(cfg.sets) || 1 }, () => ({ done:false, carga: lastCargaFor(ex.nome), reps: String(cfg.reps || '') })) };
+      return { type: 'strength', skipped: false, sets: Array.from({ length: Number(cfg.sets) || 1 }, () => ({ done:false, doneAt:null, carga: lastCargaFor(ex.nome), reps: String(cfg.reps || '') })) };
     });
     $('execWoName').textContent = w.name;
     buildExecProgress();
     renderExercise();
     showScreen('exec');
+    persistSession();
   }
 
   function buildExecProgress() {
@@ -3310,30 +3477,40 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     updateExecProgress();
   }
   function isExerciseDone(sd) { return sd.type === 'cardio' ? !!sd.done : sd.sets.some(s => s.done); }
+  // "Resolvido" = já foi feito de verdade OU foi deliberadamente pulado
+  // (sd.skipped, setado quando o aluno confirma "pular mesmo assim" em
+  // nextExercise()). Diferente de isExerciseDone: um exercício pulado
+  // nunca deveria voltar a ser tratado como "pendente" pra navegação,
+  // senão dois+ pulados entram num ping-pong infinito entre si (bug real
+  // relatado — nada marcava o exercício como resolvido, só avançava,
+  // então a varredura circular sempre encontrava os mesmos de novo).
+  function isExerciseResolved(sd) { return isExerciseDone(sd) || !!sd.skipped; }
   // Existe algum outro exercício (fora o de índice excludeIndex) ainda sem
-  // concluir? Usado tanto pro rótulo do botão (Próximo vs Finalizar treino)
+  // resolver? Usado tanto pro rótulo do botão (Próximo vs Finalizar treino)
   // quanto pra decidir se "Próximo" avança ou tenta finalizar — precisa ser
   // "sobrou algo", não mais "é o último do array", já que a ordem deixou de
   // ser sempre sequencial (dá pra pular exercícios via a tela Lista).
-  function anyUndoneExcept(excludeIndex) {
-    return state.sessionData.some((sd, i) => i !== excludeIndex && !isExerciseDone(sd));
+  function anyPendingExcept(excludeIndex) {
+    return state.sessionData.some((sd, i) => i !== excludeIndex && !isExerciseResolved(sd));
   }
   // Varredura circular a partir da posição atual, pulando quem já foi
-  // concluído (por ordem normal ou por ter sido feito fora de ordem via a
-  // tela Lista) — sempre recalculada na hora, nunca precisa "lembrar" de
-  // onde ficou pendente.
-  function nextUndoneIndex(fromIndex) {
+  // resolvido (feito, pulado, ou feito fora de ordem via a tela Lista) —
+  // sempre recalculada na hora, nunca precisa "lembrar" de onde ficou
+  // pendente.
+  function nextPendingIndex(fromIndex) {
     const n = state.sessionData.length;
     for (let step = 1; step <= n; step++) {
       const idx = (fromIndex + step) % n;
-      if (!isExerciseDone(state.sessionData[idx])) return idx;
+      if (!isExerciseResolved(state.sessionData[idx])) return idx;
     }
     return null;
   }
   function updateExecProgress() {
     document.querySelectorAll('#execProgress .exec-pseg').forEach((s,i) => {
-      s.classList.remove('done','active');
-      if (isExerciseDone(state.sessionData[i])) s.classList.add('done');
+      s.classList.remove('done','active','skipped');
+      const sd = state.sessionData[i];
+      if (isExerciseDone(sd)) s.classList.add('done');
+      else if (sd.skipped) s.classList.add('skipped');
       else if (i === state.currentExercise) s.classList.add('active');
     });
   }
@@ -3369,7 +3546,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         <div class="exec-name">${escapeHtml(ex.nome)}</div>
         ${renderCardioPanel(ex, sd)}`;
       $('prevBtn').style.visibility = i === 0 ? 'hidden' : 'visible';
-      $('nextBtn').textContent = anyUndoneExcept(i) ? 'Próximo' : 'Finalizar treino';
+      $('nextBtn').textContent = anyPendingExcept(i) ? 'Próximo' : 'Finalizar treino';
       $('execBody').scrollTop = 0;
       updateExecProgress();
       return;
@@ -3412,7 +3589,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     if (customImgPath) resolveCustomExerciseImage(customImgPath, '.exec-media');
 
     $('prevBtn').style.visibility = i === 0 ? 'hidden' : 'visible';
-    $('nextBtn').textContent = anyUndoneExcept(i) ? 'Próximo' : 'Finalizar treino';
+    $('nextBtn').textContent = anyPendingExcept(i) ? 'Próximo' : 'Finalizar treino';
     $('execBody').scrollTop = 0;
     updateExecProgress();
   }
@@ -3447,6 +3624,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     const sd = state.sessionData[state.currentExercise];
     if (sd.type !== 'cardio') return;
     sd.minutesDone = String(Math.max(0, Math.round(Number(val) || 0)));
+    persistSession();
   }
   function toggleCardioDone() {
     const sd = state.sessionData[state.currentExercise];
@@ -3455,6 +3633,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     sd.done = !sd.done;
     renderExercise();
     updateExecProgress();
+    persistSession();
   }
 
   function toggleSet(si) {
@@ -3462,52 +3641,113 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     const w = protocol.workouts[state.workoutIndex];
     const ex = w.exercises[state.currentExercise];
     sd.sets[si].done = !sd.sets[si].done;
+    sd.sets[si].doneAt = sd.sets[si].done ? new Date().toISOString() : null;
     $('setRow'+si).classList.toggle('done', sd.sets[si].done);
     updateExecProgress();
     if (sd.sets[si].done) {
       const remaining = sd.sets.filter(s => !s.done).length;
       if (remaining > 0) startRest(Number(exerciseWeekConfig(ex).rest) || 60, `Série ${si+2} de ${sd.sets.length}`);
     }
+    persistSession();
   }
-  function updateSetField(si, field, val) { state.sessionData[state.currentExercise].sets[si][field] = val; }
+  function updateSetField(si, field, val) { state.sessionData[state.currentExercise].sets[si][field] = val; persistSession(); }
 
-  /* ---- DESCANSO ---- */
+  /* ---- DESCANSO ----
+     O contador nunca decrementa "às cegas" — cada tick recalcula a partir
+     de um horário-alvo absoluto (state.restEndsAt = Date.now() + segundos),
+     nunca de um número que só diminui. Isso é o que garante que o timer
+     nunca fica errado depois de o celular throttlar o setInterval em
+     segundo plano (troca de app, tela apagada): ao voltar, o primeiro tick
+     já mostra o valor certo, sem "arrasto" acumulado. Um listener de
+     visibilitychange força esse recálculo na hora, sem esperar o próximo
+     tick do interval. */
+  let restAudioCtx = null;
+  function playRestBeep() {
+    try {
+      if (!restAudioCtx) restAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (restAudioCtx.state === 'suspended') restAudioCtx.resume();
+      const now = restAudioCtx.currentTime;
+      [0, 0.22].forEach((offset) => {
+        const osc = restAudioCtx.createOscillator();
+        const gain = restAudioCtx.createGain();
+        osc.type = 'sine'; osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.0001, now + offset);
+        gain.gain.exponentialRampToValueAtTime(0.35, now + offset + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.16);
+        osc.connect(gain); gain.connect(restAudioCtx.destination);
+        osc.start(now + offset); osc.stop(now + offset + 0.18);
+      });
+    } catch (e) { /* Web Audio indisponível — silencioso, vibração já cobre o aviso */ }
+  }
   function startRest(seconds, label) {
     clearInterval(state.restInterval);
-    state.restTotal = seconds; state.restRemaining = seconds;
-    $('restNext').textContent = label || 'Próxima série';
+    state.restTotal = seconds;
+    state.restEndsAt = Date.now() + seconds * 1000;
+    state.restLabel = label || 'Próxima série';
+    $('restNext').textContent = state.restLabel;
     $('restBar').classList.add('show');
     updateRestUI();
+    armRestInterval();
+    persistSession();
+  }
+  function armRestInterval() {
+    clearInterval(state.restInterval);
     state.restInterval = setInterval(() => {
-      state.restRemaining--; updateRestUI();
-      if (state.restRemaining <= 0) { clearInterval(state.restInterval); endRest(); }
+      updateRestUI();
+      if (Date.now() >= state.restEndsAt) { clearInterval(state.restInterval); endRest(true); }
     }, 1000);
   }
   function updateRestUI() {
-    $('restNum').textContent = Math.max(0, state.restRemaining);
-    const frac = state.restTotal > 0 ? state.restRemaining / state.restTotal : 0;
+    const remaining = Math.max(0, Math.round((state.restEndsAt - Date.now()) / 1000));
+    $('restNum').textContent = remaining;
+    const frac = state.restTotal > 0 ? remaining / state.restTotal : 0;
     $('restRing').style.strokeDashoffset = 150.8 * (1 - frac);
   }
-  function adjustRest(d) { state.restRemaining = Math.max(5, state.restRemaining + d); state.restTotal = Math.max(state.restTotal, state.restRemaining); updateRestUI(); }
-  function skipRest() { clearInterval(state.restInterval); endRest(); }
-  function endRest() { const bar = $('restBar'); if (bar) bar.classList.remove('show'); if (navigator.vibrate) navigator.vibrate([120,60,120]); }
+  function adjustRest(d) {
+    state.restEndsAt += d * 1000;
+    const remaining = Math.round((state.restEndsAt - Date.now()) / 1000);
+    if (remaining > state.restTotal) state.restTotal = remaining;
+    updateRestUI();
+    persistSession();
+  }
+  function skipRest() { clearInterval(state.restInterval); if (state.restEndsAt) endRest(false); }
+  function endRest(reachedZero) {
+    const bar = $('restBar'); if (bar) bar.classList.remove('show');
+    state.restEndsAt = null; state.restLabel = null;
+    if (navigator.vibrate) navigator.vibrate(reachedZero ? [150,80,150,80,150] : [120,60,120]);
+    if (reachedZero) playRestBeep();
+    persistSession();
+  }
+  // Ao voltar pro app (troca de aba/app minimizado), o interval pode ter
+  // ficado suspenso — recalcula na hora em vez de esperar o próximo tick,
+  // e fecha a barra sozinho se o descanso já tiver terminado enquanto
+  // estava fora (sem beep retroativo: o momento certo já passou).
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || !state.restEndsAt) return;
+    if (Date.now() >= state.restEndsAt) { clearInterval(state.restInterval); endRest(false); }
+    else { updateRestUI(); armRestInterval(); }
+  });
 
   /* ---- NAVEGAÇÃO ENTRE EXERCÍCIOS ---- */
   function nextExercise() {
     const sd = state.sessionData[state.currentExercise];
-    const isLastUndone = !anyUndoneExcept(state.currentExercise);
-    if (!isExerciseDone(sd) && !isLastUndone) {
+    const isLastPending = !anyPendingExcept(state.currentExercise);
+    if (!isExerciseDone(sd) && !isLastPending) {
       const msg = sd.type === 'cardio' ? 'Você ainda não marcou esse cardio como feito. Pular mesmo assim?' : 'Você ainda não marcou nenhuma série deste exercício. Pular mesmo assim?';
       if (!confirm(msg)) return;
+      sd.skipped = true;
+      persistSession();
     }
-    if (isLastUndone) { checkAndFinish(); return; }
-    const next = nextUndoneIndex(state.currentExercise);
-    skipRest(); state.currentExercise = next; renderExercise();
+    if (isLastPending) { checkAndFinish(); return; }
+    const next = nextPendingIndex(state.currentExercise);
+    skipRest(); state.currentExercise = next; renderExercise(); persistSession();
   }
-  function prevExercise() { skipRest(); if (state.currentExercise > 0) { state.currentExercise--; renderExercise(); } }
-  function confirmExit() {
-    if (confirm('Sair do treino? Seu progresso desta sessão não será salvo.')) { skipRest(); goHome(); }
-  }
+  function prevExercise() { skipRest(); if (state.currentExercise > 0) { state.currentExercise--; renderExercise(); persistSession(); } }
+  // O treino só termina de verdade em finishWorkout() — sair daqui é só
+  // pausa, nunca apaga nada (a sessão já está persistida a cada ação).
+  // Quem quiser descartar de propósito usa "Abandonar" no banner de
+  // retomada da Início ou no diálogo de conflito ao iniciar outro treino.
+  function confirmExit() { goHome(); }
   function checkAndFinish() {
     const w = protocol.workouts[state.workoutIndex];
     const skipped = state.sessionData.filter(sd => !isExerciseDone(sd)).length;
@@ -3548,14 +3788,20 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         rating: state.rating,
         exercises: state.sessionData.map((sd,i) => sd.type === 'cardio'
           ? { nome: w.exercises[i].nome, tipo: 'cardio', done: !!sd.done, targetMinutes: sd.targetMinutes, minutesDone: Number(sd.minutesDone) || 0 }
-          : { nome: w.exercises[i].nome, sets: sd.sets.map(s => ({ done: s.done, carga: s.carga, reps: s.reps })) })
+          : { nome: w.exercises[i].nome, skipped: !!sd.skipped, sets: sd.sets.map(s => ({ done: s.done, carga: s.carga, reps: s.reps, doneAt: s.doneAt || null })) })
       }
     };
 
     const earnedBefore = earnedBadgeIds();
     const { error } = await supa.from('training_history').insert(record);
-    if (error) { toast('Erro ao salvar treino: ' + error.message); }
-    else {
+    if (error) {
+      // Não limpa a sessão persistida: "só finaliza quando realmente
+      // finalizar" — se o salvamento falhou (rede, etc.), o progresso
+      // continua guardado pra tentar de novo, nunca é descartado em silêncio.
+      toast('Erro ao salvar treino: ' + error.message);
+    } else {
+      clearPersistedSession();
+      state.startTime = null;
       history.unshift(record);
       const newBadges = BADGES.filter(b => !earnedBefore.includes(b.id) && b.test());
       newBadges.forEach((b,i) => setTimeout(() => toast(`${b.ico} Conquista: ${escapeHtml(b.name)}`, true), 1200 + i * 2000));
@@ -3565,6 +3811,16 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
           { onConflict: 'student_id,badge_id', ignoreDuplicates: true }
         ).then(({ error: badgeErr }) => { if (badgeErr) console.error('Falha ao registrar medalha:', badgeErr.message); });
       }
+      // Aviso sutil de plausibilidade pro ranking — o servidor é sempre
+      // quem decide de verdade (get_student_ranking recalcula isso a cada
+      // consulta); essa chamada é só pra avisar na hora, sem acusar nada,
+      // depois dos toasts de conquista pra não competir por atenção.
+      supa.rpc('check_session_plausibility', { p_session_uid: record.session_uid }).then(({ data: plausible, error: plausErr }) => {
+        if (plausErr) { console.error('Falha ao checar plausibilidade da sessão:', plausErr.message); return; }
+        if (plausible === false) {
+          setTimeout(() => toast('Esse treino foi bem mais rápido que o normal pra esse protocolo — ficou salvo normalmente, mas não vai contar ponto no ranking deste mês.'), 1200 + newBadges.length * 2000 + 1500);
+        }
+      });
     }
 
     $('fsEx').textContent = exDone;

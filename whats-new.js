@@ -7,8 +7,9 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.14.0',
+      version: '1.15.0',
       items: [
+        'Corrigido: upload de PDF em Nutri podia falhar sem explicação clara pra arquivo acima de 10MB — limite subiu pra 20MB, e o erro agora avisa direito quando o arquivo ainda é grande demais.',
         'Corrigido: a observação de execução só era editável pra exercício criado na hora — agora é editável em qualquer exercício do bloco, incluindo os buscados na biblioteca.',
         'Corrigido: a técnica de intensificação escolhida não aparecia pro aluno em lugar nenhum — agora ele vê o mesmo selo azul, com uma explicação de como executar aquela técnica.',
         'Novo: técnica de intensificação (Drop-Set, Rest-Pause, Pirâmide etc.) agora pode ser escolhida direto no criador manual de treino, não só no gerado por IA.',

@@ -62,6 +62,8 @@
   .drawer-item.active .di-ico{color:var(--primary)}
   .card { background:var(--card-grad); border:1px solid rgba(20,30,45,.04); box-shadow:var(--shadow-card); border-radius:var(--radius-lg); padding:16px 18px; margin-bottom:16px; }
   .card h2 { font-size:15px; margin:0 0 12px; }
+  .nutri-card-caption { font-size:12.5px; line-height:1.5; color:var(--muted); background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin:0 0 14px; }
+  .nutri-card-caption strong { color:var(--text); }
   .field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
   .field label { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
   .field select, .field textarea { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; color:var(--text); font-family:var(--font); }
@@ -130,14 +132,15 @@
       </div>
 
       <div class="card">
-        <h2>Orientação atual<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('O que colocar aqui', 'Sem parceria com nutricionista: use só o campo de texto pra uma orientação básica (hidratação, evitar ultraprocessado, priorizar proteína magra) — já tem valor sem ser um plano formal.<br><br>Com parceria: suba o PDF que o nutricionista parceiro preparou, e use o texto pra resumir os pontos principais.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></h2>
+        <h2>Orientação atual<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('O que colocar aqui', 'Um recado direto pro aluno — hidratação, evitar ultraprocessado, priorizar proteína nas refeições principais, esse tipo de orientação geral. Não é prescrição nutricional (isso é atividade exclusiva de nutricionista): fique em conselhos práticos, não em número de caloria ou macro.<br><br>Se o aluno já tem um plano em PDF pronto, o campo de baixo (\'PDF de apoio\') é o lugar de subir esse arquivo.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></h2>
         <div class="field">
           <textarea id="orientacaoInput" placeholder="Ex: Beber 2L de água por dia, priorizar proteína nas refeições principais, evitar açúcar refinado à noite..."></textarea>
         </div>
       </div>
 
       <div class="card">
-        <h2>PDF do plano nutricional</h2>
+        <h2>PDF de apoio (nutricionista externo)<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Pra que serve este PDF', 'É um espaço de apoio, não uma prescrição sua. Se o aluno já tem um plano nutricional pronto — feito por um nutricionista independente, sem nenhum vínculo com você — ele te manda o PDF e você sobe aqui só pra ele conseguir ver esse plano dentro do app, junto do resto do treino.<br><br>Não muda nada na meta de calorias/macros do aluno: quem manda nisso é sempre a \'Meta nutricional validada\' (mais abaixo), e ela exige uma parceria de verdade com uma nutricionista que atende esse aluno junto com você — diferente deste PDF aqui, que pode vir de qualquer nutricionista externo e independente.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></h2>
+        <p class="nutri-card-caption">Seu aluno já tem um plano em PDF de um nutricionista que não trabalha com você? Ele te manda o arquivo, você sobe aqui, e ele passa a acompanhar dentro do próprio app — sem PDF solto no celular. É só uma cópia de apoio: <strong>não libera a meta de calorias e macros</strong>, isso só acontece no card "Meta nutricional validada" mais abaixo.</p>
         <div id="pdfCurrentArea"></div>
         <div class="field">
           <label>Substituir PDF (opcional)</label>
@@ -151,7 +154,8 @@
       </div>
 
       <div class="card">
-        <h2>Meta nutricional validada<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Por que a meta é travada', 'Cálculo de meta calórica/macronutrientes (VET) é prescrição dietética — atividade privativa do nutricionista (Nota Técnica CFN nº 82/2023), fora das atribuições do profissional de Educação Física.<br><br>Por isso o app nunca calcula essa meta sozinho. Você só transcreve aqui o que a nutricionista parceira do aluno definiu numa consulta real — o diário alimentar (aba do aluno) continua liberado sem isso, é só a meta oficial que fica travada até então.<br><br>O nome + CRN + UF são obrigatórios: é a mesma exigência que a própria profissão já tem (nutricionista assina prescrição com nome e CRN), o que reduz risco de um preenchimento sem lastro nenhum.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></h2>
+        <h2>Meta nutricional validada<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Por que a meta é travada', 'Diferente do PDF de apoio no card acima (que pode vir de qualquer nutricionista independente, sem vínculo com você): aqui é sempre uma parceria SUA, validada — uma nutricionista que atendeu esse aluno de verdade, junto com o seu acompanhamento.<br><br>Cálculo de meta calórica/macronutrientes (VET) é prescrição dietética — atividade privativa do nutricionista (Nota Técnica CFN nº 82/2023), fora das atribuições do profissional de Educação Física. Por isso o app nunca calcula essa meta sozinho: você só transcreve aqui o que a nutricionista parceira definiu numa consulta real. O diário alimentar (aba do aluno) continua liberado sem isso, é só a meta oficial que fica travada até então.<br><br>O nome + CRN + UF são obrigatórios: é a mesma exigência que a própria profissão já tem (nutricionista assina prescrição com nome e CRN), o que reduz risco de um preenchimento sem lastro nenhum.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></h2>
+        <p class="nutri-card-caption">Diferente do PDF de apoio acima: só preencha isso quando existe uma <strong>parceria de verdade</strong> — uma nutricionista que atende esse aluno junto com você, não um profissional externo e independente. É o que libera oficialmente a meta de calorias e macros pro aluno.</p>
         <div id="macroGoalArea"></div>
       </div>
     </div>
@@ -191,6 +195,22 @@
   function openDrawer() { $('drawerOverlay').classList.add('show'); $('sideDrawer').classList.add('show'); }
   function closeDrawer() { $('drawerOverlay').classList.remove('show'); $('sideDrawer').classList.remove('show'); }
   $('drawerLogoutBtn').addEventListener('click', async () => { await supa.auth.signOut(); window.location.href = 'login.html'; });
+
+  // Traduz o erro cru do Supabase Storage (ilegível pra quem não é técnico)
+  // pra uma mensagem que a pessoa consegue agir em cima — motivado por
+  // relato real da Livia (chat de suporte, 2026-08-01): upload de PDF
+  // falhando com "mensagem genérica", sem saber o motivo. Mesmo padrão já
+  // usado no fix de fotos de avaliação física (2026-07-27).
+  function friendlyPdfUploadError(err) {
+    const raw = (err && err.message) || '';
+    if (/exceeded the maximum allowed size/i.test(raw)) {
+      return 'Esse PDF é grande demais (limite de 20MB). Tente exportar de novo em menor qualidade, ou comprimir o arquivo antes de subir.';
+    }
+    if (/mime type/i.test(raw)) {
+      return 'Esse arquivo não foi reconhecido como PDF de verdade — confirme que é um .pdf, não uma foto ou outro formato salvo com esse nome.';
+    }
+    return 'Erro ao enviar PDF: ' + raw + ' — se persistir, tente de novo em outra rede (wifi/dados móveis) ou fale com o suporte.';
+  }
 
   let professional = null;
   let currentGuidance = null; // { id, student_id, orientacao, pdf_path, pdf_nome }
@@ -323,7 +343,7 @@
       const newPath = `${currentGuidance.student_id}/${Date.now()}-${file.name}`;
       const { error: uploadErr } = await supa.storage.from('nutri-pdfs').upload(newPath, file, { contentType: 'application/pdf' });
       if (uploadErr) {
-        $('saveMsg').textContent = 'Erro ao enviar PDF: ' + uploadErr.message;
+        $('saveMsg').textContent = friendlyPdfUploadError(uploadErr);
         $('saveMsg').className = 'msg error';
         $('saveBtn').disabled = false;
         return;
@@ -497,7 +517,7 @@
         const newPath = macroGoalPdfPath(studentId);
         const { error: uploadErr } = await supa.storage.from('nutri-pdfs').upload(newPath, file, { contentType: 'application/pdf', upsert: true });
         if (uploadErr) {
-          $('mgMsg').textContent = 'Erro ao enviar PDF: ' + uploadErr.message;
+          $('mgMsg').textContent = friendlyPdfUploadError(uploadErr);
           $('mgMsg').className = 'msg error';
           $('mgSaveBtn').disabled = false;
           return;

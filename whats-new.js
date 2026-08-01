@@ -7,8 +7,9 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.15.0',
+      version: '1.16.0',
       items: [
+        'Corrigido: a aba onde você clica em "Instalar" continuava logada depois — se ficasse aberta, podia derrubar sua sessão no app instalado sem nenhum aviso. Agora, assim que o app termina de instalar, aparece um recado claro pra fechar essa aba.',
         'Corrigido: upload de PDF em Nutri podia falhar sem explicação clara pra arquivo acima de 10MB — limite subiu pra 20MB, e o erro agora avisa direito quando o arquivo ainda é grande demais.',
         'Corrigido: a observação de execução só era editável pra exercício criado na hora — agora é editável em qualquer exercício do bloco, incluindo os buscados na biblioteca.',
         'Corrigido: a técnica de intensificação escolhida não aparecia pro aluno em lugar nenhum — agora ele vê o mesmo selo azul, com uma explicação de como executar aquela técnica.',
@@ -27,8 +28,9 @@
       ]
     },
     aluno: {
-      version: '1.9.0',
+      version: '1.10.0',
       items: [
+        'Corrigido: a aba onde você clica em "Instalar" continuava logada depois — se ficasse aberta, podia derrubar sua sessão no app instalado sem nenhum aviso. Agora, assim que o app termina de instalar, aparece um recado claro pra fechar essa aba.',
         'Novo: ao iniciar um treino, aparece um alongamento pré-treino rápido (menos de 3 minutos) — faça ou pule, sua escolha fica registrada no seu histórico.',
         'Novo: no fim do treino, a avaliação de "como foi" virou uma escala de 1 a 10 (intensidade percebida), com espaço opcional pra descrever algo sobre o treino — útil pra avisar o personal de uma dor ou desconforto pontual.',
         'Novo: o treino iniciado agora fica salvo mesmo se você fechar o app no meio — ao voltar, a Início mostra "Continuar" e retoma exatamente de onde parou. Só termina de verdade quando você finaliza.',

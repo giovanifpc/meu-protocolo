@@ -41,6 +41,31 @@
     checkHint(); // pode já estar esperando na tela — reavalia assim que o navegador confirmar suporte
   });
 
+  // Mesmo risco documentado em student-hints.js: a aba onde o profissional
+  // clicou em "Instalar" continua logada depois — se ficar aberta, o
+  // refresh automático de sessão do Supabase rodando nela pode invalidar o
+  // token que o painel instalado também usa (localStorage é por origem,
+  // não por aba/PWA), derrubando a sessão do PWA sem nenhuma ação visível
+  // ali. Achado real, 2026-08-02, reproduzido pelo usuário no lado do
+  // aluno — mesma correção replicada aqui.
+  window.addEventListener('appinstalled', showInstalledNotice);
+  function showInstalledNotice() {
+    card.innerHTML = `
+      <button type="button" class="hint-close" aria-label="Fechar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <span class="hint-tag">App instalado!</span>
+      <p>Agora é só abrir o Meu Protocolo pela tela inicial. <strong>Feche esta aba do navegador</strong> — deixá-la aberta pode derrubar sua sessão no app instalado de vez em quando.</p>
+      <div class="hint-actions"><button type="button" class="hint-btn" data-action="close-tab">Entendi, fechar aba</button></div>
+    `;
+    card.classList.add('show');
+    card.querySelector('.hint-close').addEventListener('click', hide);
+    card.querySelector('[data-action="close-tab"]').addEventListener('click', () => {
+      hide();
+      window.close(); // sem efeito em aba aberta por navegação normal — o aviso já cobriu o essencial
+    });
+  }
+
   function isStandalone() {
     return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   }

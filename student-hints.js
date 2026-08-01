@@ -64,6 +64,36 @@
     checkHint(); // pode já estar na Home esperando — reavalia assim que o navegador confirmar suporte
   });
 
+  // A aba onde o aluno clicou em "Instalar" continua logada depois do
+  // instalado — se ele deixar ela aberta (comum: ninguém pensa em fechar a
+  // aba que acabou de instalar um app), o refresh automático de sessão do
+  // Supabase rodando nessa aba esquecida pode invalidar o token que o PWA
+  // instalado também usa (localStorage é por origem, não por aba/PWA — o
+  // mesmo token é compartilhado), derrubando a sessão do app instalado sem
+  // nenhuma ação visível do aluno ali. Achado real, 2026-08-02: usuário
+  // reproduziu exatamente esse caminho (instalou o PWA, deixou a aba viva,
+  // sessão do PWA caiu na próxima vez que o Chrome foi reaberto). Correção
+  // é orientar a fechar a aba assim que o navegador confirma o instalado —
+  // window.close() só funciona em aba aberta por script, então o aviso em
+  // texto é a garantia real aqui, não a tentativa de fechar sozinho.
+  window.addEventListener('appinstalled', showInstalledNotice);
+  function showInstalledNotice() {
+    card.innerHTML = `
+      <button type="button" class="sh-close" aria-label="Fechar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <span class="sh-tag">App instalado!</span>
+      <p class="sh-msg">Agora é só abrir o Meu Protocolo pela tela inicial do seu celular. <strong>Feche esta aba do navegador</strong> — deixá-la aberta pode derrubar sua sessão no app instalado de vez em quando.</p>
+      <div class="sh-actions"><button type="button" class="sh-btn" data-action="close-tab">Entendi, fechar aba</button></div>
+    `;
+    card.classList.add('show');
+    card.querySelector('.sh-close').addEventListener('click', hide);
+    card.querySelector('[data-action="close-tab"]').addEventListener('click', () => {
+      hide();
+      window.close(); // sem efeito em aba aberta por navegação normal — o aviso já cobriu o essencial
+    });
+  }
+
   function isStandalone() {
     return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   }

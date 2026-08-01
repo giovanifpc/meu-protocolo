@@ -7,8 +7,10 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.13.0',
+      version: '1.14.0',
       items: [
+        'Reorganizado o cabeçalho de cada exercício em Montar Treino: título em destaque, botão "Adicionar mídia" logo abaixo, depois a observação de execução e por último a técnica de intensificação.',
+        'Novo botão de ajuda ao lado de "Trocar exercícios" explicando pra que serve.',
         'Corrigido: a observação de execução só era editável pra exercício criado na hora — agora é editável em qualquer exercício do bloco, incluindo os buscados na biblioteca.',
         'Corrigido: a técnica de intensificação escolhida não aparecia pro aluno em lugar nenhum — agora ele vê o mesmo selo azul, com uma explicação de como executar aquela técnica.',
         'Ajuste visual em Montar Treino: separação mais clara entre blocos de treino e entre exercícios do mesmo bloco, e a busca de exercício ganhou um título deixando claro que ela adiciona mais exercícios ao bloco atual.',

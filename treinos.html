@@ -86,7 +86,8 @@
   .exercise-row .ex-meta { color:var(--muted); font-size:12px; }
   .exercise-row-edit { flex-wrap:wrap; }
   .ex-name-col { font-weight:600; flex:1 1 100%; margin-bottom:4px; }
-  .video-link-btn { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; margin-left:6px; padding:0; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--faint); cursor:pointer; vertical-align:-6px; }
+  .ex-title { font-weight:700; font-size:13.5px; color:var(--text); margin-bottom:6px; }
+  .video-link-btn { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; margin:0 0 8px; border:1px solid var(--line); border-radius:7px; background:var(--bg); color:var(--muted); cursor:pointer; font-size:11.5px; font-weight:700; font-family:var(--font); }
   .video-link-btn.linked { background:#E7F7F1; border-color:var(--accent); color:var(--accent-dim); }
   .tecnica-chip { display:inline-block; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.3px; color:var(--primary); background:rgba(45,107,228,.1); padding:2px 8px; border-radius:6px; margin-bottom:4px; border:none; cursor:pointer; font-family:var(--font); }
   .tecnica-row { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
@@ -1780,6 +1781,15 @@
   }
   window.openTecnicaHelp = openTecnicaHelp;
 
+  const REGENERATE_HELP_BODY = 'Troca só os exercícios desse bloco por outros do mesmo padrão de movimento — sets, reps, descanso, técnica de intensificação e periodização continuam exatamente como já estão configurados, nada disso é refeito.<br><br>' +
+    'Pensado pra economizar seu tempo quando o protocolo já está bem calibrado e você só quer dar a sensação de treino novo pro aluno, sem remontar o bloco inteiro do zero.<br><br>' +
+    '<strong>Dica de uso</strong>: numa virada de ciclo, em vez de recriar o protocolo, use esse botão pra variar os exercícios do aluno mantendo toda a estrutura que já funciona.';
+  function openRegenerateHelp(e) {
+    e.stopPropagation();
+    window.showHelpBanner('Trocar exercícios', REGENERATE_HELP_BODY);
+  }
+  window.openRegenerateHelp = openRegenerateHelp;
+
   const PERIODIZACAO_HELP_BODY = '<ul>' +
     '<li><strong>Linear</strong>: carga sobe e volume desce de forma previsível, semana a semana.</li>' +
     '<li><strong>Ondulatória diária</strong>: varia por treino do loop — A pesado, B moderado, C leve —, não por semana.</li>' +
@@ -1800,7 +1810,29 @@
   // do gerado por IA): é escolha deliberada do profissional, não uma
   // sugestão de modelo que precisa de rede de segurança.
   const TECNICA_OPTIONS = ['Drop-Set', 'Rest-Pause', 'Cluster', 'Myo-Reps', 'Pirâmide Crescente', 'Pirâmide Decrescente', 'Super Slow', 'Bi-Set', 'Tri-Set', 'Negativo'];
-  function renderTecnicaAndNote(ex, w, i) {
+
+  function renderVideoIconBtn(ex) {
+    if (!ex.exercise_id) return '';
+    const media = exerciseVideos[ex.exercise_id];
+    const linked = !!(media && (media.youtube_url || media.image_path));
+    const title = linked ? 'Vídeo/imagem vinculados — editar' : 'Vincular vídeo ou imagem próprios';
+    const label = linked ? 'Mídia vinculada' : 'Adicionar mídia';
+    return `<button type="button" class="video-link-btn ${linked ? 'linked' : ''}" data-role="video-link" data-exercise-id="${ex.exercise_id}" data-exercise-nome="${escapeHtml(ex.nome)}" title="${title}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>${label}</button>`;
+  }
+
+  // Cabeçalho de cada exercício do bloco — ordem pedida pelo usuário:
+  // título do exercício, botão de mídia logo abaixo, observação de
+  // execução, e por último o seletor de técnica (antes vinha primeiro,
+  // brigando com o nome pela atenção de quem só quer ver "qual exercício é
+  // esse" de cara).
+  function renderExerciseHeader(ex, w, i) {
+    const titleHtml = `<div class="ex-title">${escapeHtml(ex.nome)}</div>`;
+    const mediaBtn = renderVideoIconBtn(ex);
+    // Antes só era editável pro exercício recém-criado no modal "Criar
+    // exercício novo" (o valor nascia ali e nunca mais podia ser mudado) —
+    // agora é sempre um campo editável, pra qualquer exercício do bloco,
+    // criado na hora ou buscado da biblioteca compartilhada.
+    const noteInput = `<textarea class="ex-note-input" data-role="ex-note" data-workout-id="${w._uid}" data-idx="${i}" placeholder="Observação de execução (opcional)" rows="1">${escapeHtml(ex.note || '')}</textarea>`;
     const optsHtml = ['<option value="">Sem técnica</option>']
       .concat(TECNICA_OPTIONS.map(t => `<option value="${escapeHtml(t)}" ${ex.tecnica === t ? 'selected' : ''}>${escapeHtml(t)}</option>`))
       .join('');
@@ -1808,20 +1840,7 @@
       <select class="tecnica-select" data-role="tecnica" data-workout-id="${w._uid}" data-idx="${i}">${optsHtml}</select>
       <button type="button" class="help-q-btn" aria-label="Ajuda" onclick="openTecnicaHelp(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button>
     </div>`;
-    // Antes só era editável pro exercício recém-criado no modal "Criar
-    // exercício novo" (o valor nascia ali e nunca mais podia ser mudado) —
-    // agora é sempre um campo editável, pra qualquer exercício do bloco,
-    // criado na hora ou buscado da biblioteca compartilhada.
-    const noteInput = `<textarea class="ex-note-input" data-role="ex-note" data-workout-id="${w._uid}" data-idx="${i}" placeholder="Observação de execução (opcional)" rows="1">${escapeHtml(ex.note || '')}</textarea>`;
-    return tecnicaRow + noteInput;
-  }
-
-  function renderVideoIconBtn(ex) {
-    if (!ex.exercise_id) return '';
-    const media = exerciseVideos[ex.exercise_id];
-    const linked = !!(media && (media.youtube_url || media.image_path));
-    const title = linked ? 'Vídeo/imagem vinculados — editar' : 'Vincular vídeo ou imagem próprios';
-    return `<button type="button" class="video-link-btn ${linked ? 'linked' : ''}" data-role="video-link" data-exercise-id="${ex.exercise_id}" data-exercise-nome="${escapeHtml(ex.nome)}" title="${title}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></button>`;
+    return titleHtml + mediaBtn + noteInput + tecnicaRow;
   }
 
   function renderCardioExerciseRow(w, ex, i) {
@@ -1845,7 +1864,7 @@
       const wk = weeks[0];
       return `
         <div class="exercise-row exercise-row-edit">
-          <div class="ex-name-col">${renderTecnicaAndNote(ex, w, i)}${escapeHtml(ex.nome)}${renderVideoIconBtn(ex)}</div>
+          <div class="ex-name-col">${renderExerciseHeader(ex, w, i)}</div>
           <div class="ex-fields">
             <input type="number" min="1" class="ex-field-input" value="${escapeHtml(wk.sets)}" data-role="wk-sets" data-workout-id="${w._uid}" data-idx="${i}" data-week="0" title="Séries">
             <span class="ex-field-x">×</span>
@@ -1859,7 +1878,7 @@
     return `
       <div class="exercise-row-multi">
         <div class="ex-name-row">
-          <div class="ex-name-col">${renderTecnicaAndNote(ex, w, i)}${escapeHtml(ex.nome)}${renderVideoIconBtn(ex)}</div>
+          <div class="ex-name-col">${renderExerciseHeader(ex, w, i)}</div>
           <button class="btn danger small" data-role="remove-exercise" data-workout-id="${w._uid}" data-idx="${i}">×</button>
         </div>
         <div class="week-grid">
@@ -1887,6 +1906,7 @@
           <input type="text" value="${escapeHtml(w.name)}" data-role="workout-name" data-workout-id="${w._uid}">
           <div style="display:flex;gap:6px;flex-shrink:0;">
             <button class="btn secondary small" data-role="regenerate-exercises" data-workout-id="${w._uid}" type="button" title="Trocar exercícios, mantendo técnicas e periodização"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>Trocar exercícios</button>
+            <button type="button" class="help-q-btn" aria-label="Ajuda" onclick="openRegenerateHelp(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button>
             <button class="btn danger small" data-role="remove-workout" data-workout-id="${w._uid}">Remover</button>
           </div>
         </div>

@@ -92,6 +92,12 @@
   .tecnica-chip { display:inline-block; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.3px; color:var(--primary); background:rgba(45,107,228,.1); padding:2px 8px; border-radius:6px; margin-bottom:4px; border:none; cursor:pointer; font-family:var(--font); }
   .tecnica-row { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
   .tecnica-select { font-size:11px; font-weight:700; color:var(--primary); background:rgba(45,107,228,.08); border:1px solid rgba(45,107,228,.25); border-radius:6px; padding:3px 6px; font-family:var(--font); cursor:pointer; max-width:170px; }
+  /* Mesmo destaque de cor do seletor de técnica (azul), só que em roxo —
+     cor nova nesta tela, escolhida de propósito pra não colidir com o
+     que já é reservado: verde é sempre "sucesso/concluído", âmbar é
+     sempre "atenção/aviso" em outras partes do app. Reaproveita o mesmo
+     tom já calibrado de contraste do preset "Roxo Profundo" do aluno. */
+  .field select.periodizacao-select { color:#5B3A9E; background:rgba(91,58,158,.08); border-color:rgba(91,58,158,.3); font-weight:700; }
   .ex-note { font-size:11.5px; color:var(--muted); flex:1 1 100%; margin:-2px 0 4px; }
   .ex-note-input { display:block; width:100%; font-size:11.5px; line-height:1.4; color:var(--text); font-family:var(--font); border:1px solid var(--line); border-radius:6px; padding:6px 8px; margin:0 0 4px; resize:vertical; min-height:54px; box-sizing:border-box; overflow-y:auto; }
   .ex-fields { display:flex; align-items:center; gap:4px; }
@@ -281,7 +287,7 @@
         <div class="periodization-row">
           <div class="field" style="margin-bottom:0;">
             <label>Periodização<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="openPeriodizacaoHelp(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></label>
-            <select id="wizardPeriodizacaoSelect">
+            <select id="wizardPeriodizacaoSelect" class="periodizacao-select">
               <option value="manual">Nenhuma (manual)</option>
               <option value="linear" selected>Linear</option>
               <option value="ondulatoria_diaria">Ondulatória diária</option>
@@ -344,7 +350,7 @@
           <div class="periodization-row">
             <div class="field" style="margin-bottom:0;">
               <label>Periodização<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="openPeriodizacaoHelp(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></label>
-              <select id="periodizacaoSelect">
+              <select id="periodizacaoSelect" class="periodizacao-select">
                 <option value="manual">Nenhuma (manual)</option>
                 <option value="linear">Linear</option>
                 <option value="ondulatoria_diaria">Ondulatória diária</option>
@@ -1790,13 +1796,14 @@
   }
   window.openRegenerateHelp = openRegenerateHelp;
 
-  const PERIODIZACAO_HELP_BODY = '<ul>' +
-    '<li><strong>Linear</strong>: carga sobe e volume desce de forma previsível, semana a semana.</li>' +
-    '<li><strong>Ondulatória diária</strong>: varia por treino do loop — A pesado, B moderado, C leve —, não por semana.</li>' +
-    '<li><strong>Ondulatória semanal</strong>: varia semana a semana num padrão ondulado, não sempre crescente.</li>' +
-    '<li><strong>Em blocos</strong>: fases distintas, ex: volume depois intensidade.</li>' +
-    '<li><strong>Reversa</strong>: começa leve/alto volume e termina pesado/baixo volume, o inverso do linear.</li>' +
-    '<li><strong>Manual</strong>: você decide sozinho, sem progressão automática.</li>' +
+  const PERIODIZACAO_HELP_BODY = '<strong>Como ler a tabela de semanas</strong>: cada coluna é uma semana (ou fase) do ciclo — o título da coluna diz qual ("S1", "S2"... ou o nome da fase) e as linhas de baixo mostram como séries, reps e descanso mudam nela. É isso que o aluno sente diferente de uma semana pra outra, na prática.<br><br>' +
+  '<ul>' +
+    '<li><strong>Linear</strong>: colunas "S1, S2...". Séries sobem e reps caem aos poucos ao longo do ciclo, descanso aumenta; a última coluna vira "Deload" — solta o volume pra recuperar antes de reiniciar.</li>' +
+    '<li><strong>Ondulatória diária</strong>: não tem coluna de semana — cada treino do loop (A, B, C...) já nasce com um perfil fixo: "Pesado" (mais séries, menos reps, mais descanso), "Moderado" (o padrão que você configurou) ou "Leve" (menos séries, mais reps, menos descanso).</li>' +
+    '<li><strong>Ondulatória semanal</strong>: colunas alternam em ciclos de 3 — "Força", "Hipertrofia", "Resistência" — repetindo esse padrão até o fim da duração escolhida, sem sempre crescer.</li>' +
+    '<li><strong>Em blocos</strong>: divide a duração total em 3 fases sequenciais — "Acumulação" (mais volume), "Intensificação" (volume parecido, mais descanso) e "Realização" (menos volume, mais descanso, foco em desempenho no fim do ciclo).</li>' +
+    '<li><strong>Reversa</strong>: colunas "S1, S2..." — o oposto da Linear: começa com mais séries/menos descanso e termina com menos séries/mais descanso.</li>' +
+    '<li><strong>Manual</strong>: sem tabela de semanas — só uma linha, você ajusta séries/reps/descanso na mão quando quiser.</li>' +
   '</ul>';
   function openPeriodizacaoHelp(e) {
     e.stopPropagation();

@@ -94,6 +94,15 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### ✅ Banner de periodização ensina a ler a tabela de semanas + seletor ganha destaque roxo (2026-08-01, mesma sessão do PC)
+
+Motivado por confusão real: o usuário estava usando uma periodização e não entendeu os termos "Acumulação"/"Intensificação"/"Realização" nas colunas da tabela de semanas — **achado durante a investigação**: esses termos são da técnica **Em blocos**, não da Ondulatória (Ondulatória semanal usa "Força"/"Hipertrofia"/"Resistência"; a diária usa "Pesado"/"Moderado"/"Leve") — o usuário parece ter confundido as duas ao descrever o problema, mas a causa raiz de fundo era a mesma nos dois casos: o banner de ajuda (`PERIODIZACAO_HELP_BODY`) explicava o que cada técnica *faz* em uma frase, mas nunca ensinava a *ler a tabela resultante* — daí o Fundador 1 (Otávio) também ter perguntado no chat de suporte o que "S1, S2..." significava.
+
+- **Banner reescrito**: novo parágrafo de abertura ("Como ler a tabela de semanas") explicando que cada coluna é uma semana/fase, o título da coluna diz qual, e as linhas de baixo mostram séries/reps/descanso mudando — é isso que o aluno sente na prática. Cada uma das 6 técnicas ganhou uma frase a mais citando o **nome exato das colunas que aparecem** (ex: Linear = "S1, S2..." + "Deload" na última; Em blocos = "Acumulação"/"Intensificação"/"Realização") e o que muda concretamente (mais/menos séries, reps, descanso) — decisão deliberada de não virar um manual de teoria de periodização (isso sim ficaria longo e sairia do escopo de ajuda rápida), só amarrar o rótulo que a pessoa vê na tela ao que ele significa.
+- **Seletor de periodização ganha destaque roxo** (`#5B3A9E`, mesmo tom já calibrado de contraste do preset "Roxo Profundo" do aluno) — pedido do usuário, mesmo espírito do `.tecnica-select` azul já existente. Cor escolhida deliberadamente diferente de verde (reservado pra sucesso/concluído em todo o app) e âmbar (reservado pra atenção/aviso) — roxo fica livre pra virar a "cor de periodização" sem colidir com nada semântico já usado. Aplicado nos 2 selects que existem (`#periodizacaoSelect`, editor manual; `#wizardPeriodizacaoSelect`, wizard de IA) via `.periodizacao-select`, com especificidade CSS (`.field select.periodizacao-select`) garantindo que vence a regra genérica `.field select` já existente.
+- **Não entrou no changelog (`whats-new.js`)** — conteúdo de banner de ajuda e cor de destaque são exatamente o tipo de mudança que a regra nova (ver "Regras de desenvolvimento") diz pra não incluir ali.
+- **Testado em produção local**: `getComputedStyle` confirmou os 2 selects com cor/fundo/borda roxos aplicados; banner de ajuda aberto de verdade mostrando o parágrafo novo + os termos "Acumulação"/"Força"/"Deload" corretamente. Zero erro de console novo.
+
 ### ✅ Ícone de ajuda (?) sem círculo duplo + caixa de observação maior (2026-08-01, mesma sessão do PC)
 
 Dois ajustes visuais pontuais, o segundo achado pelo usuário testando a caixa de observação nova (seção logo abaixo).

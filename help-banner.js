@@ -12,8 +12,8 @@
 (function () {
   const style = document.createElement('style');
   style.textContent = `
-    .help-q-btn { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; border:1.5px solid var(--muted,#94A0AF); color:var(--muted,#94A0AF); background:none; cursor:pointer; padding:0; margin-left:6px; vertical-align:middle; flex-shrink:0; }
-    .help-q-btn svg { width:11px; height:11px; }
+    .help-q-btn { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; border:1.5px solid var(--muted,#94A0AF); color:var(--muted,#94A0AF); background:none; cursor:pointer; padding:0; margin-left:6px; vertical-align:middle; flex-shrink:0; }
+    .help-q-btn svg { width:13px; height:13px; }
     .help-q-btn:hover { border-color:var(--primary,#2D6BE4); color:var(--primary,#2D6BE4); }
     #helpBannerOverlay { position:fixed; inset:0; background:rgba(15,20,28,.55); z-index:700; display:none; align-items:center; justify-content:center; padding:20px; }
     #helpBannerOverlay.show { display:flex; }

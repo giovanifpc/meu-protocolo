@@ -9,11 +9,8 @@
     profissional: {
       version: '1.14.0',
       items: [
-        'Reorganizado o cabeçalho de cada exercício em Montar Treino: título em destaque, botão "Adicionar mídia" logo abaixo, depois a observação de execução e por último a técnica de intensificação.',
-        'Novo botão de ajuda ao lado de "Trocar exercícios" explicando pra que serve.',
         'Corrigido: a observação de execução só era editável pra exercício criado na hora — agora é editável em qualquer exercício do bloco, incluindo os buscados na biblioteca.',
         'Corrigido: a técnica de intensificação escolhida não aparecia pro aluno em lugar nenhum — agora ele vê o mesmo selo azul, com uma explicação de como executar aquela técnica.',
-        'Ajuste visual em Montar Treino: separação mais clara entre blocos de treino e entre exercícios do mesmo bloco, e a busca de exercício ganhou um título deixando claro que ela adiciona mais exercícios ao bloco atual.',
         'Novo: técnica de intensificação (Drop-Set, Rest-Pause, Pirâmide etc.) agora pode ser escolhida direto no criador manual de treino, não só no gerado por IA.',
         'Corrigido: treino gerado por IA podia numerar os treinos errado (ex: A, B, C, E, E, pulando o "D") — a letra agora é sempre calculada certa, nunca repete nem pula.',
         'Novo: o criador de exercício ganhou campo de observação de execução (opcional) — a mesma orientação que aparece embaixo das séries no app do aluno.',

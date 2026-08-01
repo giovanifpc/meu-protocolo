@@ -93,6 +93,14 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### ✅ Painel de ranking movido de `perfil.html` pra `alunos.html` (2026-08-01)
+
+Usuário notou, com razão, que o painel novo (seção acima) ficava dentro de Configurações, longe de onde ele de fato pensa em "meus alunos". Decisão: **o painel de dados vai pra `alunos.html`**, mas **o toggle "Ranking entre alunos" continua em `perfil.html`** — é configuração de verdade (liga/desliga a visibilidade entre os alunos), enquanto o painel é consulta, faz mais sentido junto da lista de alunos.
+
+- **`alunos.html`**: novo card "Ranking do mês" logo abaixo de "Meus alunos" — mesmo conteúdo/visual de antes (posição, nome, treinos/medalhas/recordes, pontuação, cores ouro/prata/bronze), ícone de dúvida explicando que aparece independente do toggle de Config estar ligado. Chama `get_professional_student_ranking()` no boot, junto do carregamento da lista de alunos.
+- **`perfil.html`**: painel removido, sobrou só o toggle (inalterado). Texto do toggle ganhou uma frase apontando pra onde o placar completo foi ("Veja o placar completo na aba Alunos"). CSS/JS específicos do painel (`.ranking-row` e família, `loadProfessionalRanking()`, o helper `escapeHtml` que só existia pra isso) removidos — nada fica órfão.
+- Validado só por `node --check`/checagem de IDs órfãos/balanceamento de `<div>` nos 2 arquivos — não visto num navegador real nesta sessão (a RPC em si já está confirmada funcionando em produção, só a realocação de tela não foi vista rodando).
+
 ### 🆕 Escopo implementado: painel de ranking pro profissional em `perfil.html` (2026-07-31, mesma sessão)
 
 Gap real relatado pelo usuário: o profissional já controlava o ranking entre alunos desde 2026-07-19 (toggle "Ranking entre alunos" em `perfil.html`), mas nunca teve nenhum jeito de **ver** o resultado — a única leitura existente, `get_student_ranking()`, é escopada exclusivamente pra chamada de aluno (resolve o chamador contra a tabela `students`; um profissional chamando essa RPC recebe erro "Apenas alunos podem consultar o ranking").

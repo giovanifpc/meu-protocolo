@@ -145,7 +145,7 @@ Recurso opcional (o profissional liga em "Financeiro", no menu lateral do painel
 
 ### 5.13 Ranking mensal entre alunos (adicionado 2026-07-19)
 
-Recurso opcional (o profissional liga em Configurações). Quando ligado, os alunos de um mesmo profissional veem um placar mensal entre si — pontos por treino concluído, medalha desbloqueada, recorde pessoal de carga — com nome abreviado (nunca o nome completo de outro aluno). O placar reseta todo mês. O profissional também tem o próprio painel de ranking (Perfil > Alunos, desde 2026-07-31) — vê o placar com nome completo dos alunos, mesmo que o ranking ainda esteja desligado pra eles.
+Recurso opcional (o profissional liga em Configurações). Quando ligado, os alunos de um mesmo profissional veem um placar mensal entre si — pontos por treino concluído, medalha desbloqueada, recorde pessoal de carga — com nome abreviado (nunca o nome completo de outro aluno). O placar reseta todo mês. O profissional também tem o próprio painel de ranking (aba Alunos, card "Ranking do mês") — vê o placar com nome completo dos alunos, mesmo que o ranking ainda esteja desligado pra eles. O toggle de ligar/desligar pros alunos continua em Configurações.
 
 ### 5.14 Vídeo e imagem de execução dos exercícios (adicionado 2026-07-19, imagem própria adicionada 2026-07-27)
 

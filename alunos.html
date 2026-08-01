@@ -60,6 +60,16 @@
   .billing-row > * { min-width:0; }
   .billing-status { font-size:12px; color:var(--muted); margin-bottom:8px; }
   .empty { color:var(--muted); font-size:13px; text-align:center; padding:20px 0; }
+  .ranking-row { display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:11px 13px; margin-bottom:8px; }
+  .ranking-row:last-child { margin-bottom:0; }
+  .ranking-pos { font-size:15px; font-weight:800; color:var(--faint); width:20px; text-align:center; flex-shrink:0; }
+  .ranking-row:nth-child(1) .ranking-pos { color:#D4A017; }
+  .ranking-row:nth-child(2) .ranking-pos { color:#9AA5B1; }
+  .ranking-row:nth-child(3) .ranking-pos { color:#B8804A; }
+  .ranking-info { flex:1; min-width:0; }
+  .ranking-name { font-size:13.5px; font-weight:700; }
+  .ranking-meta { font-size:11.5px; color:var(--muted); margin-top:2px; }
+  .ranking-score { font-size:15px; font-weight:800; color:var(--primary); flex-shrink:0; }
   .field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
   .field label { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
   .field input { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; color:var(--text); font-family:var(--font); }
@@ -159,6 +169,11 @@
       <h2>Meus alunos</h2>
       <div id="studentsList"><div class="empty">Carregando...</div></div>
     </div>
+
+    <div class="card">
+      <h2>Ranking do mês<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Ranking do mês', 'Placar mensal dos seus alunos — 10pt por sessão de treino completa, 4pt incompleta, 20pt por medalha desbloqueada, 15pt por recorde pessoal de carga. Reseta todo dia 1º.<br><br>Aparece aqui independente do toggle \'Ranking entre alunos\' (em Config) estar ligado — esse toggle só controla se os ALUNOS veem esse placar entre si.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></h2>
+      <div id="rankingList"><div class="empty">Carregando...</div></div>
+    </div>
   </main>
 
   <nav class="bottom-nav">
@@ -223,6 +238,31 @@
       $('navMsgDot').style.display = (data || 0) > 0 ? 'block' : 'none';
     });
     await loadStudents();
+    loadProfessionalRanking();
+  }
+
+  // Placar do mês — independente do toggle "Ranking entre alunos" (Config)
+  // estar ligado, esse painel sempre mostra o resultado real pro
+  // profissional; o toggle só controla se os ALUNOS veem uns aos outros.
+  async function loadProfessionalRanking() {
+    const { data, error } = await supa.rpc('get_professional_student_ranking');
+    if (error) {
+      $('rankingList').innerHTML = `<div class="empty">Erro ao carregar ranking: ${escapeHtml(error.message)}</div>`;
+      return;
+    }
+    if (!data || !data.length) {
+      $('rankingList').innerHTML = `<div class="empty">Nenhuma atividade registrada este mês ainda.</div>`;
+      return;
+    }
+    $('rankingList').innerHTML = data.map((r, i) => `
+      <div class="ranking-row">
+        <div class="ranking-pos">${i + 1}</div>
+        <div class="ranking-info">
+          <div class="ranking-name">${escapeHtml(r.display_name)}</div>
+          <div class="ranking-meta">${r.sessions_completas} treino(s) · ${r.medalhas} medalha(s) · ${r.recordes} recorde(s)</div>
+        </div>
+        <div class="ranking-score">${r.score}</div>
+      </div>`).join('');
   }
 
   // Cada página do profissional (index/alunos/treinos...) é um documento

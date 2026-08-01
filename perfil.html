@@ -79,19 +79,6 @@
   .switch .slider::before { content:''; position:absolute; width:20px; height:20px; left:3px; top:3px; background:#fff; border-radius:50%; transition:transform .15s ease; box-shadow:0 1px 2px rgba(0,0,0,.2); }
   .switch input:checked + .slider { background:var(--primary); }
   .switch input:checked + .slider::before { transform:translateX(18px); }
-  .ranking-panel { margin-top:14px; }
-  .ranking-panel .section-label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; }
-  .empty { color:var(--muted); font-size:13px; text-align:center; padding:16px 0; }
-  .ranking-row { display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:11px 13px; margin-bottom:8px; }
-  .ranking-row:last-child { margin-bottom:0; }
-  .ranking-pos { font-size:15px; font-weight:800; color:var(--faint); width:20px; text-align:center; flex-shrink:0; }
-  .ranking-row:nth-child(1) .ranking-pos { color:#D4A017; }
-  .ranking-row:nth-child(2) .ranking-pos { color:#9AA5B1; }
-  .ranking-row:nth-child(3) .ranking-pos { color:#B8804A; }
-  .ranking-info { flex:1; min-width:0; }
-  .ranking-name { font-size:13.5px; font-weight:700; }
-  .ranking-meta { font-size:11.5px; color:var(--muted); margin-top:2px; }
-  .ranking-score { font-size:15px; font-weight:800; color:var(--primary); flex-shrink:0; }
   .logo-row { display:flex; align-items:center; gap:12px; }
   .logo-preview { width:64px; height:64px; border-radius:12px; border:1px dashed var(--line); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; background:var(--bg); }
   .logo-preview img { max-width:100%; max-height:100%; object-fit:contain; }
@@ -289,16 +276,12 @@
       <div class="toggle-row">
         <div class="tr-text">
           <div class="tr-label">Ranking entre alunos</div>
-          <div class="tr-sub">Placar mensal (treinos, medalhas e recordes de carga) visível pros seus alunos entre si, com nome abreviado.</div>
+          <div class="tr-sub">Placar mensal (treinos, medalhas e recordes de carga) visível pros seus alunos entre si, com nome abreviado. Veja o placar completo na aba Alunos.</div>
         </div>
         <label class="switch">
           <input type="checkbox" id="rankingToggle">
           <span class="slider"></span>
         </label>
-      </div>
-      <div class="ranking-panel" id="rankingPanel">
-        <div class="section-label">Ranking deste mês</div>
-        <div id="rankingList"><div class="empty">Carregando...</div></div>
       </div>
     </div>
 
@@ -431,9 +414,6 @@
   const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const MERCADOPAGO_PUBLIC_KEY = 'APP_USR-b5376858-ebb9-44fe-8d82-6cc525eaa4f2';
   const $ = (id) => document.getElementById(id);
-  function escapeHtml(s) {
-    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
   function openDrawer() { $('drawerOverlay').classList.add('show'); $('sideDrawer').classList.add('show'); }
   function closeDrawer() { $('drawerOverlay').classList.remove('show'); $('sideDrawer').classList.remove('show'); }
   $('drawerLogoutBtn').addEventListener('click', async () => { await supa.auth.signOut(); window.location.href = 'login.html'; });
@@ -889,7 +869,6 @@
     $('whatsappInput').value = pro.whatsapp || '';
     $('homeSubtitleInput').value = pro.home_subtitle || '';
     $('rankingToggle').checked = !!pro.ranking_enabled;
-    loadProfessionalRanking();
     $('supportFabToggle').checked = pro.support_fab_enabled !== false;
 
     $('referralLinkInput').value = pro.referral_code ? `https://meuprotocolo.app/onboarding.html?ref=${pro.referral_code}` : '';
@@ -928,30 +907,6 @@
     professional.ranking_enabled = enabled;
     toast(enabled ? 'Ranking ativado pros seus alunos.' : 'Ranking desativado.');
   });
-
-  // Placar do mês, visível pro profissional independente do toggle acima
-  // (o toggle só controla se os ALUNOS veem uns aos outros) — assim dá pra
-  // conferir o resultado antes de decidir ativar pra eles.
-  async function loadProfessionalRanking() {
-    const { data, error } = await supa.rpc('get_professional_student_ranking');
-    if (error) {
-      $('rankingList').innerHTML = `<div class="empty">Erro ao carregar ranking: ${escapeHtml(error.message)}</div>`;
-      return;
-    }
-    if (!data || !data.length) {
-      $('rankingList').innerHTML = `<div class="empty">Nenhuma atividade registrada este mês ainda.</div>`;
-      return;
-    }
-    $('rankingList').innerHTML = data.map((r, i) => `
-      <div class="ranking-row">
-        <div class="ranking-pos">${i + 1}</div>
-        <div class="ranking-info">
-          <div class="ranking-name">${escapeHtml(r.display_name)}</div>
-          <div class="ranking-meta">${r.sessions_completas} treino(s) · ${r.medalhas} medalha(s) · ${r.recordes} recorde(s)</div>
-        </div>
-        <div class="ranking-score">${r.score}</div>
-      </div>`).join('');
-  }
 
   $('supportFabToggle').addEventListener('change', async (e) => {
     const enabled = e.target.checked;

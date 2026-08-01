@@ -7,8 +7,9 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.12.0',
+      version: '1.13.0',
       items: [
+        'Corrigido: trocar de tela no painel (Início, Alunos, Treino...) estava lento e com uma "piscada" — os scripts de terceiros (Sentry, Supabase) não deixavam a tela aparecer até terminarem de carregar. Agora a tela aparece na hora, os dados chegam logo em seguida.',
         'Novo: técnica de intensificação (Drop-Set, Rest-Pause, Pirâmide etc.) agora pode ser escolhida direto no criador manual de treino, não só no gerado por IA.',
         'O painel de ranking na aba Alunos subiu pro topo da página — não fica mais escondido depois de uma lista de alunos longa.',
         'Corrigido: treino gerado por IA podia numerar os treinos errado (ex: A, B, C, E, E, pulando o "D") — a letra agora é sempre calculada certa, nunca repete nem pula.',
@@ -25,8 +26,9 @@
       ]
     },
     aluno: {
-      version: '1.6.0',
+      version: '1.7.0',
       items: [
+        'Corrigido: o app demorava mais que o necessário pra abrir — scripts de terceiros que não deixavam a tela aparecer até terminarem de carregar. Agora abre mais rápido.',
         'Novo: durante o treino, botão "Lista" mostra todos os exercícios com check nos concluídos — toque em qualquer um pra pular direto pra ele. Útil quando a máquina do próximo exercício está ocupada: faz outro primeiro e volta depois sem perder o controle.',
         'Corrigido: sua foto de perfil recarregava do zero toda vez que você reabria o app — agora fica em cache e aparece na hora.',
         'Novo: diário alimentar em Nutri — registre o que você comeu (busque ou cadastre o alimento) e veja o total de calorias e macros do dia, direto no app.',

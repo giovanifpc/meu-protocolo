@@ -12,9 +12,9 @@
 <title>Meu Protocolo — Meu Treino</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
-<script src="https://js.sentry-cdn.com/dd3ca3ee7a720284b2a9bf8240b29158.min.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://sdk.mercadopago.com/js/v2"></script>
+<script src="https://js.sentry-cdn.com/dd3ca3ee7a720284b2a9bf8240b29158.min.js" crossorigin="anonymous" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="https://sdk.mercadopago.com/js/v2" defer></script>
 <script src="student-hints.js" defer></script>
 <script src="whats-new.js" defer></script>
 <script>window.SUPPORT_WIDGET_NO_FAB = true;</script>
@@ -1040,7 +1040,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script defer>
   const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';
   const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

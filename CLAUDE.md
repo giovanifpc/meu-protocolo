@@ -14,6 +14,26 @@ Produto **totalmente separado da marca Fox Performance** — projetos distintos,
 
 ---
 
+## ⛔ Pausa de desenvolvimento novo (regra fixa, vigente desde 2026-08-02)
+
+**Nenhuma função/feature nova deve ser implementada até o roadmap de finalização do projeto estar concluído.** A partir de agora só são aceitos: ajustes pontuais (bug real, correção pequena) e pontos críticos que os próprios fundadores (Founders) apontarem em uso real — nunca feature nova por iniciativa própria, nem retomar item do roadmap pós-dev/crescimento (`roadmap-pos-dev.md`) enquanto essa pausa estiver ativa.
+
+Passos do roadmap de finalização (lista sujeita a confirmação — a versão completa e oficial vive no master doc, `MEU-PROTOCOLO-MASTER.md`, só no PC do usuário; conferir/completar esta lista na próxima sessão com acesso a ele):
+1. **Organizar as contas** — assinar os planos pagos necessários das plataformas, **um contrato de cada vez**, não simultâneo. Escopo fechado em 2026-08-02 (levantamento completo na entrada correspondente de "Status atual"):
+   - Supabase Pro — US$ 25/mês (backup diário automático de verdade + fim da pausa do projeto por inatividade)
+   - Resend Pro — US$ 20/mês (remove o teto de 100 e-mails/dia do Free)
+   - Domínio `.app` (Cloudflare Registrar) — já ativo, ~US$ 1,60/mês
+   - **Subtotal: ≈ US$ 46,60/mês (~R$ 238/mês)**, sem lojas de app
+   - **Fora do escopo necessário agora** (não contratar sem pedido explícito do usuário): PITR do Supabase (US$100/mês — avaliado e descartado, backup diário já resolve o risco real), Sentry Team, Cloudflare Pro, UptimeRobot pago, GitHub Pro — nenhum resolve dor real no estágio atual
+   - Apple Developer Program (US$99/ano) e Google Play Console (US$25 pagamento único) só entram quando/se o app for publicado nas lojas — não fazem parte do "organizar as contas" de agora
+2. Registrar a marca no INPI
+3. Abrir o CNPJ (MEI)
+4. Itens adicionais do roadmap de finalização ainda não confirmados nesta sessão (revisão jurídica de termos/privacidade com o cliente 0 e pesquisa a fundo do concorrente Athlo já estavam registrados como pendência não-técnica antes desta regra — ver "Não-técnico" no fim do arquivo)
+
+Enquanto esse roadmap não estiver 100% fechado: qualquer pedido de feature nova deve ser respondido lembrando dessa pausa, não implementado direto. Ajuste pontual/bug real segue liberado normalmente, sem precisar confirmar a pausa toda vez.
+
+---
+
 ## Regras de desenvolvimento
 
 - **Branch principal:** `main` — todo commit vai direto para a main
@@ -1671,6 +1691,8 @@ Nota: o master doc completo (`MEU-PROTOCOLO-MASTER.md`) só existe no PC do usu�
 
 **Não-técnico (do usuário, não do Code)**: estrutura de recebimento (MEI), registro da marca no INPI, pesquisa a fundo do concorrente Athlo (athloapp.eu), alinhar termos com o cliente 0.
 
-**Pendências decididas pro final do projeto (2026-07-18)**: o usuário pediu pra revisar essas duas coisas só quando o dev estiver mais fechado, não agora — não sugerir de novo antes disso:
-1. **Backup/PITR do Supabase**: hoje `pitr_enabled: false`, nenhum backup automático ativo (confirmado via `supabase backups list --project-ref yumqmramxbahkfxsthtt`). Envolve investimento (upgrade de plano/add-on) — o usuário quer decidir isso na revisão final de plataformas, junto com a decisão de assinar um plano pago do Supabase pra garantir storage.
-2. **Organizar contas** (e-mail e planos pagos das plataformas usadas no projeto — Supabase, Mercado Pago, Resend, Cloudflare, etc.) — revisão geral pro final do dev, não é tarefa técnica de código.
+**Pendências decididas pro final do projeto — status atualizado em 2026-08-02**: o que era "revisar só quando o dev estiver mais fechado" (2026-07-18) virou o **roadmap de finalização ativo agora**, com pausa de desenvolvimento novo até fechar — ver regra "⛔ Pausa de desenvolvimento novo" no topo deste arquivo.
+1. **Organizar as contas** (definido em 2026-08-02, contratação um plano de cada vez, em andamento): Supabase Pro (US$25/mês — resolve o `pitr_enabled: false` de hoje via backup diário automático; PITR de US$100/mês avaliado e descartado por ora) + Resend Pro (US$20/mês) + domínio `.app` já ativo (~US$1,60/mês) — subtotal ≈ US$46,60/mês (~R$238/mês), sem lojas de app. Levantamento completo de todas as plataformas (Cloudflare, Sentry, UptimeRobot, Apple/Google Play) feito nesta mesma data, ver conversa/registro de 2026-08-02.
+2. Registrar a marca no INPI.
+3. Abrir o CNPJ (MEI).
+4. Itens adicionais do roadmap de finalização do master doc ainda não confirmados nesta sessão — completar contra `MEU-PROTOCOLO-MASTER.md` assim que houver acesso a ele (revisão jurídica de termos/privacidade e pesquisa do concorrente Athlo já eram pendência não-técnica registrada antes desta rodada, ver bullet acima).

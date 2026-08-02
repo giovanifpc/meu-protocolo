@@ -4,22 +4,17 @@ Texto para usar ao contatar contabilidades digitais (Contabilizei, Agilize, Cont
 
 ---
 
-Olá! Quero abrir uma empresa e gostaria de um orçamento.
+Oi, tudo bem? Queria pedir um orçamento pra abrir uma empresa.
 
-**Sobre a empresa:**
-- Vai ser aberta em nome de pessoa física, como sócia única (titular ainda sem CNPJ próprio).
-- Ramo: desenvolvimento e licenciamento de um aplicativo de gestão por assinatura (SaaS) — clientes pagam mensalidade para usar o sistema pronto, não é desenvolvimento sob encomenda para um cliente específico.
-- Modalidade pretendida: **ME (Microempresa) optante pelo Simples Nacional** — MEI não se aplica, pois desenvolvimento de software é atividade vedada ao MEI.
-- CNAE de referência que pesquisamos: **6203-1/00** (desenvolvimento e licenciamento de programas de computador não-customizáveis). Gostaria da confirmação de vocês se esse é o CNAE mais adequado.
-- Expectativa de faturamento crescendo rápido nos próximos meses.
+A empresa vai ser aberta no nome da minha mãe, ela ainda não tem CNPJ. É um aplicativo de gestão que a gente vende por assinatura mensal, tipo um sistema pronto que os clientes pagam pra usar, não é um desenvolvimento sob encomenda pra ninguém específico.
 
-**Perguntas que preciso que respondam antes de fechar:**
-1. Vocês têm experiência com empresa de software/SaaS no Simples Nacional, especificamente com o **Fator R** (Anexo III x Anexo V)? Preciso de orientação sobre pró-labore desde a abertura para não cair no Anexo V (alíquota mais alta) sem necessidade.
-2. Qual o valor da abertura do CNPJ e o que está incluso?
-3. Qual a mensalidade da contabilidade recorrente para uma ME nesse perfil, e o que está incluso (emissão de nota fiscal, folha de pagamento/pró-labore, obrigações acessórias)?
-4. Prazo estimado para o CNPJ ficar pronto?
+Pelo que pesquisei, a ideia seria abrir como ME no Simples Nacional, porque MEI não pode fazer desenvolvimento de software. E o CNAE que acho que se encaixa é o 6203-1/00, de desenvolvimento e licenciamento de programa de computador não customizável, mas queria confirmar com vocês se é esse mesmo.
 
-Aguardo o orçamento, obrigado(a).
+A gente espera que o faturamento cresça rápido nos próximos meses, então queria saber se vocês já atenderam empresa de software antes e entendem bem do Fator R, porque isso muda bastante o imposto (Anexo III ou Anexo V) e eu queria já montar o pró-labore certo desde o início pra não pagar imposto a mais sem necessidade.
+
+Pode me passar quanto custa pra abrir, quanto fica a mensalidade da contabilidade depois (com nota fiscal, folha/pró-labore e as obrigações inclusas) e quanto tempo leva pra sair o CNPJ?
+
+Obrigado, fico no aguardo.
 
 ---
 

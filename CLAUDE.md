@@ -19,11 +19,12 @@ Produto **totalmente separado da marca Fox Performance** — projetos distintos,
 **Nenhuma função/feature nova deve ser implementada até o roadmap de finalização do projeto estar concluído.** A partir de agora só são aceitos: ajustes pontuais (bug real, correção pequena) e pontos críticos que os próprios fundadores (Founders) apontarem em uso real — nunca feature nova por iniciativa própria, nem retomar item do roadmap pós-dev/crescimento (`roadmap-pos-dev.md`) enquanto essa pausa estiver ativa.
 
 Passos do roadmap de finalização (lista sujeita a confirmação — a versão completa e oficial vive no master doc, `MEU-PROTOCOLO-MASTER.md`, só no PC do usuário; conferir/completar esta lista na próxima sessão com acesso a ele):
-1. **Organizar as contas** — assinar os planos pagos necessários das plataformas, **um contrato de cada vez**, não simultâneo. Escopo fechado em 2026-08-02 (levantamento completo na entrada correspondente de "Status atual"):
+1. **Organizar as contas** — assinar os planos pagos necessários das plataformas, **um contrato de cada vez**, não simultâneo. Escopo fechado em 2026-08-02, contabilidade fechada com a Contajá em 2026-08-03 (levantamento completo na entrada correspondente de "Status atual"):
    - Supabase Pro — US$ 25/mês (backup diário automático de verdade + fim da pausa do projeto por inatividade)
    - Resend Pro — US$ 20/mês (remove o teto de 100 e-mails/dia do Free)
    - Domínio `.app` (Cloudflare Registrar) — já ativo, ~US$ 1,60/mês
-   - **Subtotal: ≈ US$ 46,60/mês (~R$ 238/mês)**, sem lojas de app
+   - Contabilidade (Contajá, plano básico) — R$ 137/mês (obrigações acessórias, pró-labore, nota fiscal com API de automação desde o início)
+   - **Subtotal: ≈ US$ 46,60/mês (~R$ 238/mês) de plataformas + R$ 137/mês de contabilidade ≈ R$ 375/mês no total**, sem lojas de app
    - **Fora do escopo necessário agora** (não contratar sem pedido explícito do usuário): PITR do Supabase (US$100/mês — avaliado e descartado, backup diário já resolve o risco real), Sentry Team, Cloudflare Pro, UptimeRobot pago, GitHub Pro — nenhum resolve dor real no estágio atual
    - Apple Developer Program (US$99/ano) e Google Play Console (US$25 pagamento único) só entram quando/se o app for publicado nas lojas — não fazem parte do "organizar as contas" de agora
 2. Registrar a marca no INPI
@@ -142,7 +143,8 @@ Continuação do levantamento de plataformas do mesmo dia (ver seção "Pausa de
 - CNAE secundário pra taxa de 1% da cobrança automática (aluno→profissional): incluído sem custo extra, dentro de um "grupo de CNAE" que a Contajá já define pra cobrir toda a operação.
 - Conta PJ: a Contajá indica Banco Cora por padrão, mas não é obrigatório — decisão do usuário foi não usar o Cora, vai escolher outro banco (Inter/Nubank cogitados) por conta própria.
 - Certificado digital: custo à parte, não incluso na mensalidade.
-- Nota fiscal emitida dentro da própria plataforma da Contajá (API só entra depois de escalar). Plano básico R$137/mês, inclui obrigações acessórias, relatórios, balanços, registro de pró-labore, cálculo de imposto, declarações mensais e anuais, suporte.
+- Nota fiscal emitida dentro da própria plataforma da Contajá — **correção de 2026-08-03**: decisão do usuário é usar a API de automação de nota fiscal **desde o início**, não esperar escalar. Plano básico R$137/mês, inclui obrigações acessórias, relatórios, balanços, registro de pró-labore, cálculo de imposto, declarações mensais e anuais, suporte.
+- **Trabalho técnico pendente pra implementar quando o CNPJ/conta Contajá estiver ativa**: Edge Function nova que dispara a emissão de nota fiscal automaticamente a cada pagamento aprovado, integrada ao fluxo já existente do `mercadopago-webhook` — usando a API da Contajá assim que as credenciais forem geradas. Não iniciar antes disso existir (depende do CNPJ sair e da Contajá liberar acesso à API) — registrado aqui só pra não esquecer quando a hora chegar.
 - Prazo: CNPJ sai em ~10 dias; emissão de nota fiscal liberada em até 30 dias no total.
 - Pró-labore começa a partir do faturamento real, cálculo controlado pela própria Contajá — INSS de 11% sobre o valor do pró-labore, Imposto de Renda isento até R$5 mil, distribuição de lucros isenta de imposto até R$50 mil. Precisa enviar extrato bancário mensal pra eles somarem a distribuição de lucro.
 - Calendário de obrigações já vem na própria plataforma da Contajá (guias, emissão de nota) — dia 20 é o vencimento padrão das guias (DAS).

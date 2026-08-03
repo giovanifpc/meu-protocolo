@@ -137,6 +137,17 @@ Continuação do levantamento de plataformas do mesmo dia (ver seção "Pausa de
 - **Verificação de idoneidade**: registro no CRC é conferível de graça (nome/CPF/CNPJ) no site do CRC do estado ou na Consulta Nacional do CFC — vale checar antes de fechar, mesmo com contabilidade digital grande.
 - Texto pronto pra abordar os orçamentos online ficou salvo em `contador-mensagem-orcamento.md` (raiz do repo).
 
+**Orçamento fechado com a Contajá (2026-08-03)** — resposta da ligação real, fecha a etapa de achar contador:
+- Tributação confirmada: DAS 6% (Anexo III, Fator R já favorável desde o início) — ISS do município (Uberaba/MG, endereço dela) já vem embutido nesse DAS único, não é cobrança separada.
+- CNAE secundário pra taxa de 1% da cobrança automática (aluno→profissional): incluído sem custo extra, dentro de um "grupo de CNAE" que a Contajá já define pra cobrir toda a operação.
+- Conta PJ: a Contajá indica Banco Cora por padrão, mas não é obrigatório — decisão do usuário foi não usar o Cora, vai escolher outro banco (Inter/Nubank cogitados) por conta própria.
+- Certificado digital: custo à parte, não incluso na mensalidade.
+- Nota fiscal emitida dentro da própria plataforma da Contajá (API só entra depois de escalar). Plano básico R$137/mês, inclui obrigações acessórias, relatórios, balanços, registro de pró-labore, cálculo de imposto, declarações mensais e anuais, suporte.
+- Prazo: CNPJ sai em ~10 dias; emissão de nota fiscal liberada em até 30 dias no total.
+- Pró-labore começa a partir do faturamento real, cálculo controlado pela própria Contajá — INSS de 11% sobre o valor do pró-labore, Imposto de Renda isento até R$5 mil, distribuição de lucros isenta de imposto até R$50 mil. Precisa enviar extrato bancário mensal pra eles somarem a distribuição de lucro.
+- Calendário de obrigações já vem na própria plataforma da Contajá (guias, emissão de nota) — dia 20 é o vencimento padrão das guias (DAS).
+- Custo de fechamento: R$441 (equivalente a 3 mensalidades do plano básico) pra cadastro/liberação da plataforma e início do cadastro da sócia, mais taxas de abertura (Junta Comercial/Receita) e certificado digital à parte. Estimativa total informada: **~R$1.500** (taxas + adesão inicial).
+
 - **Nenhuma decisão de código feita aqui** — é só levantamento pra apoiar a conversa com o contador; puramente administrativo/jurídico, cai dentro do item "organizar as contas" do roadmap de finalização.
 
 ### ✅ Escopo FECHADO, pronto pra implementar (ainda zero código): Aluno de Teste (preview ao vivo do app do aluno) + Banner personalizado Elite (desenhado 2026-08-01, fechado 2026-08-02)

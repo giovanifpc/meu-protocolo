@@ -244,7 +244,14 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .set-field input:focus{outline:none;border-color:var(--primary)}
 .set-field label{font-size:9px;color:var(--faint);text-transform:uppercase;letter-spacing:.5px}
 
-.rest-bar{position:fixed;bottom:0;left:0;right:0;max-width:520px;margin:0 auto;background:var(--card);border-top:1px solid var(--line);box-shadow:0 -4px 20px rgba(0,0,0,.06);padding:16px 18px calc(16px + env(safe-area-inset-bottom));transform:translateY(110%);transition:.35s cubic-bezier(.2,.8,.2,1);z-index:50}
+/* Banner de descanso fixo no TOPO da tela Exec (2026-08-04, pedido do
+   usuário) — antes ficava grudado no rodapé, exigindo que o resto da tela
+   "se ajustasse"/rolasse pra continuar vendo a barra junto do rodapé de
+   navegação. Como overlay fixo logo abaixo do cabeçalho, ele cobre
+   parcialmente o topo do gif (.exec-media) quando aparece — deliberado,
+   nunca empurra o layout (a série/lista continua exatamente onde estava,
+   sem reflow) */
+.rest-bar{position:fixed;left:0;right:0;max-width:520px;margin:0 auto;top:calc(env(safe-area-inset-top) + 76px);background:var(--card);border:1px solid var(--line);border-top:none;box-shadow:0 10px 26px -10px rgba(0,0,0,.22);padding:14px 18px;border-radius:0 0 var(--radius-lg) var(--radius-lg);transform:translateY(-140%);transition:.35s cubic-bezier(.2,.8,.2,1);z-index:55}
 .rest-bar.show{transform:translateY(0)}
 .rest-inner{display:flex;align-items:center;gap:16px}
 .rest-circle{width:56px;height:56px;flex-shrink:0;position:relative;display:flex;align-items:center;justify-content:center}
@@ -431,11 +438,20 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .locked-goal svg{width:24px;height:24px;color:var(--faint);flex-shrink:0;margin-top:2px}
 .locked-goal .lg-title{font-size:14px;font-weight:700;margin-bottom:4px}
 .locked-goal .lg-sub{font-size:12.5px;color:var(--muted);line-height:1.5}
+.kcal-hero{background:var(--card-grad);border:1px solid var(--card-border);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px}
+.kcal-hero-top{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.kcal-hero-val{font-size:15px;font-weight:800;color:var(--text);text-transform:none;letter-spacing:0}
+.kcal-hero-val small{font-size:11px;font-weight:600;color:var(--muted)}
+.kcal-hero-bar{height:8px;background:var(--elev);border-radius:8px;overflow:hidden}
+.kcal-hero-fill{height:100%;border-radius:8px;transition:.5s;background:linear-gradient(90deg,var(--primary-dim),var(--primary))}
+.macros-label{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
 .macro-row{margin-bottom:12px}
 .macro-row:last-of-type{margin-bottom:0}
 .macro-row-top{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--text);margin-bottom:5px}
 .macro-bar{height:6px;background:var(--elev);border-radius:6px;overflow:hidden}
-.macro-fill{height:100%;background:linear-gradient(90deg,var(--primary-dim),var(--primary));border-radius:6px;transition:.5s}
+.macro-fill{height:100%;border-radius:6px;transition:.5s;background:linear-gradient(90deg,var(--primary-dim),var(--primary))}
+.macro-fill.mf-carb{background:linear-gradient(90deg,#0B7B87,#14A6B4)}
+.macro-fill.mf-fat{background:linear-gradient(90deg,#9C3B7F,#C2478B)}
 .food-log-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
 .food-log-row:last-child{border-bottom:none}
 .flr-name{font-size:13.5px;font-weight:700}
@@ -1254,6 +1270,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     $(id).classList.add('active');
     window.scrollTo(0,0);
+    // Funil único de toda troca de tela do app — ponto certo pra
+    // pedir/liberar o wake lock de tela ativa (ver requestWakeLock),
+    // nunca precisa ser chamado nos outros ~10 call sites de showScreen('exec').
+    if (id === 'exec') requestWakeLock(); else releaseWakeLock();
   }
   function hideNav() { $('bottomNav').style.display = 'none'; }
   function goTab(tab) {
@@ -2900,16 +2920,31 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         </div>`;
     }
     const t = dailyTotals();
-    const bar = (label, done, goal, unit) => goal
-      ? `<div class="macro-row"><div class="macro-row-top"><span>${label}</span><span>${Math.round(done)} / ${goal}${unit}</span></div><div class="macro-bar"><div class="macro-fill" style="width:${Math.min(100, Math.round(done / goal * 100))}%"></div></div></div>`
+    // Calorias ganham um bloco "hero" próprio, visualmente separado dos 3
+    // macros — antes era só mais uma linha igual às outras (mesma barra,
+    // mesma cor), o que confundia "total calórico" com "um macro entre
+    // outros". Cada macro também ganhou cor própria (proteína=azul/marca,
+    // carboidrato=teal, gordura=rosa/roxo) — só pra diferenciação visual
+    // das 3 barras, nunca reaproveitando verde/âmbar (reservados a
+    // sucesso/atenção em todo o app).
+    const kcalPct = macroGoal.meta_kcal ? Math.min(100, Math.round(t.kcal / macroGoal.meta_kcal * 100)) : 0;
+    const kcalHero = macroGoal.meta_kcal
+      ? `<div class="kcal-hero"><div class="kcal-hero-top"><span>Calorias</span><span class="kcal-hero-val">${Math.round(t.kcal)} <small>/ ${macroGoal.meta_kcal} kcal</small></span></div><div class="kcal-hero-bar"><div class="kcal-hero-fill" style="width:${kcalPct}%"></div></div></div>`
       : '';
+    const bar = (label, done, goal, unit, colorClass) => goal
+      ? `<div class="macro-row"><div class="macro-row-top"><span>${label}</span><span>${Math.round(done)} / ${goal}${unit}</span></div><div class="macro-bar"><div class="macro-fill ${colorClass || ''}" style="width:${Math.min(100, Math.round(done / goal * 100))}%"></div></div></div>`
+      : '';
+    // Nem toda meta validada tem os 3 macros individuais preenchidos (só
+    // kcal é obrigatório) — o rótulo "Macronutrientes" só aparece se sobrar
+    // pelo menos uma barra pra mostrar embaixo dele.
+    const macrosHtml = bar('Proteína', t.proteina, macroGoal.meta_proteina_g, 'g')
+      + bar('Carboidrato', t.carboidrato, macroGoal.meta_carboidrato_g, 'g', 'mf-carb')
+      + bar('Gordura', t.gordura, macroGoal.meta_gordura_g, 'g', 'mf-fat');
     return `
       <div class="nutri-card goal-unlocked">
         <div class="section-label" style="margin-top:0">Meta validada por ${escapeHtml(macroGoal.nutricionista_nome)}</div>
-        ${bar('Calorias', t.kcal, macroGoal.meta_kcal, 'kcal')}
-        ${bar('Proteína', t.proteina, macroGoal.meta_proteina_g, 'g')}
-        ${bar('Carboidrato', t.carboidrato, macroGoal.meta_carboidrato_g, 'g')}
-        ${bar('Gordura', t.gordura, macroGoal.meta_gordura_g, 'g')}
+        ${kcalHero}
+        ${macrosHtml ? `<div class="macros-label">Macronutrientes</div>${macrosHtml}` : ''}
         ${macroGoal.orientacao_resumo ? `<div class="nutri-text" style="margin-top:10px">${escapeHtml(macroGoal.orientacao_resumo)}</div>` : ''}
         ${macroGoal.pdf_path ? `<button class="btn btn-ghost" id="viewGoalPdfBtn" type="button" style="width:100%;margin-top:12px">${ICONS.fileText} Ver PDF da nutricionista</button>` : ''}
       </div>`;
@@ -3718,21 +3753,64 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
      já mostra o valor certo, sem "arrasto" acumulado. Um listener de
      visibilitychange força esse recálculo na hora, sem esperar o próximo
      tick do interval. */
+  /* ---- TELA SEMPRE ATIVA DURANTE O TREINO ----
+     Screen Wake Lock API (2026-08-04, pedido do usuário) — pedida ao
+     entrar na tela Exec, liberada ao sair dela (hook central em
+     showScreen(), único funil de troca de tela do app). Efeito colateral
+     bom: com a tela sem apagar sozinha, o setInterval do timer de descanso
+     para de ser suspenso pelo navegador em segundo plano — mesma causa
+     provável do bip/vibração "não acontecendo" às vezes (ver endRest()).
+     Suporte a Wake Lock é opcional (`'wakeLock' in navigator`) — sem
+     suporte, ou se o navegador recusar (ex: bateria muito baixa em alguns
+     Android), falha em silêncio: o app continua funcionando normal, só sem
+     essa garantia extra. */
+  let wakeLockSentinel = null;
+  async function requestWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    try { wakeLockSentinel = await navigator.wakeLock.request('screen'); }
+    catch (e) { /* recusado (ex: bateria fraca) — silencioso, treino continua funcionando normal */ }
+  }
+  function releaseWakeLock() {
+    if (wakeLockSentinel) { wakeLockSentinel.release().catch(() => {}); wakeLockSentinel = null; }
+  }
+  // O wake lock é liberado automaticamente pelo navegador sempre que a aba
+  // fica oculta (troca de app, tela apagada) — precisa ser pedido de novo
+  // ao voltar, senão a 2ª vez que a tela apagar sozinha ele não volta a
+  // segurar.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && !wakeLockSentinel && $('exec')?.classList.contains('active')) {
+      requestWakeLock();
+    }
+  });
+
   let restAudioCtx = null;
+  // Bip do fim de descanso — refeito (2026-08-04) depois do relato de que o
+  // som original era "muito baixo, imperceptível": ganho bem mais alto
+  // (perto do teto seguro pra osciladores em série, com um limiter/
+  // DynamicsCompressor pra nunca estourar/distorcer no alto-falante do
+  // celular) e 4 tons alternados (880/659Hz, tipo "campainha de chat") em
+  // vez de 2 — dura ~1.1s no total, bem mais longo e perceptível que os
+  // ~0.4s de antes.
   function playRestBeep() {
     try {
       if (!restAudioCtx) restAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if (restAudioCtx.state === 'suspended') restAudioCtx.resume();
+      const compressor = restAudioCtx.createDynamicsCompressor();
+      compressor.connect(restAudioCtx.destination);
       const now = restAudioCtx.currentTime;
-      [0, 0.22].forEach((offset) => {
+      const notes = [
+        { t: 0.00, f: 880 }, { t: 0.26, f: 659 },
+        { t: 0.55, f: 880 }, { t: 0.81, f: 659 },
+      ];
+      notes.forEach(({ t: offset, f: freq }) => {
         const osc = restAudioCtx.createOscillator();
         const gain = restAudioCtx.createGain();
-        osc.type = 'sine'; osc.frequency.value = 880;
+        osc.type = 'triangle'; osc.frequency.value = freq;
         gain.gain.setValueAtTime(0.0001, now + offset);
-        gain.gain.exponentialRampToValueAtTime(0.35, now + offset + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.16);
-        osc.connect(gain); gain.connect(restAudioCtx.destination);
-        osc.start(now + offset); osc.stop(now + offset + 0.18);
+        gain.gain.exponentialRampToValueAtTime(0.9, now + offset + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.24);
+        osc.connect(gain); gain.connect(compressor);
+        osc.start(now + offset); osc.stop(now + offset + 0.26);
       });
     } catch (e) { /* Web Audio indisponível — silencioso, vibração já cobre o aviso */ }
   }
@@ -3786,7 +3864,19 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   function endRest(reachedZero) {
     const bar = $('restBar'); if (bar) bar.classList.remove('show');
     state.restEndsAt = null; state.restLabel = null;
-    if (navigator.vibrate) navigator.vibrate(reachedZero ? [150,80,150,80,150] : [120,60,120]);
+    // Padrão de vibração do fim de descanso alongado/reforçado (2026-08-04)
+    // — o relato do usuário era que a vibração simplesmente não acontecia.
+    // A causa mais provável não é o navigator.vibrate() em si (ele já era
+    // chamado sempre que chegava aqui), e sim o setInterval do timer sendo
+    // suspenso pelo navegador quando a tela apaga/o app vai pra segundo
+    // plano — sem o requestWakeLock() (ver showScreen) o tick que dispara
+    // endRest(true) simplesmente não rodava no momento certo. Reforçado
+    // aqui também: padrão mais longo/perceptível, e a tentativa de vibrar
+    // continua acontecendo mesmo quando o navegador não suporta a API (o
+    // iOS Safari não implementa Vibration API — limitação de plataforma,
+    // sem contorno possível em PWA; nesse caso o bip mais alto é a única
+    // rede de segurança).
+    if (navigator.vibrate) navigator.vibrate(reachedZero ? [200,100,200,100,200,100,400] : [140,70,140]);
     if (reachedZero) playRestBeep();
     persistSession();
   }

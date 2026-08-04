@@ -99,6 +99,97 @@ function filtrarExerciciosForaDeContexto(workouts: any[]) {
   });
 }
 
+// Rede de segurança contra exercício redundante no mesmo bloco — mesmo
+// movimento repetido só trocando o equipamento (ex: "Tríceps francês com
+// polia" e "Tríceps francês com halteres" no mesmo treino, relatado pelo
+// usuário em 2026-08-04). Garantia por código, mesmo princípio de
+// filtrarExerciciosForaDeContexto acima: a regra 1d do prompt já pede pra
+// IA não repetir, mas nada garante que ela obedeceu — aqui comparamos as
+// "palavras de movimento" de cada exercício (nome sem preposição/palavra de
+// equipamento) contra as já aceitas no mesmo treino; sobreposição alta
+// (Jaccard ≥ 0.5) descarta o repetido, mantendo sempre o primeiro.
+// Deliberadamente conservador (mesmo espírito de detectarGrupos acima):
+// "Supino reto"/"Supino inclinado" têm overlap baixo o bastante (1 palavra
+// em comum de 3 distintas) pra nunca serem confundidos como duplicata.
+const STOPWORDS_MOVIMENTO = new Set([
+  'com', 'na', 'no', 'de', 'do', 'da', 'em', 'e', 'a', 'o', 'ao',
+  'barra', 'halter', 'halteres', 'polia', 'polias', 'cross', 'crossover',
+  'over', 'maquina', 'aparelho', 'cabo', 'cabos', 'smith', 'corda',
+  'triangulo', 'unilateral', 'bilateral',
+]);
+
+function palavrasDeMovimento(nome: string): Set<string> {
+  const semAcento = (nome || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const palavras = semAcento.split(/[^a-z0-9]+/).filter(Boolean);
+  return new Set(palavras.filter((p) => !STOPWORDS_MOVIMENTO.has(p)));
+}
+
+function jaccard(a: Set<string>, b: Set<string>): number {
+  if (!a.size || !b.size) return 0;
+  let intersecao = 0;
+  for (const w of a) if (b.has(w)) intersecao++;
+  const uniao = a.size + b.size - intersecao;
+  return uniao ? intersecao / uniao : 0;
+}
+
+function removerExerciciosRedundantes(workouts: any[]) {
+  return workouts.map((w) => {
+    const aceitos: Set<string>[] = [];
+    const exercises = (w.exercises || []).filter((ex: any) => {
+      if (ex.tipo === 'cardio') return true; // cardio nunca entra nessa comparação
+      const palavras = palavrasDeMovimento(ex.nome);
+      const duplicado = aceitos.some((p) => jaccard(p, palavras) >= 0.5);
+      if (duplicado) return false;
+      aceitos.push(palavras);
+      return true;
+    });
+    return { ...w, exercises };
+  });
+}
+
+// Cardio final obrigatório em todo treino (2026-08-04, pedido do usuário) —
+// mesmo princípio "garantia, não esperança": o prompt (regra 9) já instrui
+// a IA a sempre incluir e a calibrar a intensidade, mas isso é conferido e
+// corrigido por código, nunca só assumido. Treino de perna/glúteo (detectado
+// pelo nome, mesmo detectarGrupos da regra 1b) sempre fecha com cardio LEVE
+// pernas já foram trabalhadas, cardio pesado aqui é contraproducente. Todo
+// o resto (superiores, full body sem grupo detectável) fecha com cardio
+// MODERADO A INTENSO.
+const INTENSIDADES_LEVES = new Set(['leve', 'leve a moderada']);
+
+function cardioPadrao(ehPerna: boolean) {
+  return ehPerna
+    ? {
+        tipo: 'cardio', nome: 'Caminhada leve na esteira', duracao_min: 10, intensidade: 'leve',
+        nota_execucao: 'Ritmo leve, sem inclinação — as pernas já foram trabalhadas no treino de hoje, é só pra ativar a circulação e fechar com a frequência cardíaca controlada.',
+        tips: ['Passo confortável, sem ofegar', 'Postura ereta, sem se apoiar no corrimão'],
+      }
+    : {
+        tipo: 'cardio', nome: 'Bike ergométrica', duracao_min: 12, intensidade: 'moderada a intensa',
+        nota_execucao: 'Ritmo que eleve de verdade a frequência cardíaca — as pernas ainda estão descansadas, dá pra puxar mais aqui.',
+        tips: ['Aumente a resistência a cada 3min', 'Mantenha o ritmo até o fim, sem desacelerar antes da hora'],
+      };
+}
+
+function ajustarIntensidadeCardio(ex: any, ehPerna: boolean) {
+  const atual = String(ex.intensidade || '').toLowerCase();
+  if (ehPerna) return INTENSIDADES_LEVES.has(atual) ? ex : { ...ex, intensidade: 'leve' };
+  return (!atual || INTENSIDADES_LEVES.has(atual)) ? { ...ex, intensidade: 'moderada a intensa' } : ex;
+}
+
+function garantirCardioFinal(workouts: any[]) {
+  return workouts.map((w) => {
+    const grupos = detectarGrupos(w.name || '');
+    const ehPerna = grupos.includes('perna') || grupos.includes('gluteo');
+    const semCardio = (w.exercises || []).filter((ex: any) => ex.tipo !== 'cardio');
+    const cardioDaIa = (w.exercises || []).find((ex: any) => ex.tipo === 'cardio');
+    const cardioFinal = cardioDaIa ? ajustarIntensidadeCardio(cardioDaIa, ehPerna) : cardioPadrao(ehPerna);
+    return { ...w, exercises: [...semCardio, cardioFinal] };
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -209,8 +300,9 @@ ${historyResumo || 'Sem histórico ainda — é aluno novo ou sem sessões regis
 
 REGRAS DE MONTAGEM (siga rigorosamente)
 1. Gere exatamente ${freq} treinos (id "A", "B", "C"... até a letra necessária), com divisão de grupos musculares coerente com a frequência escolhida (ex: 2x = full body ou upper/lower; 3x = ABC; 4x = ABCD; 5-6x = divisão mais isolada por grupo).
-1b. CRÍTICO — nunca inclua um exercício de grupo muscular fora do que o nome do treino declara. Ex: um treino chamado "Peito e Tríceps" NUNCA pode ter um exercício de glúteo, perna ou costas misturado "de brinde" — isso é um erro grave. Cada exercício dentro de um treino precisa pertencer a algum dos grupos musculares citados no "name" daquele treino (exceto o item de cardio opcional da regra 9, que não tem grupo muscular).
+1b. CRÍTICO — nunca inclua um exercício de grupo muscular fora do que o nome do treino declara. Ex: um treino chamado "Peito e Tríceps" NUNCA pode ter um exercício de glúteo, perna ou costas misturado "de brinde" — isso é um erro grave. Cada exercício dentro de um treino precisa pertencer a algum dos grupos musculares citados no "name" daquele treino (exceto o item de cardio obrigatório da regra 9, que não tem grupo muscular).
 1c. Se o gênero do aluno for informado (Masculino/Feminino), use isso só como um leve ajuste de ênfase/seleção dentro do que já é fisiologicamente coerente — nunca como estereótipo rígido nem tema/cor. Nada de incluir exercício isolado de um grupo alheio ao foco do treino do dia só por causa do gênero (isso continua proibido pela regra 1b); o ajuste é sutil, dentro dos exercícios que já fazem sentido pro treino: ex. alguma prioridade extra pra glúteo/posterior de coxa em dias de perna pra alunas que buscam hipertrofia de membros inferiores, ou ênfase em peito/costas/ombro pros objetivos mais comuns de alunos. Se não informado, monte sem nenhum viés de gênero.
+1d. CRÍTICO — nunca repita o mesmo movimento dentro do mesmo treino só trocando o equipamento (ex: "Tríceps francês com polia" e "Tríceps francês com halteres" no mesmo treino é redundante — escolha só uma variação). Isso também vale pra variações quase idênticas do mesmo padrão de movimento pro mesmo grupo (ex: dois exercícios de crucifixo/voador no cross over/máquina, ambos isolando peito do mesmo jeito). Ângulos ou padrões de movimento genuinamente diferentes (ex: "Supino reto" e "Supino inclinado", ou "Rosca direta" e "Rosca martelo") NÃO são redundantes — continue variando ângulo/padrão normalmente, a regra é só contra repetir o MESMO movimento com equipamento diferente.
 2. Cada exercício pode receber uma "tecnica" de intensificação (um destes valores exatos, ou null se não se aplica): "Drop-Set", "Rest-Pause", "Cluster", "Myo-Reps", "Pirâmide Crescente", "Pirâmide Decrescente", "Super Slow", "Bi-Set", "Tri-Set", "Negativo".
 3. Aplique técnica com moderação e critério — nunca em todos os exercícios. Prefira aplicar no ÚLTIMO exercício isolador de cada treino (papel de "finalizador"), nunca no primeiro exercício composto pesado do treino.
 4. Para nível "iniciante": NÃO use "Drop-Set", "Cluster", "Rest-Pause" nem "Negativo" (mais arriscadas/exigentes tecnicamente) — prefira "Pirâmide Crescente", "Bi-Set" ou nenhuma técnica.
@@ -218,7 +310,7 @@ REGRAS DE MONTAGEM (siga rigorosamente)
 6. Cada exercício tem um campo "nota_execucao": uma dica curta e específica de execução (ex: "1-3 na reserva, carga sobe a cada série", "pausa de 15s dentro da série", "reduz 20% de carga a cada drop, sem descanso entre eles") — coerente com a técnica aplicada, quando houver.
 7. Use nomes de exercícios comuns e específicos em português do Brasil (ex: "Supino reto com barra", "Agachamento livre", "Puxada frente na polia").
 8. sets/reps/rest de cada exercício são o ponto de partida da semana 1 — não invente uma progressão semana a semana, isso é calculado depois por outro sistema.
-9. Opcionalmente, inclua UM item de cardio orientado como o ÚLTIMO exercício de um treino (nunca no meio nem no início do array) — especialmente quando o objetivo for emagrecimento ou saúde, ou quando fizer sentido como finalizador. Não é obrigatório em todo treino nem em todo protocolo. Um item de cardio usa um formato diferente dos exercícios de força (sem sets/reps/rest/tecnica): {"tipo":"cardio","nome":"string (ex: Caminhada, Bike ergométrica, Elíptico)","duracao_min":number,"intensidade":"leve"|"leve a moderada"|"moderada"|"moderada a intensa"|"intensa","nota_execucao":"string","tips":["string","string"]} — 2 a 4 dicas curtas de execução em "tips".
+9. OBRIGATÓRIO — todo treino sem exceção termina com UM item de cardio como o ÚLTIMO exercício do array (nunca no meio nem no início). A intensidade segue uma regra fixa, sem exceção: se o treino for de perna e/ou glúteo (quadríceps, posterior de coxa, panturrilha, glúteo — sozinho ou combinado com outro grupo no mesmo dia), o cardio é "leve" — as pernas já foram exigidas no treino de força, cardio pesado aqui é contraproducente e aumenta risco de lesão. Se o treino for de membros superiores (peito, costas, ombro, bíceps, tríceps) ou qualquer outro foco sem perna/glúteo, o cardio é "moderada" ou "moderada a intensa" — nunca "leve" nesse caso. Um item de cardio usa um formato diferente dos exercícios de força (sem sets/reps/rest/tecnica): {"tipo":"cardio","nome":"string (ex: Caminhada, Bike ergométrica, Elíptico)","duracao_min":number,"intensidade":"leve"|"leve a moderada"|"moderada"|"moderada a intensa"|"intensa","nota_execucao":"string","tips":["string","string"]} — 2 a 4 dicas curtas de execução em "tips".
 
 Responda APENAS com um JSON válido, sem texto antes ou depois, exatamente neste formato:
 {
@@ -265,6 +357,8 @@ Responda APENAS com um JSON válido, sem texto antes ou depois, exatamente neste
 
     const suggestion = JSON.parse(jsonMatch[0]);
     suggestion.workouts = filtrarExerciciosForaDeContexto(suggestion.workouts || []);
+    suggestion.workouts = removerExerciciosRedundantes(suggestion.workouts);
+    suggestion.workouts = garantirCardioFinal(suggestion.workouts);
     suggestion.workouts = aplicarVetoPorNivel(suggestion.workouts, nivelFinal);
     return jsonResponse(suggestion);
   } catch (err) {

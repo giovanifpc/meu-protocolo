@@ -7,8 +7,10 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.16.0',
+      version: '1.17.0',
       items: [
+        'Corrigido: o treino gerado por IA podia repetir o mesmo exercício com equipamentos diferentes (ex: tríceps francês na polia e com halteres no mesmo treino) — agora a IA evita esse tipo de redundância.',
+        'Novo: todo treino gerado por IA termina com cardio automático — leve num treino de perna/glúteo, moderado a intenso num treino de superiores.',
         'Corrigido: a aba onde você clica em "Instalar" continuava logada depois — se ficasse aberta, podia derrubar sua sessão no app instalado sem nenhum aviso. Agora, assim que o app termina de instalar, aparece um recado claro pra fechar essa aba.',
         'Corrigido: upload de PDF em Nutri podia falhar sem explicação clara pra arquivo acima de 10MB — limite subiu pra 20MB, e o erro agora avisa direito quando o arquivo ainda é grande demais.',
         'Corrigido: a observação de execução só era editável pra exercício criado na hora — agora é editável em qualquer exercício do bloco, incluindo os buscados na biblioteca.',
@@ -28,8 +30,10 @@
       ]
     },
     aluno: {
-      version: '1.10.0',
+      version: '1.11.0',
       items: [
+        'Corrigido: o som do timer de descanso estava baixo demais e a vibração podia não disparar no fim do descanso — som bem mais alto/longo, e a tela agora fica sempre ativa durante o treino (evita que o celular apague e atrapalhe o timer).',
+        'Corrigido: busca de alimento no diário não encontrava itens básicos que já existiam na base (ex: ovo frito, ovo cozido, arroz branco) — busca melhorada pra encontrar mesmo com palavras fora de ordem.',
         'Corrigido: a aba onde você clica em "Instalar" continuava logada depois — se ficasse aberta, podia derrubar sua sessão no app instalado sem nenhum aviso. Agora, assim que o app termina de instalar, aparece um recado claro pra fechar essa aba.',
         'Novo: ao iniciar um treino, aparece um guia de alongamento pré-treino (10 min, com ilustração de cada movimento) — faça ou pule, sua escolha fica registrada no seu histórico.',
         'Novo: no fim do treino, a avaliação de "como foi" virou uma escala de 1 a 10 (intensidade percebida), com espaço opcional pra descrever algo sobre o treino — útil pra avisar o personal de uma dor ou desconforto pontual.',

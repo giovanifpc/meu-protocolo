@@ -96,11 +96,11 @@ Ao cadastrar um aluno novo (desde 2026-07-27), aparece um banner com o WhatsApp 
 
 Dois jeitos de montar o treino de um aluno:
 - **Manual**: profissional monta do zero — título, periodização, adiciona treinos (A, B, C...), busca exercício na biblioteca (~1550 exercícios com GIF de execução), define séries/reps/descanso e, opcionalmente, uma técnica de intensificação por exercício (Drop-Set, Rest-Pause, Cluster, Myo-Reps, Pirâmide Crescente/Decrescente, Super Slow, Bi-Set, Tri-Set, Negativo) — mesmas opções que a IA usa, agora escolhíveis também no modo manual.
-- **Por IA**: um assistente pergunta objetivo, nível do aluno, periodização desejada, frequência semanal e duração da sessão — a IA gera o protocolo inteiro (exercícios, divisão, técnicas de intensificação), considerando automaticamente a anamnese de saúde do aluno (lesões, restrições) e o gênero cadastrado (calibra ênfase, evita exercício fora de contexto) sem o profissional precisar redigitar nada. O resultado cai na tela de edição normal pra revisão antes de publicar — nada é publicado automaticamente sem o profissional confirmar.
+- **Por IA**: um assistente pergunta objetivo, nível do aluno, periodização desejada, frequência semanal e duração da sessão — a IA gera o protocolo inteiro (exercícios, divisão, técnicas de intensificação), considerando automaticamente a anamnese de saúde do aluno (lesões, restrições) e o gênero cadastrado (calibra ênfase, evita exercício fora de contexto, evita repetir o mesmo exercício com equipamentos diferentes) sem o profissional precisar redigitar nada. O resultado cai na tela de edição normal pra revisão antes de publicar — nada é publicado automaticamente sem o profissional confirmar.
 
 **Periodização**: o sistema calcula sozinho como sets/reps/descanso evoluem semana a semana, a partir de uma técnica escolhida (Linear, Ondulatória diária, Ondulatória semanal, Em blocos, Reversa, ou Manual/sem progressão automática).
 
-**Cardio**: pode ser adicionado como item especial de um treino (duração, intensidade, orientação, dicas) — sempre aparece por último no treino, nunca no meio dos exercícios de força.
+**Cardio**: no modo manual, pode ser adicionado como item opcional de um treino (duração, intensidade, orientação, dicas). No modo por IA (desde 2026-08-04), é sempre incluído automaticamente como o último item de cada treino — leve se o treino for de perna/glúteo, moderado a intenso se for de superiores. Em qualquer um dos dois modos, cardio sempre aparece por último no treino, nunca no meio dos exercícios de força.
 
 Um protocolo tem status **rascunho** (só o profissional vê) ou **publicado** (o aluno já enxerga e pode treinar).
 

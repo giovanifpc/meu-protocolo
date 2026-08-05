@@ -7,8 +7,10 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.17.0',
+      version: '1.18.0',
       items: [
+        'Novo: aba "Histórico" por aluno — veja todas as sessões de treino já finalizadas, com a intensidade percebida e a observação que o aluno escreveu no fim do treino (ex: relato de dor/desconforto).',
+        'Novo: observação nova do aluno agora vira alerta na Início, igual mensalidade atrasada — antes só aparecia se você gerasse o relatório de texto do aluno.',
         'Corrigido: o treino gerado por IA podia repetir o mesmo exercício com equipamentos diferentes (ex: tríceps francês na polia e com halteres no mesmo treino) — agora a IA evita esse tipo de redundância.',
         'Novo: todo treino gerado por IA termina com cardio automático — leve num treino de perna/glúteo, moderado a intenso num treino de superiores.',
         'Corrigido: a aba onde você clica em "Instalar" continuava logada depois — se ficasse aberta, podia derrubar sua sessão no app instalado sem nenhum aviso. Agora, assim que o app termina de instalar, aparece um recado claro pra fechar essa aba.',

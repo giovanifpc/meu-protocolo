@@ -179,6 +179,12 @@ Na aba Nutri do aluno, abaixo da orientação em texto/PDF de sempre (seção 5.
 
 O profissional vê o diário do dia do aluno (só leitura, mesma aba Nutri) — não edita, só acompanha adesão.
 
+### 5.20 Histórico de treinos + observação do aluno (adicionado 2026-08-05)
+
+Aba nova "Histórico" no painel do profissional (mesmo padrão de Treino/Avaliação/Nutri — a partir de "Alunos", escolhe o aluno). Lista TODAS as sessões de treino que o aluno já finalizou (completas e incompletas, sem filtrar por mês) — data, treino, duração, e a avaliação de intensidade (RPE 1-10) que o aluno escolheu no fim.
+
+Quando o aluno deixa uma observação escrita (campo opcional, junto da intensidade, ex: "senti dor no ombro"), ela aparece destacada em cada sessão nessa tela — e também gera um alerta na Início do profissional ("nova observação"), igual mensalidade atrasada ou aluno sem treinar, até o profissional clicar "Marcar como visto". Explicar pro profissional, se perguntar: é o jeito de saber se um aluno relatou dor/desconforto/dificuldade sem precisar abrir relatório nenhum.
+
 ---
 
 ## 6. Perguntas frequentes esperadas (ponto de partida, não lista fechada)

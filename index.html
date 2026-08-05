@@ -58,6 +58,8 @@
   .attention-tag { font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; text-transform:uppercase; white-space:nowrap; }
   .attention-tag.adesao { background:#FFF4E5; color:#8A5A00; }
   .attention-tag.pagamento { background:#FDEDEC; color:var(--danger); }
+  .attention-tag.observacao { background:#E8F0FE; color:#1E4FB0; }
+  .attention-note { font-size:13px; color:var(--text); line-height:1.5; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:10px; white-space:pre-wrap; }
   .attention-detail { display:none; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); }
   .attention-detail.open { display:block; }
   .attention-detail textarea { width:100%; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:8px 10px; font-size:13px; color:var(--text); font-family:var(--font); min-height:70px; resize:vertical; margin-bottom:8px; }
@@ -229,6 +231,7 @@
   }
 
   function firstName(nome) { return (nome || '').trim().split(' ')[0]; }
+  function fmtDateShort(d) { return new Date(d).toLocaleDateString('pt-BR'); }
 
   function buildAdherenceMessage(s, days) {
     const nome = firstName(s.nome);
@@ -284,7 +287,23 @@
     }
 
     const studentIds = students.map(s => s.id);
-    const { data: history } = await supa.from('training_history').select('student_id, completed_at').in('student_id', studentIds).order('completed_at', { ascending: false });
+    const [{ data: history }, { data: obsRows }] = await Promise.all([
+      supa.from('training_history').select('student_id, completed_at').in('student_id', studentIds).order('completed_at', { ascending: false }),
+      // Observação que o aluno deixa no fim do treino (junto da intensidade
+      // percebida) nunca tinha nenhum jeito de chegar até o profissional
+      // sem ele proativamente gerar um relatório de texto (relatorios.html)
+      // — vira alerta aqui, igual mensalidade/adesão, até ser marcada como
+      // vista (supabase_59_training_observation_seen.sql). observation_seen_at
+      // é null em TODO histórico anterior a essa migration também (coluna
+      // nova) — o filtro por rating_note presente evita alertar sessão
+      // antiga sem observação nenhuma.
+      supa.from('training_history')
+        .select('session_uid, student_id, completed_at, workout_id, workout_name, detail')
+        .in('student_id', studentIds)
+        .is('observation_seen_at', null)
+        .not('detail->>rating_note', 'is', null)
+        .order('completed_at', { ascending: false }),
+    ]);
 
     const sevenDaysAgo = Date.now() - 7 * 86400000;
     const weekCount = (history || []).filter(h => new Date(h.completed_at).getTime() >= sevenDaysAgo).length;
@@ -297,6 +316,8 @@
 
     // status agora vem direto de students (supabase_42_student_status_gating.sql)
     const activeStudents = students.filter(s => s.status === 'ativo');
+    const studentsById = {};
+    students.forEach(s => { studentsById[s.id] = s; });
 
     const adherenceAlerts = activeStudents.map(s => {
       const last = lastByStudent[s.id];
@@ -309,7 +330,21 @@
       return info && info.daysLate > 0 ? { tipo: 'pagamento', student: s, daysLate: info.daysLate, due: info.due } : null;
     }).filter(Boolean);
 
-    const alerts = [...paymentAlerts, ...adherenceAlerts].sort((a, b) => {
+    // Observação inclui aluno pausado/inativo também (diferente dos outros
+    // 2 tipos) — um relato de dor/desconforto não deveria sumir só porque
+    // o aluno foi pausado depois de treinar.
+    const observationAlerts = (obsRows || []).map(h => {
+      const s = studentsById[h.student_id];
+      if (!s) return null;
+      return { tipo: 'observacao', student: s, session_uid: h.session_uid, completed_at: h.completed_at, workout_id: h.workout_id, workout_name: h.workout_name, note: h.detail.rating_note };
+    }).filter(Boolean);
+
+    // Observação primeiro (pode ser um relato de dor/desconforto — mais
+    // urgente de ler que atraso de mensalidade ou dias sem treinar).
+    const alerts = [...observationAlerts, ...paymentAlerts, ...adherenceAlerts].sort((a, b) => {
+      if (a.tipo === 'observacao' && b.tipo !== 'observacao') return -1;
+      if (b.tipo === 'observacao' && a.tipo !== 'observacao') return 1;
+      if (a.tipo === 'observacao') return new Date(b.completed_at) - new Date(a.completed_at);
       const aVal = a.tipo === 'pagamento' ? a.daysLate + 1000 : (a.days ?? 999);
       const bVal = b.tipo === 'pagamento' ? b.daysLate + 1000 : (b.days ?? 999);
       return bVal - aVal;
@@ -322,6 +357,24 @@
 
     $('attentionList').innerHTML = alerts.map((a, i) => {
       const s = a.student;
+      if (a.tipo === 'observacao') {
+        return `
+        <div class="attention-item">
+          <div class="attention-row" data-role="toggle-alert" data-idx="${i}">
+            <span class="attention-name">${escapeHtml(s.nome)}</span>
+            <span class="attention-tag observacao">nova observação</span>
+          </div>
+          <div class="attention-detail" id="alertDetail-${i}">
+            <div class="hint" style="margin-bottom:6px;">Treino ${escapeHtml(a.workout_id || '')} — ${escapeHtml(a.workout_name || '')}, ${fmtDateShort(a.completed_at)}</div>
+            <div class="attention-note">${escapeHtml(a.note)}</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <a class="btn secondary" href="historico.html?student_id=${s.id}">Ver histórico completo</a>
+              <button class="btn" id="alertSeenBtn-${i}" type="button">Marcar como visto</button>
+            </div>
+            <div class="msg" id="alertPushMsg-${i}"></div>
+          </div>
+        </div>`;
+      }
       const tag = a.tipo === 'pagamento'
         ? `${a.daysLate} dia(s) em atraso`
         : (a.days === null ? 'nunca treinou' : `há ${a.days} dias sem treinar`);
@@ -351,6 +404,27 @@
       });
     });
     alerts.forEach((a, i) => {
+      if (a.tipo === 'observacao') {
+        const seenBtn = $('alertSeenBtn-' + i);
+        seenBtn.addEventListener('click', async () => {
+          seenBtn.disabled = true;
+          const { error } = await supa.rpc('mark_training_observation_seen', { p_session_uid: a.session_uid });
+          const out = $('alertPushMsg-' + i);
+          if (error) {
+            seenBtn.disabled = false;
+            out.textContent = 'Erro ao marcar como visto: ' + error.message;
+            out.className = 'msg error';
+            return;
+          }
+          // Some da lista na hora, sem esperar recarregar a tela inteira —
+          // mesmo princípio de feedback imediato já usado no resto do app.
+          $('attentionList').querySelector(`[data-idx="${i}"]`).closest('.attention-item').remove();
+          if (!$('attentionList').querySelector('.attention-item')) {
+            $('attentionList').innerHTML = '<div class="empty">Tudo em dia — treino e mensalidade. 🎉</div>';
+          }
+        });
+        return;
+      }
       const waBtn = $('alertWaBtn-' + i);
       if (waBtn) {
         const update = () => { waBtn.href = waLink(a.student.telefone, $('alertMsg-' + i).value); };

@@ -206,6 +206,7 @@
     <a href="#" id="tabTreino" class="tab-link active">Treino</a>
     <a href="#" id="tabAvaliacao" class="tab-link">Avaliação</a>
     <a href="#" id="tabNutri" class="tab-link">Nutrição</a>
+    <a href="#" id="tabHistorico" class="tab-link">Histórico</a>
   </div>
 
   <main>
@@ -676,6 +677,7 @@
     bar.style.display = 'flex';
     $('tabAvaliacao').href = 'avaliacoes.html?student_id=' + studentId;
     $('tabNutri').href = 'nutri.html?student_id=' + studentId;
+    $('tabHistorico').href = 'historico.html?student_id=' + studentId;
   }
 
   async function boot() {

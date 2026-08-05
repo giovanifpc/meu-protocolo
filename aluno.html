@@ -575,14 +575,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 
 <!-- ===== HOME ===== -->
 <section class="screen active" id="home">
-  <div class="topbar" id="homeTopbar" style="display:none">
-    <span class="brand">Início</span>
-    <button class="notif-bell" onclick="openNotifications()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-      <span class="notif-dot"></span>
-    </button>
-    <button class="menu-btn" onclick="openDrawer()" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button>
-  </div>
+  <!-- Achado real de varredura (2026-08-05): #homeTopbar era markup morto
+       desde o redesenho do cabeçalho (2026-07-21) -- display:none fixo,
+       nunca alternado por nenhum JS do arquivo (a `.pro-topband` dinâmica
+       dentro de buildHomeDashboard() a substituiu por completo). Removido. -->
   <div class="content" id="homeContent">
     <div class="empty-state"><div class="es-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></div><div class="es-txt">Carregando...</div></div>
   </div>
@@ -707,6 +703,21 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       <div class="menu-ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z" opacity="0"/><path d="M22 6 12 13 2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg></div>
       <div class="menu-info"><div class="mi-title">E-mail logado</div><div class="mi-sub" id="settingsEmailText" style="word-break:break-all">—</div></div>
     </div>
+
+    <!-- Achado real de varredura (2026-08-05): Termos/Privacidade só
+         apareciam na tela de consentimento do 1º acesso -- sem nenhum link
+         em lugar nenhum do app depois, pra quem quisesse reler o que
+         aceitou. -->
+    <div class="section-label">Legal</div>
+    <a class="menu-item" href="termos.html">
+      <div class="menu-ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+      <div class="menu-info"><div class="mi-title">Termos de Uso</div></div>
+    </a>
+    <a class="menu-item" href="privacidade.html">
+      <div class="menu-ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+      <div class="menu-info"><div class="mi-title">Política de Privacidade</div></div>
+    </a>
+
     <button class="menu-item" id="settingsLogoutBtn">
       <div class="menu-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div>
       <div class="menu-info"><div class="mi-title">Sair</div><div class="mi-sub">Encerrar sessão</div></div>
@@ -1019,6 +1030,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       <button type="button" class="back-link-btn" onclick="backToFoodSearch()">‹ Voltar à busca</button>
       <div class="food-detail-name" id="fdName">—</div>
       <div class="food-detail-macros" id="fdMacros100">—</div>
+      <button type="button" class="back-link-btn" id="editFoodLibBtn" style="display:none;">Editar este alimento</button>
       <div class="ci-input-row">
         <input type="number" id="foodQtyInput" placeholder="100" inputmode="numeric" value="100">
         <span>gramas</span>
@@ -1045,6 +1057,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         <button class="btn btn-ghost" type="button" onclick="closeAddMealModal()">Cancelar</button>
         <button class="btn btn-primary" type="button" id="createFoodBtn">Criar e usar</button>
       </div>
+      <button type="button" class="back-link-btn" id="deleteFoodLibBtn" style="display:none;color:var(--danger);margin-top:8px;">Excluir este alimento</button>
     </div>
   </div>
 </div>
@@ -1056,14 +1069,14 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     <p class="ci-sub">Antes de começar, conta como foi seu sono.</p>
     <div class="ci-label">Hoje dormi</div>
     <div class="ci-choice-row" id="sleepQualityChoices">
-      <button type="button" class="ci-choice" onclick="selectSleepQuality(this,'bem')">🙂<small>Bem</small></button>
-      <button type="button" class="ci-choice" onclick="selectSleepQuality(this,'mal')">😟<small>Mal</small></button>
+      <button type="button" class="ci-choice" data-val="bem" onclick="selectSleepQuality(this,'bem')">🙂<small>Bem</small></button>
+      <button type="button" class="ci-choice" data-val="mal" onclick="selectSleepQuality(this,'mal')">😟<small>Mal</small></button>
     </div>
     <div class="ci-label">Duração do sono</div>
     <div class="ci-choice-row" id="sleepDurationChoices">
-      <button type="button" class="ci-choice" onclick="selectSleepDuration(this,'menos6')">😴<small>- 6h</small></button>
-      <button type="button" class="ci-choice" onclick="selectSleepDuration(this,'6a8')">🙂<small>6-8h</small></button>
-      <button type="button" class="ci-choice" onclick="selectSleepDuration(this,'mais8')">🔥<small>+ 8h</small></button>
+      <button type="button" class="ci-choice" data-val="menos6" onclick="selectSleepDuration(this,'menos6')">😴<small>- 6h</small></button>
+      <button type="button" class="ci-choice" data-val="6a8" onclick="selectSleepDuration(this,'6a8')">🙂<small>6-8h</small></button>
+      <button type="button" class="ci-choice" data-val="mais8" onclick="selectSleepDuration(this,'mais8')">🔥<small>+ 8h</small></button>
     </div>
     <div class="crop-actions" style="margin-top:18px">
       <button class="btn btn-ghost" type="button" onclick="skipSleepCheckin()">Agora não</button>
@@ -2009,6 +2022,12 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     });
     renderHistorySubContent();
     updateChatBadge();
+    // Achado real de varredura (2026-08-05): faltava a mesma ressincronia
+    // que updateChatBadge() já fazia — o `.notif-dot` recém-criado dentro
+    // de `.pro-topband` (innerHTML reconstrói o elemento do zero) nunca
+    // refletia notificação não-lida, mesmo com a mesma bolinha aparecendo
+    // certo nas outras abas (Treino/Nutri/Perfil, que não são recriadas).
+    updateNotifBadge();
   }
 
   // Troca a sub-aba de detalhe (Evolução de carga / Avaliação física) e
@@ -2042,7 +2061,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
           <div class="stat4-bar"><div class="stat4-bar-fill" style="width:${waterPct}%;background:#3B9AE1"></div></div>
           <div class="stat4-cap">Meta: ${waterGoalMl()}ml</div>
         </div>
-        <div class="stat4-card">
+        <div class="stat4-card" onclick="openSleepModal()" style="cursor:pointer">
           <div class="stat4-ico ico-purple">${ICONS.moon}</div>
           <div class="stat4-lbl">Sono</div>
           <div class="stat4-val">${sleepSummaryText()}</div>
@@ -2419,6 +2438,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       const rating = h.detail && h.detail.rating;
       const setsDone = h.detail && h.detail.sets_done != null ? h.detail.sets_done : '-';
       const warmupDone = !!(h.detail && h.detail.warmup && h.detail.warmup.done);
+      const note = h.detail && h.detail.rating_note;
       return `
         <div class="hist-item ${incomplete ? 'hist-incomplete' : ''}">
           <div class="hist-top">
@@ -2430,10 +2450,61 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
             <span class="hist-meta-ico">${incomplete ? ICONS.warning : ICONS.check} ${setsDone} séries</span>
             <span class="hist-meta-ico">${ICONS.clock} ${h.minutes} min</span>
             ${warmupDone ? `<span class="hist-meta-ico" title="Fez o alongamento">${ICONS.activity}</span>` : ''}
-            ${ratingBadgeHtml(rating)}
+            <span class="hist-meta-ico" data-role="edit-rating-toggle" data-uid="${escapeHtml(h.session_uid)}" style="cursor:pointer;">${ratingBadgeHtml(rating) || 'Avaliar'} ${typeof rating === 'number' ? '' : ''}</span>
           </div>
+          ${note ? `<div class="hist-meta" style="margin-top:2px;"><span style="font-size:12px;color:var(--muted);">${escapeHtml(note)}</span></div>` : ''}
+          <div class="hist-edit-rating" id="editRating-${escapeHtml(h.session_uid)}" style="display:none;margin-top:8px;"></div>
         </div>`;
     }).join('');
+    // Achado real de varredura (2026-08-05): RPE + observação do fim do
+    // treino só eram editáveis enquanto a tela Finish daquela sessão
+    // específica estava aberta -- depois de sair, virava texto estático sem
+    // nenhum jeito de corrigir (ex: aluno quis dizer "dor no joelho" e
+    // escreveu errado, só percebeu depois). Reaproveita a mesma escala de
+    // cor (RPE_COLORS) da tela Finish, num painel inline compacto.
+    container.querySelectorAll('[data-role="edit-rating-toggle"]').forEach(el => {
+      el.addEventListener('click', () => openHistoryRatingEditor(el.dataset.uid));
+    });
+  }
+
+  function openHistoryRatingEditor(sessionUid) {
+    const h = history.find(x => x.session_uid === sessionUid);
+    const box = $('editRating-' + sessionUid);
+    if (!h || !box) return;
+    if (box.style.display === 'block') { box.style.display = 'none'; box.innerHTML = ''; return; }
+    const currentRating = (h.detail && typeof h.detail.rating === 'number') ? h.detail.rating : null;
+    const currentNote = (h.detail && h.detail.rating_note) || '';
+    box.innerHTML = `
+      <div class="rpe-scale" style="margin-bottom:8px;">${RPE_COLORS.map((c, i) => {
+        const val = i + 1;
+        return `<button type="button" class="rpe-btn ${currentRating === val ? 'selected' : ''}" style="background:${c}" data-val="${val}">${val}</button>`;
+      }).join('')}</div>
+      <textarea class="hist-edit-note" placeholder="Observação (opcional)" style="width:100%;box-sizing:border-box;">${escapeHtml(currentNote)}</textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn btn-primary" style="flex:1;padding:8px;font-size:13px;" data-role="save-rating">Salvar</button>
+        <button class="btn" style="flex:1;padding:8px;font-size:13px;background:var(--bg);color:var(--text);" data-role="cancel-rating">Cancelar</button>
+      </div>`;
+    box.style.display = 'block';
+    let pendingRating = currentRating;
+    box.querySelectorAll('.rpe-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        pendingRating = Number(b.dataset.val);
+        box.querySelectorAll('.rpe-btn').forEach(x => x.classList.toggle('selected', Number(x.dataset.val) === pendingRating));
+      });
+    });
+    box.querySelector('[data-role="cancel-rating"]').addEventListener('click', () => { box.style.display = 'none'; box.innerHTML = ''; });
+    box.querySelector('[data-role="save-rating"]').addEventListener('click', async () => {
+      const btn = box.querySelector('[data-role="save-rating"]');
+      btn.disabled = true;
+      const noteVal = box.querySelector('.hist-edit-note').value.trim();
+      const newDetail = { ...(h.detail || {}), rating: pendingRating, rating_note: noteVal || null };
+      const { error } = await supa.from('training_history').update({ detail: newDetail }).eq('session_uid', sessionUid);
+      btn.disabled = false;
+      if (error) { toast('Erro ao salvar: ' + error.message); return; }
+      h.detail = newDetail;
+      toast('Avaliação atualizada.');
+      buildHistList($('histList'));
+    });
   }
   // Rating pode vir em 2 formatos: número 1-10 (escala nova, RPE) ou uma
   // das 3 strings antigas ('cansado'/'normal'/'otimo', formato descontinuado
@@ -2842,6 +2913,21 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     $('sleepOverlay').classList.add('show');
   }
 
+  // Achado real de varredura (2026-08-05): uma vez respondido (ou pulado
+  // com "Agora não"), não existia nenhum jeito de reabrir o check-in de
+  // sono no mesmo dia pra corrigir uma resposta errada. Diferente de
+  // maybeShowSleepModal() (só automático, no boot, respeita o "já
+  // respondeu"/"pulou"), esta sempre abre — pré-preenchendo a resposta já
+  // salva, se houver, pra corrigir em vez de começar do zero.
+  function openSleepModal() {
+    sleepQualitySel = todayCheckin?.sleep_quality || null;
+    sleepDurationSel = todayCheckin?.sleep_duration || null;
+    $('sleepConfirmBtn').disabled = !(sleepQualitySel && sleepDurationSel);
+    document.querySelectorAll('#sleepQualityChoices .ci-choice').forEach(b => b.classList.toggle('selected', b.dataset.val === sleepQualitySel));
+    document.querySelectorAll('#sleepDurationChoices .ci-choice').forEach(b => b.classList.toggle('selected', b.dataset.val === sleepDurationSel));
+    $('sleepOverlay').classList.add('show');
+  }
+
   /* ---- NUTRI ---- */
   function buildNutri() {
     const area = $('nutriContent');
@@ -2882,7 +2968,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     }
     $('openAddMealBtn').addEventListener('click', openAddMealModal);
     $('foodLogList').querySelectorAll('[data-role="remove-log"]').forEach(btn => {
-      btn.addEventListener('click', () => removeFoodLogEntry(btn.dataset.logId));
+      btn.addEventListener('click', (e) => { e.stopPropagation(); removeFoodLogEntry(btn.dataset.logId); });
+    });
+    $('foodLogList').querySelectorAll('[data-role="edit-log-qty"]').forEach(el => {
+      el.addEventListener('click', () => toggleEditLogQty(el.dataset.logId));
     });
   }
 
@@ -2955,12 +3044,13 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     const rows = foodLogToday.length
       ? foodLogToday.map(r => `
           <div class="food-log-row">
-            <div class="flr-main">
+            <div class="flr-main" data-role="edit-log-qty" data-log-id="${r.id}" style="cursor:pointer;">
               <div class="flr-name">${escapeHtml(r.nome_congelado)}</div>
               <div class="flr-meta">${MEAL_LABELS[r.refeicao] || r.refeicao} · ${r.quantidade_g}g · ${Math.round(r.kcal)}kcal</div>
             </div>
             <button type="button" class="flr-remove" data-role="remove-log" data-log-id="${r.id}" aria-label="Remover">${ICONS.trash}</button>
-          </div>`).join('')
+          </div>
+          <div class="food-log-qty-edit" id="editQty-${r.id}" style="display:none;"></div>`).join('')
       : '<div class="food-log-empty">Nenhuma refeição registrada hoje ainda.</div>';
     return `
       <div class="nutri-card">
@@ -2972,6 +3062,48 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
           <span>${Math.round(t.kcal)}kcal · P ${Math.round(t.proteina)}g · C ${Math.round(t.carboidrato)}g · G ${Math.round(t.gordura)}g</span>
         </div>
       </div>`;
+  }
+
+  // Achado real de varredura (2026-08-05): corrigir só a quantidade de uma
+  // refeição já lançada (ex: comeu 150g, não 100g) exigia remover o
+  // lançamento inteiro e buscar/adicionar de novo do zero. Deriva o valor
+  // por 100g a partir do próprio registro existente (kcal/quantidade_g*100)
+  // — funciona pra qualquer item, sem depender de food_library_id ainda
+  // apontar pra um alimento que pode ter sido editado/removido depois.
+  function toggleEditLogQty(logId) {
+    const r = foodLogToday.find(x => x.id === logId);
+    const box = $('editQty-' + logId);
+    if (!r || !box) return;
+    if (box.style.display === 'block') { box.style.display = 'none'; box.innerHTML = ''; return; }
+    box.innerHTML = `
+      <div style="display:flex;gap:8px;align-items:center;margin:6px 0;">
+        <input type="number" min="1" step="1" class="edit-qty-input" value="${r.quantidade_g}" style="width:80px;">
+        <span style="font-size:13px;color:var(--muted);">g</span>
+        <button class="btn btn-primary" style="padding:6px 12px;font-size:12.5px;" data-role="save-qty">Salvar</button>
+        <button class="btn" style="padding:6px 12px;font-size:12.5px;background:var(--bg);color:var(--text);" data-role="cancel-qty">Cancelar</button>
+      </div>`;
+    box.style.display = 'block';
+    box.querySelector('[data-role="cancel-qty"]').addEventListener('click', () => { box.style.display = 'none'; box.innerHTML = ''; });
+    box.querySelector('[data-role="save-qty"]').addEventListener('click', async () => {
+      const newQty = Number(box.querySelector('.edit-qty-input').value);
+      if (!newQty || newQty <= 0) { toast('Informe uma quantidade válida.'); return; }
+      const ratio = newQty / r.quantidade_g;
+      const payload = {
+        quantidade_g: newQty,
+        kcal: Math.round(r.kcal * ratio * 100) / 100,
+        proteina_g: Math.round(r.proteina_g * ratio * 100) / 100,
+        carboidrato_g: Math.round(r.carboidrato_g * ratio * 100) / 100,
+        gordura_g: Math.round(r.gordura_g * ratio * 100) / 100,
+      };
+      const btn = box.querySelector('[data-role="save-qty"]');
+      btn.disabled = true;
+      const { error } = await supa.from('student_food_log').update(payload).eq('id', logId);
+      btn.disabled = false;
+      if (error) { toast('Erro ao salvar: ' + error.message); return; }
+      Object.assign(r, payload);
+      toast('Quantidade atualizada.');
+      buildNutri();
+    });
   }
 
   async function removeFoodLogEntry(logId) {
@@ -2996,6 +3128,9 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   function openAddMealModal() {
     selectedMealType = defaultMealType();
     foodPickedItem = null;
+    editingFoodLibId = null;
+    $('createFoodBtn').textContent = 'Criar e usar';
+    $('deleteFoodLibBtn').style.display = 'none';
     $('mealTypeRow').innerHTML = Object.keys(MEAL_LABELS).map(k =>
       `<button type="button" class="meal-type-btn ${k === selectedMealType ? 'selected' : ''}" data-meal="${k}">${MEAL_LABELS[k]}</button>`
     ).join('');
@@ -3047,6 +3182,9 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       });
     });
     $('foodSearchResults').querySelector('[data-role="create-food"]').addEventListener('click', () => {
+      editingFoodLibId = null;
+      $('createFoodBtn').textContent = 'Criar e usar';
+      $('deleteFoodLibBtn').style.display = 'none';
       $('newFoodNome').value = q;
       $('newFoodKcal').value = '';
       $('newFoodProt').value = '';
@@ -3062,8 +3200,39 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     $('fdMacros100').textContent = `${f.kcal_100g}kcal · P${f.proteina_g_100g}g · C${f.carboidrato_g_100g}g · G${f.gordura_g_100g}g por 100g`;
     $('foodQtyInput').value = 100;
     updateFoodDetailPreview();
+    // Achado real de varredura (2026-08-05): alimento privado (criado pelo
+    // próprio aluno) nunca podia ser editado/excluído depois — erro de
+    // digitação (ex: 1000kcal em vez de 100) ficava pra sempre na busca.
+    // Só aparece pra item que o próprio aluno criou (created_by_student_id).
+    $('editFoodLibBtn').style.display = f.created_by_student_id === student.id ? 'block' : 'none';
     showAddMealView('detail');
   }
+
+  let editingFoodLibId = null;
+
+  $('editFoodLibBtn').addEventListener('click', () => {
+    if (!foodPickedItem) return;
+    editingFoodLibId = foodPickedItem.id;
+    $('newFoodNome').value = foodPickedItem.nome;
+    $('newFoodKcal').value = foodPickedItem.kcal_100g;
+    $('newFoodProt').value = foodPickedItem.proteina_g_100g;
+    $('newFoodCarb').value = foodPickedItem.carboidrato_g_100g;
+    $('newFoodGord').value = foodPickedItem.gordura_g_100g;
+    $('createFoodBtn').textContent = 'Salvar alterações';
+    $('deleteFoodLibBtn').style.display = 'block';
+    showAddMealView('create');
+  });
+
+  $('deleteFoodLibBtn').addEventListener('click', async () => {
+    if (!editingFoodLibId) return;
+    if (!confirm('Excluir este alimento? Ele não vai mais aparecer na sua busca — refeições já registradas com ele continuam guardadas normalmente.')) return;
+    const { error } = await supa.from('food_library').delete().eq('id', editingFoodLibId);
+    if (error) { toast('Erro ao excluir: ' + error.message); return; }
+    toast('Alimento excluído.');
+    editingFoodLibId = null;
+    foodPickedItem = null;
+    closeAddMealModal();
+  });
 
   function updateFoodDetailPreview() {
     if (!foodPickedItem) return;
@@ -3110,6 +3279,18 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     const gord = Number($('newFoodGord').value) || 0;
     if (!nome) { toast('Informe o nome do alimento.'); return; }
     if (!kcal || kcal < 0) { toast('Informe as calorias por 100g.'); return; }
+    if (editingFoodLibId) {
+      const { data, error } = await supa.from('food_library').update({
+        nome, kcal_100g: kcal, proteina_g_100g: prot, carboidrato_g_100g: carb, gordura_g_100g: gord,
+      }).eq('id', editingFoodLibId).select().single();
+      if (error) { toast('Erro ao salvar: ' + error.message); return; }
+      toast('Alimento atualizado.');
+      editingFoodLibId = null;
+      $('createFoodBtn').textContent = 'Criar e usar';
+      $('deleteFoodLibBtn').style.display = 'none';
+      selectFoodItem(data);
+      return;
+    }
     const { data, error } = await supa.from('food_library').insert({
       nome, kcal_100g: kcal, proteina_g_100g: prot, carboidrato_g_100g: carb, gordura_g_100g: gord,
       created_by_student_id: student.id, fonte: 'personalizado',
@@ -3168,6 +3349,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 
     let html = `
       ${weekCalHtml()}
+      ${activeSessionBannerHtml()}
       ${cycleBadge}
       <div class="section-label" ${cycleBadge ? 'style="margin-top:0"' : ''}>Próximo treino</div>
       <div class="next-workout" onclick="openOverview(${nextIdx})">
@@ -3449,7 +3631,11 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     if (!confirm('Isso vai apagar todo o progresso desse treino em andamento — nenhuma série marcada fica salva. Quer mesmo abandonar?')) return;
     clearPersistedSession();
     toast('Treino abandonado.');
-    buildHomeDashboard();
+    // Achado real de varredura (2026-08-05): sempre re-renderizava só a
+    // Início, mesmo quando o banner (agora também presente na aba Treino,
+    // ver buildWorkoutHub) era abandonado de lá — a aba Treino ficava com o
+    // banner "fantasma" na tela até trocar de aba manualmente.
+    if ($('history').classList.contains('active')) buildWorkoutHub(); else buildHomeDashboard();
   }
   function resumeSessionFromStorage() {
     const saved = loadPersistedSessionRaw();
@@ -3723,6 +3909,8 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     if (sd.type !== 'cardio') return;
     if (!sd.minutesDone) sd.minutesDone = String(sd.targetMinutes || 30);
     sd.done = !sd.done;
+    // Mesma correção do toggleSet (força/treino) — ver comentário lá.
+    if (sd.done && sd.skipped) sd.skipped = false;
     renderExercise();
     updateExecProgress();
     persistSession();
@@ -3734,6 +3922,13 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     const ex = w.exercises[state.currentExercise];
     sd.sets[si].done = !sd.sets[si].done;
     sd.sets[si].doneAt = sd.sets[si].done ? new Date().toISOString() : null;
+    // Achado real de varredura (2026-08-05): exercício pulado (nextExercise
+    // marca sd.skipped=true) e depois completado de verdade voltando por
+    // "Lista" nunca resetava essa flag — a UI mostrava certo (isExerciseDone
+    // já teria prioridade), mas o dado persistido em training_history.detail
+    // (ver finishWorkout, "skipped: !!sd.skipped") ficava inconsistente pra
+    // sempre, guardando "pulado" pra um exercício que na real foi feito.
+    if (sd.sets[si].done && sd.skipped) sd.skipped = false;
     $('setRow'+si).classList.toggle('done', sd.sets[si].done);
     updateExecProgress();
     if (sd.sets[si].done) {
@@ -4083,22 +4278,38 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     }
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.getSubscription();
-    $('pushBtnTitle').textContent = sub ? 'Notificações ativadas ✓' : 'Ativar notificações';
+    $('pushBtnTitle').textContent = sub ? 'Notificações ativadas ✓ — toque pra desativar' : 'Ativar notificações';
   }
 
   $('enablePushBtn').addEventListener('click', async () => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    const reg = await navigator.serviceWorker.ready;
+    const existingSub = await reg.pushManager.getSubscription();
+
+    // Achado real de varredura (2026-08-05): "Ativar notificações" nunca
+    // teve o par "Desativar" -- o botão só alternava o TEXTO entre os dois
+    // estados, mas clicar de novo sempre tentava (re)inscrever, nunca
+    // desinscrevia de verdade. Único jeito de desligar era pela config do
+    // navegador/SO ou desinstalando o PWA.
+    if (existingSub) {
+      $('enablePushBtn').disabled = true;
+      const endpoint = existingSub.endpoint;
+      await existingSub.unsubscribe().catch((e) => console.error('Falha ao desinscrever push:', e));
+      const { error } = await supa.from('push_subscriptions').delete().eq('student_id', student.id).eq('endpoint', endpoint);
+      $('enablePushBtn').disabled = false;
+      if (error) { toast('Notificações desativadas neste aparelho, mas houve erro ao limpar o registro: ' + error.message); updatePushButtonState(); return; }
+      toast('Notificações desativadas.');
+      updatePushButtonState();
+      return;
+    }
+
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') { toast('Permissão de notificação negada.'); return; }
 
-    const reg = await navigator.serviceWorker.ready;
-    let sub = await reg.pushManager.getSubscription();
-    if (!sub) {
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-      });
-    }
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
     const json = sub.toJSON();
     const { error } = await supa.from('push_subscriptions').upsert({
       student_id: student.id,

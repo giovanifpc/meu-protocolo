@@ -627,6 +627,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         <button class="avatar-edit-btn" id="avatarEditBtn" title="Trocar foto" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
         <input type="file" id="avatarFileInput" accept="image/*" style="display:none">
       </div>
+      <!-- Achado real de varredura (2026-08-05): só existia "Trocar foto",
+           nunca um jeito de voltar ao estado "sem foto" (círculo com a
+           inicial do nome) a não ser sobrepondo com outra foto. -->
+      <button type="button" id="removeAvatarBtn" style="display:none;background:none;border:none;color:var(--muted);font-size:12px;text-decoration:underline;cursor:pointer;margin:2px 0 4px;">Remover foto</button>
       <div class="profile-name" id="profileName">Aluno</div>
       <div class="profile-sub" id="profileSub">—</div>
     </div>
@@ -2664,6 +2668,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     el.innerHTML = url
       ? `<img src="${escapeHtml(url)}" alt="">`
       : escapeHtml((student.nome || '?').trim().charAt(0).toUpperCase());
+    $('removeAvatarBtn').style.display = url ? 'block' : 'none';
   }
 
   // Mesmo cache de URL assinada já usado em alunos.html (painel do
@@ -2697,6 +2702,17 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   }
 
   $('avatarEditBtn').addEventListener('click', () => $('avatarFileInput').click());
+
+  $('removeAvatarBtn').addEventListener('click', async () => {
+    if (!confirm('Remover sua foto de perfil? Volta a mostrar só a inicial do seu nome.')) return;
+    $('removeAvatarBtn').disabled = true;
+    const { error } = await supa.storage.from(AVATAR_BUCKET).remove([avatarPath()]);
+    $('removeAvatarBtn').disabled = false;
+    if (error) { toast('Erro ao remover: ' + error.message); return; }
+    try { sessionStorage.removeItem('mp_avatar_url_' + student.id); } catch {}
+    setAvatarImg(null);
+    toast('Foto removida.');
+  });
 
   const cropState = { natW: 0, natH: 0, baseScale: 1, scale: 1, offsetX: 0, offsetY: 0, dragging: false, pointerId: null, lastX: 0, lastY: 0, objectUrl: null };
   const CROP_STAGE = 240;

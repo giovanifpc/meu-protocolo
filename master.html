@@ -256,6 +256,13 @@
       const valorParsed = moneyStrToReais(tr.querySelector('.valorInput').value);
       const newBillingExempt = tr.querySelector('.billingExemptCheckbox').checked;
       const trialRaw = tr.querySelector('.trialEndsInput').value;
+      // Achado real de varredura (2026-08-05): mandar null pra
+      // new_trial_ends_at nunca limpava a data de verdade -- a RPC fazia
+      // coalesce(null, valor_antigo), que sempre preserva o valor antigo.
+      // Falha silenciosa: a UI mostrava o campo vazio (parecia ter
+      // funcionado) mas o banco mantinha a data antiga. Corrigido com o
+      // mesmo padrão de flag dedicado já usado em clear_valor_customizado
+      // (supabase_60_master_trial_clear.sql).
       const args = {
         prof_id: row.id,
         new_plan: newPlan,
@@ -264,6 +271,7 @@
         clear_valor_customizado: valorParsed === null,
         new_billing_exempt: newBillingExempt,
         new_trial_ends_at: trialRaw === '' ? null : new Date(trialRaw + 'T23:59:59').toISOString(),
+        clear_trial_ends_at: trialRaw === '',
       };
       const { error } = await supa.rpc('master_update_professional', args);
       btn.disabled = false;
@@ -628,8 +636,15 @@
         <input type="text" id="mfaEnrollCode" inputmode="numeric" maxlength="6" placeholder="000000">
         <button class="btn" id="mfaEnrollBtn">Confirmar</button>
         <div class="msg" id="mfaEnrollMsg"></div>
+        <button id="mfaEnrollLogoutBtn" style="background:none;border:none;color:var(--muted);font-size:12px;text-decoration:underline;cursor:pointer;width:auto;padding:4px 0;margin-top:10px;">Sair / tentar com outra conta</button>
       </div>
     `);
+    // Achado real de varredura (2026-08-05): #mfaGate cobre a tela inteira,
+    // inclusive o cabeçalho (que não tem z-index próprio) -- enquanto esse
+    // fluxo está aberto, o "Sair" do cabeçalho fica inacessível. Se travar
+    // no meio do cadastro do autenticador (QR não escaneia, quer desistir e
+    // tentar com outra conta), não havia nenhuma saída sem fechar a aba.
+    $('mfaEnrollLogoutBtn').addEventListener('click', masterLogout);
 
     $('mfaEnrollBtn').addEventListener('click', async () => {
       const code = $('mfaEnrollCode').value.trim();
@@ -687,8 +702,10 @@
         <div class="msg" id="mfaChallengeMsg"></div>
         <button id="mfaLostBtn">Perdi o acesso ao autenticador</button>
         <div id="mfaRecoveryBox" style="display:none;"></div>
+        <button id="mfaChallengeLogoutBtn" style="background:none;border:none;color:var(--muted);font-size:12px;text-decoration:underline;cursor:pointer;width:auto;padding:4px 0;margin-top:6px;">Sair</button>
       </div>
     `);
+    $('mfaChallengeLogoutBtn').addEventListener('click', masterLogout);
 
     $('mfaChallengeBtn').addEventListener('click', async () => {
       const code = $('mfaChallengeCode').value.trim();
@@ -755,10 +772,11 @@
     await loadProfessionals();
   }
 
-  $('logoutBtn').addEventListener('click', async () => {
+  async function masterLogout() {
     await supa.auth.signOut();
     window.location.href = 'login.html';
-  });
+  }
+  $('logoutBtn').addEventListener('click', masterLogout);
 
   boot();
 </script>

@@ -46,7 +46,7 @@
     <div id="step1">
       <h1>Bem-vindo</h1>
       <p class="hint">Vamos criar sua conta de profissional.</p>
-      <div class="trial-note">Trial gratuito de 14 dias. Ao final, a cobrança do plano escolhido é feita automaticamente no cartão cadastrado a seguir.</div>
+      <div class="trial-note">Trial gratuito de 14 dias, no plano Starter. Ao final, a cobrança é feita automaticamente no cartão cadastrado a seguir — dá pra trocar de plano quando quiser, depois de entrar.</div>
 
       <div class="field">
         <label>Seu nome ou nome do negócio</label>
@@ -55,11 +55,17 @@
 
       <button class="btn" id="createBtn">Continuar</button>
       <div class="msg" id="msgBox"></div>
+      <div class="lock-hint"><span id="step1LogoutLink" style="cursor:pointer;text-decoration:underline;">E-mail errado? Sair</span></div>
     </div>
 
     <div id="step2">
       <h1>Cartão de cobrança</h1>
       <p class="hint">Não cobramos nada agora — só depois dos 14 dias de trial.</p>
+      <div class="lock-hint" style="margin-bottom:10px;">
+        <span id="step2BackLink" style="cursor:pointer;text-decoration:underline;">‹ Corrigir nome</span>
+        &nbsp;·&nbsp;
+        <span id="step2LogoutLink" style="cursor:pointer;text-decoration:underline;">Sair</span>
+      </div>
 
       <div class="field">
         <label>Nome no cartão</label>
@@ -144,9 +150,22 @@
     // Se já existe conta pro e-mail (ex: sessão anterior criou o registro mas
     // não completou o cadastro do cartão), pula direto pro passo certo em vez
     // de mostrar o formulário de nome de novo.
-    const { data: existing, error: existingErr } = await supa.from('professionals').select('id, mp_preapproval_id').eq('email', session.user.email).maybeSingle();
+    //
+    // Achado real de varredura (2026-08-05): esta checagem só olhava
+    // mp_preapproval_id, nunca status/billing_exempt como login.html já faz
+    // — (1) um profissional com assinatura cancelada (status='inativo', mas
+    // ainda com mp_preapproval_id antigo preenchido) e sessão válida
+    // aberta podia contornar o bloqueio de reativação de login.html
+    // navegando direto pra cá; (2) um profissional isento de cobrança
+    // (billing_exempt=true, programa Founder) sem mp_preapproval_id via
+    // login.html vai direto pro index.html — mas caindo aqui por fora
+    // desse fluxo (aba antiga, link direto), veria a tela de cartão que
+    // deveria estar isento.
+    const { data: existing, error: existingErr } = await supa.from('professionals').select('id, status, mp_preapproval_id, billing_exempt').eq('email', session.user.email).maybeSingle();
     if (existingErr) console.error('Falha ao checar conta existente:', existingErr.message);
-    if (existing?.mp_preapproval_id) {
+    if (existing?.status === 'inativo') {
+      showMsg('Sua assinatura está cancelada. Seus dados ficam retidos por um tempo — entre em contato pra reativar: contato@meuprotocolo.app');
+    } else if (existing?.mp_preapproval_id || existing?.billing_exempt) {
       window.location.href = 'index.html';
     } else if (existing) {
       $('step1').style.display = 'none';
@@ -154,6 +173,19 @@
       initCardFields();
     }
   })();
+
+  // Achado real de varredura (2026-08-05): nenhum dos 2 passos tinha como
+  // sair/trocar de e-mail, nem como voltar do passo 2 pra corrigir o nome
+  // digitado errado no passo 1 (que já tinha sido gravado via upsert).
+  // Voltar não desfaz o upsert -- só reabre o formulário; corrigir e
+  // clicar "Continuar" de novo faz outro upsert na mesma linha (onConflict
+  // email), sem duplicar nem exigir passo extra.
+  $('step1LogoutLink').addEventListener('click', async () => { await supa.auth.signOut(); window.location.href = 'login.html'; });
+  $('step2LogoutLink').addEventListener('click', async () => { await supa.auth.signOut(); window.location.href = 'login.html'; });
+  $('step2BackLink').addEventListener('click', () => {
+    $('step2').style.display = 'none';
+    $('step1').style.display = 'block';
+  });
 
   let mpFields = null;
   function initCardFields() {

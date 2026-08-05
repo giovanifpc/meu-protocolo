@@ -130,23 +130,13 @@
     showMsg('', '');
   });
 
-  $('verifyOtpBtn').addEventListener('click', async () => {
-    const token = $('otpInput').value.trim();
-    if (!token) {
-      showMsg('Digite o código recebido.', 'error');
-      return;
-    }
-    $('verifyOtpBtn').disabled = true;
-    showMsg('Verificando...', '');
-    const { data, error } = await supa.auth.verifyOtp({ email: pendingEmail, token, type: 'email' });
-    $('verifyOtpBtn').disabled = false;
-    if (error) {
-      showMsg('Código inválido ou expirado: ' + error.message, 'error');
-      return;
-    }
-
-    const email = data.user.email;
-
+  // Roteamento pós-autenticação, isolado numa função só — reaproveitada
+  // tanto depois de confirmar o OTP quanto no boot, quando já existe uma
+  // sessão válida (achado real de varredura, 2026-08-05: antes disso,
+  // login.html nunca checava sessão existente antes de mostrar o formulário
+  // de e-mail, ao contrário de onboarding.html — quem já estava logado e
+  // reabria o link de login precisava pedir OTP de novo à toa).
+  async function routeAfterAuth(email) {
     // E-mail dedicado do painel master (operação, visão de todos os tenants) —
     // checa antes de tudo, sem link público em lugar nenhum apontando pra cá.
     if (email === 'meuprotocolo1@gmail.com') {
@@ -191,6 +181,37 @@
     }
     // Primeiro acesso sem cadastro prévio: trata como novo profissional (onboarding)
     window.location.href = 'onboarding.html';
+  }
+
+  // Sessão já válida (ex: sessão anterior nunca expirou, reabriu o link de
+  // login por engano/bookmark) — pula direto pro roteamento, sem pedir OTP
+  // de novo. Se algo aqui falhar/travar, cai no formulário normal (nunca
+  // bloqueia o login por causa dessa checagem extra).
+  (async () => {
+    try {
+      const { data: { session } } = await supa.auth.getSession();
+      if (session?.user?.email) {
+        showMsg('Você já está logado — entrando...', '');
+        await routeAfterAuth(session.user.email);
+      }
+    } catch (e) { console.error('Checagem de sessão existente falhou:', e); }
+  })();
+
+  $('verifyOtpBtn').addEventListener('click', async () => {
+    const token = $('otpInput').value.trim();
+    if (!token) {
+      showMsg('Digite o código recebido.', 'error');
+      return;
+    }
+    $('verifyOtpBtn').disabled = true;
+    showMsg('Verificando...', '');
+    const { data, error } = await supa.auth.verifyOtp({ email: pendingEmail, token, type: 'email' });
+    $('verifyOtpBtn').disabled = false;
+    if (error) {
+      showMsg('Código inválido ou expirado: ' + error.message, 'error');
+      return;
+    }
+    await routeAfterAuth(data.user.email);
   });
 
   $('backToEmail').addEventListener('click', () => {

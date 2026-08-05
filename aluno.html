@@ -251,8 +251,16 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
    parcialmente o topo do gif (.exec-media) quando aparece — deliberado,
    nunca empurra o layout (a série/lista continua exatamente onde estava,
    sem reflow) */
-.rest-bar{position:fixed;left:0;right:0;max-width:520px;margin:0 auto;top:calc(env(safe-area-inset-top) + 76px);background:var(--card);border:1px solid var(--line);border-top:none;box-shadow:0 10px 26px -10px rgba(0,0,0,.22);padding:14px 18px;border-radius:0 0 var(--radius-lg) var(--radius-lg);transform:translateY(-140%);transition:.35s cubic-bezier(.2,.8,.2,1);z-index:55}
-.rest-bar.show{transform:translateY(0)}
+/* Achado real testando o app (2026-08-05): translateY(-140%) é relativo à
+   própria altura da barra — com o conteúdo real (círculo de 56px + texto),
+   -140% não empurrava o suficiente pra fora da tela, sobrando uma fatia
+   visível (cortada) por cima do gif mesmo com a barra "escondida". Corrigido
+   com visibility, que garante 100% invisível/não-clicável independente do
+   quanto o transform conseguiu empurrar — o delay na transição de
+   visibility (só ao ESCONDER) deixa a animação de subida terminar antes de
+   sumir de vez, sem cortar o movimento. */
+.rest-bar{position:fixed;left:0;right:0;max-width:520px;margin:0 auto;top:calc(env(safe-area-inset-top) + 76px);background:var(--card);border:1px solid var(--line);border-top:none;box-shadow:0 10px 26px -10px rgba(0,0,0,.22);padding:14px 18px;border-radius:0 0 var(--radius-lg) var(--radius-lg);transform:translateY(-140%);visibility:hidden;transition:transform .35s cubic-bezier(.2,.8,.2,1), visibility 0s linear .35s;z-index:55}
+.rest-bar.show{transform:translateY(0);visibility:visible;transition:transform .35s cubic-bezier(.2,.8,.2,1), visibility 0s linear}
 .rest-inner{display:flex;align-items:center;gap:16px}
 .rest-circle{width:56px;height:56px;flex-shrink:0;position:relative;display:flex;align-items:center;justify-content:center}
 .rest-circle svg{position:absolute;inset:0;transform:rotate(-90deg)}
@@ -3550,11 +3558,20 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     showScreen('overview');
   }
 
+  // Achado real testando o app (2026-08-05): pular pra outro exercício pela
+  // Lista chamava skipRest() (cancelamento de verdade) — mas abrir a Lista
+  // só pra DAR UMA OLHADA no próximo exercício (sem intenção de abandonar o
+  // descanso que está rolando de verdade) perdia o timer sem querer. Mesmo
+  // princípio já usado no resto do app: navegar dentro do treino nunca
+  // cancela um descanso real, só esconde/reexibe a barra (pauseRestUI/
+  // resumeRestUIIfActive) — cancelar de verdade continua reservado pra
+  // quando o aluno marca uma série nova ou aperta "pular" explicitamente.
   function jumpToExerciseFromList(i) {
-    skipRest();
+    pauseRestUI();
     state.currentExercise = i;
     renderExercise();
     showScreen('exec');
+    resumeRestUIIfActive();
   }
 
   // A seta "‹" do topo da tela Overview muda de sentido conforme o modo:

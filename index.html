@@ -325,7 +325,15 @@
       return { tipo: 'adesao', student: s, days };
     }).filter(a => a.days === null || a.days >= 7);
 
+    // Achado real de varredura (2026-08-05): esse alerta nunca sabia se o
+    // aluno já tinha cobrança automática ativa (mp_charge_method) — mandava
+    // a mesma mensagem manual de WhatsApp pedindo confirmação de pagamento
+    // pra quem já estava sendo cobrado automaticamente (cartão/Pix avulso
+    // gerado pelo cron), causando dupla cobrança e dupla confusão. Quem já
+    // está automatizado tem aviso próprio no sino via dunning/webhook em
+    // caso de falha — não precisa duplicar aqui.
     const paymentAlerts = activeStudents.map(s => {
+      if (s.mp_charge_method && s.mp_charge_method !== 'nenhum') return null;
       const info = computeDueInfo(s);
       return info && info.daysLate > 0 ? { tipo: 'pagamento', student: s, daysLate: info.daysLate, due: info.due } : null;
     }).filter(Boolean);

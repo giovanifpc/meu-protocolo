@@ -106,6 +106,7 @@
         <button class="btn secondary" id="backToInboxBtn">‹ Conversas</button>
         <span class="thread-student-name" id="threadStudentName"></span>
       </div>
+      <div id="threadInactiveNote" style="display:none;padding:8px 14px;font-size:12px;color:#8A5A00;background:#FFF4E5;">Este aluno está Inativo — ele só vê suas mensagens depois de reativado.</div>
       <div class="chat-messages" id="chatMessages"></div>
       <div class="chat-input-row">
         <input type="text" id="chatInput" placeholder="Escreva uma mensagem..." maxlength="1000">
@@ -152,7 +153,6 @@
   let professional = null;
   let conversations = [];
   let currentThreadStudentId = null;
-  let currentThreadStudentName = '';
   let threadPollTimer = null;
 
   function escapeHtml(s) {
@@ -212,10 +212,14 @@
 
   async function openThread(conv) {
     currentThreadStudentId = conv.student_id;
-    currentThreadStudentName = conv.student_nome;
     $('threadStudentName').textContent = conv.student_nome;
     $('inboxView').style.display = 'none';
     $('threadView').style.display = 'block';
+    // Achado real de varredura (2026-08-05): aluno Inativo fica bloqueado do
+    // próprio app — mandar mensagem pra ele fica "no vazio" até reativado,
+    // sem nenhum aviso disso antes.
+    const { data: student } = await supa.from('students').select('status').eq('id', conv.student_id).maybeSingle();
+    $('threadInactiveNote').style.display = student?.status === 'inativo' ? 'block' : 'none';
     await loadAndRenderThread();
     await supa.rpc('mark_messages_read', { p_student_id: currentThreadStudentId });
     clearInterval(threadPollTimer);

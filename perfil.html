@@ -198,7 +198,15 @@
     <div class="card" id="cardBillingCard" style="display:none;">
       <h2>Cartão da assinatura</h2>
       <div class="field" id="cardBillingInfo">
-        <p style="font-size:13px;color:var(--muted);margin:0;">Cartão cadastrado — troque quando precisar, sem precisar cancelar e refazer a assinatura.</p>
+        <!-- Achado real de varredura (2026-08-05): este card nunca mostrou
+             bandeira/4 dígitos/validade de verdade (a tabela professionals
+             nunca ganhou colunas pra isso) — o profissional clicava
+             "Trocar" sem nenhuma pista de qual cartão estava ativo hoje.
+             Decisão: ser transparente sobre a limitação em vez de fingir
+             certeza — tentar exibir dado real exigiria mexer numa
+             integração de pagamento ao vivo sem poder testar contra
+             dinheiro real, risco desproporcional pra essa correção. -->
+        <p style="font-size:13px;color:var(--muted);margin:0;">Você tem um cartão cadastrado pra essa assinatura, mas não mostramos os detalhes dele aqui (bandeira/final) — se não tiver certeza de qual é, pode trocar mesmo assim, sem precisar cancelar e refazer a assinatura.</p>
       </div>
       <button class="btn secondary" id="cardBillingChangeBtn" type="button">Trocar cartão atual</button>
       <div id="cardBillingForm" style="display:none;margin-top:14px;">
@@ -303,11 +311,13 @@
       <h2>Cancelar assinatura</h2>
       <div id="cancelStep1">
         <p style="font-size:13px;color:var(--muted);margin:0 0 12px;">Isso encerra o acesso ao Meu Protocolo. Você pode revisar os detalhes antes de confirmar.</p>
+        <div id="cancelBlockedNote" class="msg" style="display:none;background:#FFF4E5;border:1px solid #F0C892;color:#8A5A00;border-radius:10px;padding:10px 12px;margin-bottom:12px;"></div>
         <button class="btn danger" id="openCancelBtn">Cancelar minha assinatura</button>
       </div>
       <div id="cancelStep2" style="display:none">
         <p style="font-size:13px;line-height:1.6;margin:0 0 8px;"><strong>Seu acesso será encerrado imediatamente</strong> ao confirmar.</p>
         <p style="font-size:13px;line-height:1.6;margin:0 0 8px;">Seus dados (protocolos, avaliações, histórico dos seus alunos) ficam <strong>retidos por 30 dias</strong> em estado inativo — nesse período, entre em contato para reativar sem perder nada.</p>
+        <p style="font-size:13px;line-height:1.6;margin:0 0 8px;" id="cancelReferralNote"></p>
         <p style="font-size:13px;line-height:1.6;margin:0 0 16px;color:var(--danger);"><strong>Após os 30 dias, os dados são excluídos permanentemente</strong> e não podem ser recuperados.</p>
         <div style="display:flex;gap:10px;">
           <button class="btn secondary" id="backCancelBtn" style="flex:1;">Voltar</button>
@@ -1004,7 +1014,34 @@
     }
   });
 
-  $('openCancelBtn').addEventListener('click', () => {
+  $('openCancelBtn').addEventListener('click', async () => {
+    // Achado real de varredura (2026-08-05, decisão confirmada com o
+    // usuário): sem essa checagem, cancelar trancava o profissional do lado
+    // de fora (status='inativo' bloqueia login imediatamente) enquanto a
+    // cobrança automática que ele configurou pros PRÓPRIOS alunos (conta MP
+    // conectada) continuava rodando sozinha, sem ninguém conseguir gerenciar
+    // ou cancelar. Mesmo padrão já usado no bloqueio de downgrade pra
+    // Starter (mercadopago-update-preapproval): bloqueia a ação até o
+    // profissional desconectar manualmente antes, em vez de cancelar tudo
+    // em cascata sozinho.
+    $('openCancelBtn').disabled = true;
+    const { data: studentsForBlock } = await supa.from('students').select('mp_charge_method').eq('professional_id', professional.id);
+    $('openCancelBtn').disabled = false;
+    const activeCount = (studentsForBlock || []).filter(s => s.mp_charge_method && s.mp_charge_method !== 'nenhum').length;
+    if (activeCount > 0) {
+      $('cancelBlockedNote').innerHTML = `Você tem <strong>${activeCount} aluno${activeCount > 1 ? 's' : ''}</strong> em cobrança automática ativa. Desconecte sua conta Mercado Pago (ou desative a cobrança de cada aluno) na aba <a href="financeiro.html" style="color:#8A5A00;font-weight:700;">Financeiro</a> antes de cancelar — sem isso, ela continuaria cobrando os alunos sozinha e você não teria mais acesso ao app pra gerenciar isso.`;
+      $('cancelBlockedNote').style.display = 'block';
+      return;
+    }
+    $('cancelBlockedNote').style.display = 'none';
+    // Achado real de varredura (2026-08-05): crédito de indicação pendente
+    // nunca era mencionado aqui — sem cobrança futura pra aplicar o
+    // desconto, ele simplesmente se perde ao cancelar, sem o profissional
+    // saber disso antes de confirmar.
+    const pendingCredit = professional.referral_credit_months || 0;
+    $('cancelReferralNote').textContent = pendingCredit > 0
+      ? `Você tem ${pendingCredit} mês${pendingCredit > 1 ? 'es' : ''} grátis de indicação pendente — como não haverá mais cobrança futura pra aplicar o desconto, esse crédito se perde ao cancelar.`
+      : '';
     $('cancelStep1').style.display = 'none';
     $('cancelStep2').style.display = 'block';
   });

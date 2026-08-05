@@ -264,6 +264,12 @@
   }
 
   const STATUS_LABELS = { ativo: 'Ativo', pausado: 'Pausado', inativo: 'Inativo' };
+  // Achado real de varredura (2026-08-05): mp_charge_method existe em
+  // students desde a cobrança automática, mas nunca aparecia em lugar
+  // nenhum do painel — o profissional não tinha como saber quem já está
+  // automatizado, o que abria espaço pra "marcar pago" e Inativo cancelarem
+  // cobrança de verdade sem ele perceber que havia algo ativo pra cancelar.
+  const CHARGE_METHOD_LABELS = { cartao: 'Cartão automático ativo', pix_avulso: 'Pix automático ativo' };
   const PLAN_STUDENT_LIMITS = { starter: 15, pro: 40, elite: Infinity };
   let notesByStudent = {};
   let currentStudentCount = 0;
@@ -330,13 +336,14 @@
           </select>
           <div class="billing-row">
             <input type="number" step="0.01" data-role="mensalidade-valor" data-student-id="${s.id}" placeholder="Valor da mensalidade (R$)" value="${s.mensalidade_valor ?? ''}">
-            <input type="number" min="1" max="31" data-role="mensalidade-dia" data-student-id="${s.id}" placeholder="Dia venc. (1-31)" value="${s.mensalidade_dia_vencimento ?? ''}">
+            <input type="number" min="1" max="31" data-role="mensalidade-dia" data-student-id="${s.id}" placeholder="Dia venc. (1-31)" value="${s.mensalidade_dia_vencimento ?? ''}" ${s.mp_charge_method === 'cartao' ? 'disabled title="Aluno já tem cartão automático ativo — mudar aqui só mudaria o texto mostrado no app, a cobrança real continua no dia original. Pra mudar de verdade, desconecte e reconfigure o método de pagamento dele."' : ''}>
           </div>
           <button class="btn small" style="padding:7px 12px;font-size:12px;" data-role="save-edit" data-student-id="${s.id}">Salvar edição</button>
           <div class="msg" id="editSaveMsg-${s.id}"></div>
 
           <div class="payment-zone">
             <div class="notes-sub-label">Pagamento</div>
+            ${CHARGE_METHOD_LABELS[s.mp_charge_method] ? `<div class="billing-status" style="color:var(--accent-dim);font-weight:700;">${CHARGE_METHOD_LABELS[s.mp_charge_method]}</div>` : ''}
             <div class="billing-status">${s.ultimo_pagamento_em ? `Último pagamento: ${new Date(s.ultimo_pagamento_em + 'T00:00:00').toLocaleDateString('pt-BR')}` : 'Nenhum pagamento registrado ainda'}</div>
             <button class="btn small secondary" style="padding:7px 12px;font-size:12px;" data-role="mark-paid" data-student-id="${s.id}">Marcar pago hoje</button>
           </div>
@@ -448,8 +455,14 @@
       return;
     }
     textarea.value = '';
-    statusEl.textContent = 'Mensagem enviada — veja a resposta na aba Mensagens.';
-    toast('Mensagem enviada.');
+    // Achado real de varredura (2026-08-05): aluno Inativo fica bloqueado do
+    // próprio app — a mensagem é gravada normalmente, mas ele só vai vê-la
+    // depois de reativado. Sem esse aviso, o profissional podia achar que a
+    // conversa já chegou até ele.
+    const student = studentsCache?.find(s => s.id === studentId);
+    const inativoNote = student?.status === 'inativo' ? ' (aluno está Inativo — ele só vê isso depois de reativado)' : '';
+    statusEl.textContent = 'Mensagem enviada' + inativoNote + '.';
+    toast('Mensagem enviada.' + inativoNote);
   }
 
   // Um único botão salva tudo do painel de edição (nota privada + WhatsApp +
@@ -538,6 +551,15 @@
   }
 
   async function markPaid(studentId) {
+    // Achado real de varredura (2026-08-05): pra aluno com Pix automático,
+    // o cron usa exatamente ultimo_pagamento_em pra calcular quando gerar o
+    // próximo Pix de verdade — um clique manual (comum, por hábito) atrasava
+    // a cobrança automática real em até 1 mês, sem nenhum aviso.
+    const student = studentsCache?.find(s => s.id === studentId);
+    if (student?.mp_charge_method && student.mp_charge_method !== 'nenhum') {
+      const metodo = student.mp_charge_method === 'cartao' ? 'cartão automático' : 'Pix automático';
+      if (!confirm(`Esse aluno já está em cobrança automática (${metodo}). Marcar pago manualmente aqui pode atrasar a próxima cobrança automática em até 1 mês. Continuar mesmo assim?`)) return;
+    }
     const { error } = await supa.from('students').update({ ultimo_pagamento_em: todayISO() }).eq('id', studentId);
     if (error) { toast('Erro ao marcar pagamento: ' + error.message); return; }
     toast('Pagamento registrado.');
@@ -554,6 +576,21 @@
     const studentId = sel.dataset.studentId;
     const newStatus = sel.value;
     const previousStatus = sel.dataset.prevStatus || 'ativo';
+    // Achado real de varredura (2026-08-05): marcar Inativo só pra revelar o
+    // botão "Excluir" já cancelava a cobrança automática de verdade — sem
+    // aviso nenhum. Se o profissional voltasse pra Ativo (desistiu de
+    // excluir), o aluno seguia Ativo mas a cobrança já tinha sido cancelada
+    // de verdade, sem nada reativar sozinho. Agora pede confirmação explícita
+    // ANTES de mudar o status, só quando há cobrança automática de verdade
+    // pra cancelar.
+    const student = studentsCache?.find(s => s.id === studentId);
+    if (newStatus === 'inativo' && student?.mp_charge_method && student.mp_charge_method !== 'nenhum') {
+      const metodo = student.mp_charge_method === 'cartao' ? 'cartão automático' : 'Pix automático';
+      if (!confirm(`Esse aluno tem ${metodo} ativo. Marcar Inativo cancela essa cobrança de verdade agora — não é só uma marcação. Se você voltar o status pra Ativo depois, a cobrança NÃO volta sozinha. Continuar?`)) {
+        sel.value = previousStatus;
+        return;
+      }
+    }
     sel.disabled = true;
     const { error } = await supa.from('students').update({ status: newStatus }).eq('id', studentId);
     sel.disabled = false;
@@ -563,6 +600,7 @@
       return;
     }
     sel.dataset.prevStatus = newStatus;
+    if (student) student.status = newStatus;
     $('dangerZone-' + studentId).style.display = newStatus === 'inativo' ? 'block' : 'none';
     // Marcar Inativo também cancela a cobrança automática desse aluno (lacuna
     // 3 do desenho de cobrança automática) — sem isso o app continuaria

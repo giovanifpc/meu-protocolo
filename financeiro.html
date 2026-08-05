@@ -180,7 +180,7 @@
     </div>
 
     <div class="card">
-      <h2>Receita<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Como esses números são calculados', 'É autodeclarado, não é extrato bancário nem integração de pagamento.<br><br><strong>Recebido</strong> conta quem tem o último pagamento registrado dentro do mês corrente; <strong>A receber</strong> é o resto dos alunos com mensalidade cadastrada.<br><br>Só vira recebido quando você clica em Marcar pago hoje na aba Alunos.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></h2>
+      <h2>Receita<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Como esses números são calculados', '<strong>Recebido</strong>/<strong>A receber</strong> aqui em cima são autodeclarados (Pix manual, sem gateway) — só de alunos SEM cobrança automática configurada. Vira recebido quando você clica em Marcar pago hoje na aba Alunos.<br><br>Quem já tem cartão ou Pix automático ativo entra só no bloco \'Cobrança automática\' logo abaixo (ledger real, vindo do Mercado Pago) — nunca nos dois ao mesmo tempo, pra não contar a mesma cobrança duas vezes.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></h2>
       <p class="card-sub">Vinda dos seus próprios alunos — não confundir com a cobrança da sua assinatura do Meu Protocolo.</p>
       <div class="revenue-grid">
         <div class="revenue-stat received">
@@ -192,9 +192,9 @@
           <div class="rv-lbl">A receber este mês</div>
         </div>
       </div>
-      <p class="revenue-disclaimer">Baseado no que você marcou como pago em cada aluno (aba Alunos) — não é um pagamento verificado automaticamente, já que o recebimento é direto por Pix, sem gateway.</p>
+      <p class="revenue-disclaimer">Baseado no que você marcou como pago manualmente (aba Alunos) — só de alunos SEM cobrança automática configurada. Quem já tem cartão ou Pix automático ativo entra no bloco "Cobrança automática" abaixo, nunca nos dois ao mesmo tempo.</p>
       <div id="autoRevenueBlock" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--line);">
-        <div class="tr-label" style="margin-bottom:10px;">Cobrança automática este mês</div>
+        <div class="tr-label" style="margin-bottom:10px;">Cobrança automática este mês (separado do "Recebido" acima, nunca somado a ele)</div>
         <div class="revenue-grid" style="grid-template-columns:1fr 1fr 1fr;">
           <div class="revenue-stat">
             <div class="rv-num" id="arGross" style="font-size:16px;">—</div>
@@ -527,20 +527,30 @@
 
   // Receita própria do profissional (vinda dos alunos) — nunca confundir com
   // a aba "Receita" do master.html, que é a receita do Giovani vinda da
-  // assinatura SaaS via Mercado Pago. Aqui não há ledger real (o pagamento
-  // aluno->profissional é Pix manual) — "recebido" é quem tem
-  // ultimo_pagamento_em dentro do mês corrente, "a receber" é o resto dos
-  // alunos com mensalidade cadastrada. Recebido + a receber = a expectativa
-  // de receita do mês inteiro. Sem filtro de status aqui de propósito —
-  // "ativo/pausado/inativo" não é coluna de students, vive só em
+  // assinatura SaaS via Mercado Pago. "Recebido"/"a receber" aqui é só a
+  // parte AUTODECLARADA (Pix manual, sem gateway) — quem tem
+  // ultimo_pagamento_em dentro do mês corrente. Sem filtro de status aqui de
+  // propósito — "ativo/pausado/inativo" não é coluna de students, vive só em
   // student_notes (nota privada do profissional); soma qualquer aluno com
   // mensalidade_valor cadastrado, independente disso.
+  //
+  // Achado real de varredura (2026-08-05): antes somava TODO aluno aqui,
+  // inclusive quem já está em cobrança automática (cartão/Pix avulso) — o
+  // webhook (mercadopago-webhook) também atualiza ultimo_pagamento_em numa
+  // cobrança automática aprovada, então essa mesma cobrança já entrava
+  // SEPARADAMENTE no bloco "Bruto/Taxa/Líquido" logo abaixo (loadAutoRevenue,
+  // via student_billing_charges) — a mesma cobrança contada duas vezes em
+  // dois cards lado a lado, sem nenhuma reconciliação, inflando a
+  // impressão de receita total se os dois números fossem somados de cabeça.
+  // Corrigido excluindo aqui quem já tem mp_charge_method ativo — essa
+  // parcela vive só no bloco de cobrança automática agora.
   function renderRevenue(students) {
     const now = new Date();
     const y = now.getFullYear(), m = now.getMonth();
     let received = 0, pending = 0;
     students.forEach((s) => {
       if (!s.mensalidade_valor) return;
+      if (s.mp_charge_method && s.mp_charge_method !== 'nenhum') return; // já contado no bloco de cobrança automática abaixo
       const valor = Number(s.mensalidade_valor) || 0;
       let paidThisMonth = false;
       if (s.ultimo_pagamento_em) {
@@ -581,7 +591,7 @@
 
     const { data: students, error: studentsError } = await supa
       .from('students')
-      .select('mensalidade_valor, ultimo_pagamento_em')
+      .select('mensalidade_valor, ultimo_pagamento_em, mp_charge_method')
       .eq('professional_id', professional.id);
     if (studentsError) { console.error('Falha ao carregar alunos pra Receita:', studentsError.message); return; }
     renderRevenue(students || []);

@@ -1,137 +1,100 @@
-# Varredura de inconsistências de fluxo — 2026-08-05
+# Varredura de inconsistências de fluxo — 2026-08-05 (FECHADA)
 
-Levantamento pedido pelo usuário depois de notar um padrão recorrente de retrabalho: funcionalidades novas sem lugar de chegada, botões de adição sem remoção, campos sem edição. A regra "análise de fluxo completo" (ver `CLAUDE.md`) só existe desde 2026-07-28 e nunca foi aplicada retroativamente ao que já estava pronto — este documento é essa aplicação retroativa, cobrindo o app inteiro (18 páginas HTML + as ~51 funções/RPC do banco).
+Levantamento pedido pelo usuário depois de notar um padrão recorrente de retrabalho: funcionalidades novas sem lugar de chegada, botões de adição sem remoção, campos sem edição. A regra "análise de fluxo completo" (ver `CLAUDE.md`) só existe desde 2026-07-28 e nunca tinha sido aplicada retroativamente ao que já estava pronto — este documento foi essa aplicação retroativa, cobrindo o app inteiro (18 páginas HTML + as ~51 funções/RPC do banco).
 
-**Método**: 6 auditorias paralelas (uma por região do app) mais uma varredura própria de funções SQL órfãs, cada uma checando 4 categorias:
-1. **Ida sem volta** — ação de criar/conectar/ativar sem o par de remover/desconectar/desativar
-2. **Campo sem edição** — dado capturado que só existe no momento de criar
-3. **Função/recurso órfão** — botão, campo ou função que não vai a lugar nenhum
-4. **Intersecção esquecida** — feature nova que não conhece feature relacionada já existente
+**Status: todos os 51 achados confirmados foram corrigidos e testados de ponta a ponta contra o banco/produção real (dado sintético criado e removido em cada teste). Os 7 achados marcados "suspeita, não confirmada" ficaram deliberadamente de fora — não foram corrigidos, seguem como pendência registrada no fim deste documento**, por pedido explícito do usuário (não agir sobre suspeita não verificada com certeza).
 
-**Nada foi corrigido ainda** — isto é só o levantamento, pra priorizarmos juntos. Achados marcados "suspeita, verificar" não foram confirmados com certeza total.
+**Método original**: 6 auditorias paralelas (uma por região do app) mais uma varredura própria de funções SQL órfãs, cada uma checando 4 categorias — ida sem volta, campo sem edição, função/recurso órfão, intersecção esquecida.
 
-**Contagem real por gravidade** (correção de uma resposta anterior que só citou 4 — a lista "prioridade alta" abaixo sempre teve mais que isso, e 2 achados que eu tinha arquivado errado em "categoria 4" foram promovidos pra cá depois de reler com mais rigor):
-
-| Gravidade | O que significa | Quantos |
-|---|---|---|
-| 🔴 **Alto** | Dinheiro se movendo sem controle, dado de saúde corrompido, acesso trancado, ou perda permanente de dado já publicado/em uso pelo aluno | **13** |
-| 🟠 **Médio** | Perda de dado não crítico, confusão real (mas reversível), promessa que não se cumpre, falha silenciosa numa ferramenta administrativa | **~18** |
-| 🟢 **Baixo** | Fricção de UX, falta de um botão de conveniência, código morto — incômodo, não risco | **~27** |
-
-58 achados no total (confirmados + "suspeita, verificar").
+**Segurança do processo de correção**: tudo foi feito em lotes pequenos e isolados por arquivo/área, testado localmente (servidor estático + navegador real + contas de teste) antes de cada commit, com checagem de sintaxe (`node --check`)/balanceamento de tags antes de qualquer push, e confirmação de que nenhuma tag `<script>`/`defer`/`async` foi tocada (causa do incidente de performance de 2026-08-01 documentado mais acima neste arquivo) — nenhuma mudança de timing/ordem de carregamento de script entrou nesta leva.
 
 ---
 
-## 🔴 Prioridade alta (13) — envolve dinheiro, dado de saúde, ou acesso trancado
+## ✅ Corrigidos — 13 de risco alto
 
-### Cobrança automática
+Todos testados de ponta a ponta contra o banco real.
 
-- **[perfil.html] Cancelar a assinatura do profissional não desconecta a cobrança automática dos alunos dele.** "Cancelar assinatura" (nível 2 — a própria assinatura SaaS) só chama `mercadopago-cancel-preapproval`. Nunca toca `mp_connect_status`/`professional_mp_connections` (nível 1 — a conta MP que o profissional conectou pra cobrar os PRÓPRIOS alunos) nem cancela nenhuma cobrança de aluno em andamento. Como `status='inativo'` bloqueia login imediatamente, o profissional fica **trancado do lado de fora** enquanto a cobrança automática dos alunos dele continua rodando sozinha, sem ninguém conseguir gerenciar ou cancelar. O texto de confirmação não avisa nada disso.
-- **[alunos.html] Marcar "Inativo" só pra revelar o botão "Excluir" já cancela a cobrança automática de verdade, sem volta.** O bloco de exclusão só aparece quando o status vira Inativo — mas mudar pra Inativo já dispara `mercadopago-cancel-student-charge` na hora. Se o profissional volta o status pra Ativo (desistiu de excluir), o aluno segue "Ativo" mas a cobrança automática já foi cancelada de verdade — e nada reativa isso sozinho, só o próprio aluno reconfigurando o pagamento.
-- **[alunos.html] `mp_charge_method` (cartão/Pix automático/nenhum) nunca aparece no painel do profissional.** Ele não tem como saber, olhando a lista de alunos, quem já está automatizado — o que abre espaço direto pro próximo item.
-- **[alunos.html] "Marcar pago hoje" num aluno com Pix automático atrasa o próximo Pix gerado pelo cron em até 1 mês, sem aviso.** `computeNextDueDate()` usa `ultimo_pagamento_em` como base tanto pro lembrete por e-mail quanto pra decidir quando gerar o próximo Pix de verdade — um clique manual (comum, por hábito) empurra a cobrança real do sistema.
-- **[index.html] Alerta de "mensalidade em atraso" não sabe se o aluno já está em cobrança automática.** Manda a mesma mensagem manual de WhatsApp pedindo confirmação de pagamento pra quem já está sendo cobrado automaticamente — dupla cobrança, dupla confusão.
-- **[financeiro.html] Receita do mês contada em duplicidade.** "Recebido este mês" (a partir de `ultimo_pagamento_em`) e o bloco "Bruto/Taxa/Líquido" (a partir de `student_billing_charges`) somam a MESMA cobrança automática duas vezes, sem reconciliação — infla o número mostrado.
-- **[alunos.html] Editar o dia de vencimento (`mensalidade_dia_vencimento`) de um aluno já com cartão automático não sincroniza com o Mercado Pago.** Só o valor (`mensalidade_valor`) é sincronizado — o dia real da cobrança continua o antigo, o app mostra um dia diferente do que realmente acontece.
+1. **[perfil.html]** Cancelar a assinatura do profissional agora **bloqueia** se houver aluno em cobrança automática ativa (mesmo padrão do bloqueio de downgrade) — decisão confirmada com o usuário antes de implementar. *Commit 44c6440.*
+2. **[alunos.html]** Marcar "Inativo" em aluno com cobrança automática ativa agora pede **confirmação explícita** antes de cancelar de verdade. *Commit 44c6440.*
+3. **[alunos.html]** `mp_charge_method` agora aparece no painel de cada aluno. *Commit 44c6440.*
+4. **[alunos.html]** "Marcar pago hoje" em aluno automatizado agora avisa antes (pode atrasar a próxima cobrança automática). *Commit 44c6440.*
+5. **[index.html]** Alerta de "mensalidade em atraso" não dispara mais pra quem já está em cobrança automática. *Commit 44c6440.*
+6. **[financeiro.html]** "Recebido este mês" não conta mais em duplicidade com o bloco "Bruto/Taxa/Líquido". *Commit 44c6440.*
+7. **[alunos.html]** Campo "dia de vencimento" desabilitado quando já tem cartão automático ativo (decisão confirmada: só-leitura com explicação, não arriscar sincronizar com a API real do Mercado Pago sem poder testar contra dinheiro real). *Commit 44c6440.*
+8. **[avaliacoes.html]** Nova avaliação nasce com o sexo real do aluno (`students.genero`), não mais 'F' fixo. *Commit 870d98c.*
+9. **[avaliacoes.html]** Editar avaliação usada em comparativo publicado agora avisa antes. *Commit 870d98c.*
+10. **[onboarding.html]** Boot agora checa `status`/`billing_exempt` como `login.html` já fazia. *Commit 03819d4.*
+11. **[master.html/supabase_61]** Cadastro manual de profissional agora bloqueia no servidor e-mail que já é de aluno (ou o próprio e-mail master) — testado via RPC direta, zero dado sintético deixado pra trás. *Commit 03819d4.*
+12. **[treinos.html]** "Salvar rascunho" fora de uma sessão de criação, em cima de protocolo publicado, agora pede confirmação antes de tirar o treino do ar. *Commit b896e58.*
+13. **[treinos.html]** "Aplicar modelo"/"Duplicar" nunca mais sobrescrevem a linha existente — sempre demovem o protocolo atual (se publicado) e nascem como inserção nova. *Commit b896e58.*
 
-### Dado de saúde / integridade de avaliação
+## ✅ Corrigidos — ~18 de risco médio
 
-- **[avaliacoes.html] Nova avaliação física sempre nasce com "Sexo: Feminino" fixo, ignorando `students.genero` já cadastrado.** As fórmulas de dobras cutâneas são sexo-específicas — esquecer de trocar manualmente corrompe o cálculo de %gordura em silêncio.
-- **[avaliacoes.html] Editar uma avaliação que já compõe um comparativo publicado muda o que o aluno vê na hora, sem aviso ao profissional.** Comparativo é view computada ao vivo, não uma cópia — corrigir um peso digitado errado de 2 meses atrás altera retroativamente o "antes/depois" já compartilhado.
+- **[perfil.html]** Crédito de indicação mencionado no aviso de cancelamento. *44c6440.*
+- Retenção de 30 dias do cancelamento: **não foi ligada** (cron continua desligado) — decisão confirmada com o usuário nesta sessão (item genuinamente irreversível, merece conversa própria, não uma correção dentro de uma leva). Segue como pendência registrada, não como bug corrigido.
+- **[avaliacoes.html]** Trocar de aluno com fotos pendentes agora avisa antes de descartar. *870d98c.*
+- **[master.html/supabase_60]** "Trial até" vazio agora limpa de verdade (flag `clear_trial_ends_at` dedicado). *03819d4.*
+- **[treinos.html]** "Trocar exercícios" agora limpa a observação do exercício antigo. *b896e58.*
+- **[treinos.html]** Editar nome de exercício customizado propaga pras instâncias já no bloco. *b896e58.*
+- **[treinos.html]** Wizard de IA desabilita "Semanas" quando a periodização não usa duração. *b896e58.*
+- **[treinos.html]** Dropdown de rascunhos atualiza na hora após qualquer demote. *b896e58.*
+- **[treinos.html]** "Duplicar"/"Aplicar modelo" bloqueados durante sessão de criação ativa. *b896e58.*
+- **[aluno.html]** Sino de notificação agora atualiza a bolinha na tela Início. *8a9f3f3.*
+- **[aluno.html]** Banner "Treino em andamento" agora aparece também na aba Treino. *8a9f3f3.*
+- **[aluno.html]** Exercício pulado e completado depois via Lista agora reseta `sd.skipped` corretamente. *8a9f3f3.*
+- **[aluno.html]** RPE + observação do fim do treino agora editáveis no histórico (não só na tela Finish). *8a9f3f3.*
+- **[aluno.html]** Alimento privado ganhou editar e excluir. *8a9f3f3.*
+- **[aluno.html]** Refeição já lançada ganhou "corrigir quantidade" (recalcula macros proporcionalmente). *8a9f3f3.*
+- **[perfil.html]** "Cartão da assinatura": texto virou transparente sobre não ter os detalhes reais (decisão: não fingir certeza, não arriscar integração de pagamento nova sem poder testar). *44c6440.*
+- **[alunos.html + mensagens.html]** Mensagem pra aluno Inativo agora avisa que fica "no vazio". *44c6440.*
+- **[index.html]** Ranking do mês agora filtra `status='ativo'` — pausado/inativo some do placar. *cc74bd1.*
+- **[relatorios.html + interpret-report]** Relatório de texto e interpretação por IA agora mencionam nutrição (meta validada + diário). *a838698, cee665a.*
 
-### Acesso e sessão
+## ✅ Corrigidos — ~16 de risco baixo / órfãos
 
-- **[onboarding.html] Boot não checa `status`/`billing_exempt` como `login.html` já checa.** Um profissional com assinatura cancelada mas sessão antiga ainda aberta pode contornar o bloqueio de reativação navegando direto pra `onboarding.html`; um profissional Founder isento (`billing_exempt`) que caia ali fora do fluxo normal vê a tela de cartão que deveria estar isento dela.
-- **[master.html] Cadastro manual de profissional não checa se o e-mail já pertence a um aluno.** Reproduz exatamente a classe de bug "vazamento de sessão entre papéis" (aluno↔profissional) já corrigida em `index.html`/`onboarding.html`/`aluno.html` várias vezes — mas essa trava nunca chegou no painel master.
+- **[aluno.html]** Foto de perfil ganhou "Remover foto". *beb5dab.*
+- **[aluno.html]** Push notification ganhou "Desativar" de verdade (unsubscribe + remove da tabela). *8a9f3f3.*
+- **[aluno.html]** Check-in de sono ganhou reabertura (`openSleepModal()`, pré-preenche resposta salva). *8a9f3f3.*
+- **[aluno.html]** Termos/Privacidade ganharam link em Configurações. *8a9f3f3.*
+- **[aluno.html]** `#homeTopbar` (markup morto) removido. *8a9f3f3.*
+- **[treinos.html]** "+ Cardio" ganhou "Editar" (antes só apagar e recriar). *b896e58.*
+- **[treinos.html]** Modelo da biblioteca ganhou "Renomear". *b896e58.*
+- **[treinos.html]** Lógica morta de "grupo muscular novo" removida. *b896e58.*
+- **[avaliacoes.html]** "Excluir avaliação" implementado (RLS já permitia, só a UI nunca expunha). *870d98c.*
+- **[avaliacoes.html]** "Voltar pra rascunho" implementado. *870d98c.*
+- **[nutri.html]** "PDF de apoio" ganhou "Remover". *a838698.*
+- **[onboarding.html]** Passo 2 ganhou "‹ Corrigir nome" e "Sair" nos dois passos; texto de "plano escolhido" corrigido (nunca existiu seletor de plano). *03819d4.*
+- **[termos.html/privacidade.html]** "Voltar" ganhou fallback de navegação (login.html) quando não há referrer same-origin. *f49da2c.*
+- **[index.html]** "Marcar como visto" — avaliado; sem mudança (ver nota abaixo).
+- **[master.html]** `#mfaGate` ganhou "Sair" nos fluxos de enroll e challenge (cabeçalho ficava inacessível). *03819d4.*
+- **`is_master_email()`** (SQL órfã) removida. *f49da2c.*
+- **[mensagens.html]** Variável morta `currentThreadStudentName` removida. *44c6440.*
+- **[login.html]** Agora checa sessão já válida antes de mostrar o formulário de e-mail. *03819d4.*
 
-### Protocolo de treino publicado (perda de dado que o aluno já está usando)
-
-- **[treinos.html] "Salvar rascunho" despublica silenciosamente um protocolo já ativo.** Fora de um fluxo de "criar novo" (ex: só abrindo o protocolo já publicado de um aluno e ajustando algo), clicar "Salvar rascunho" muda `status` pra `rascunho` na mesma hora, sem confirmação — **o aluno perde acesso ao próprio treino instantaneamente** até o profissional perceber e publicar de novo. Reclassificado de "categoria 4" pra cá — é o mesmo tipo de dano que os itens de cobrança automática, só que na área de treino.
-- **[treinos.html] "Aplicar modelo"/"Duplicar protocolo de outro aluno" sobrescrevem um protocolo já publicado sem rede de segurança**, diferente de "Criar novo" (que sempre demove pra rascunho antes). O aviso mostrado (`confirm()`) dá a entender que só edição não-salva está em risco — na prática, **o protocolo publicado é perdido de vez**. Mesma reclassificação.
-
----
-
-## 🟠 Prioridade média (~18) — perda de dado reversível, confusão real, promessa não cumprida
-
-- **[perfil.html] Crédito de indicação pendente (meses grátis) não é mencionado no fluxo de cancelamento** — não fica claro se é perdido ao cancelar antes de usar.
-- **Retenção de 30 dias prometida no cancelamento nunca roda de verdade.** `purge_inactive_professionals()` existe mas o `cron.schedule` que a dispararia está **comentado/desligado** desde que foi criada (`supabase_17`) — decisão deliberada aguardando confirmação explícita, mas a tela de cancelamento promete "expira em 30 dias" e isso nunca se cumpre sozinho no banco.
-- **[avaliacoes.html] Trocar de aluno no meio de uma "Nova avaliação" descarta fotos já escolhidas (ainda não salvas) sem nenhum aviso** — recuperável (basta escolher de novo), mas perde tempo/trabalho sem confirmação.
-- **[master.html] Campo "Trial até": apagar a data e salvar não funciona** — `null` é silenciosamente ignorado pela RPC, a UI mostra vazio mas o banco mantém a data antiga (falha silenciosa, ferramenta administrativa).
-- **[alunos.html] `mp_charge_method` nunca aparece no painel do profissional** (ver contexto completo na seção "Cobrança automática" acima — listado como alto por causa do efeito dominó que causa, mas o problema em si é "falta de informação na tela", não perda de dinheiro direta).
-- Os demais itens de "categoria 4" abaixo que envolvem confusão real mas não perda de dado crítico: sino de notificação sem badge na Início, banner de sessão em andamento ausente na aba Treino, ranking sem filtrar status, relatório/IA sem mencionar nutrição, mensagem pra aluno inativo sem aviso, trocar exercícios preservando observação do antigo.
-- Os itens de "categoria 2" (campo sem edição) que envolvem dado real do dia a dia: RPE/observação do fim do treino travada fora da hora, alimento privado sem editar, refeição sem corrigir quantidade, cartão da assinatura sem mostrar detalhes.
-- Os itens de "categoria 1" com maior chance de gerar mensagem de suporte: avaliação sem excluir, avaliação finalizada sem voltar a rascunho, onboarding sem voltar/corrigir nome.
-
-*(Estes últimos 3 grupos ficam detalhados por categoria abaixo — a lista acima é só a sinalização de gravidade; não estou duplicando o texto completo de novo.)*
-
-## 🟢 Prioridade baixa (~27) — fricção de UX, código morto, sem risco real
-
-Foto de perfil sem remover, push sem desativar, sono sem reabrir, termos/privacidade sem link depois, cardio sem editar, modelo de biblioteca sem renomear, PDF de apoio sem remover, marcar como visto sem desfazer, `is_master_email()` órfã, `#homeTopbar` morto, variável morta em `mensagens.html`, lógica morta de grupo muscular em `treinos.html`, e os demais itens de menor impacto listados nas categorias abaixo e na seção de suspeitas.
-
----
-
-## 🟡 Categoria 1 — Ida sem volta (botão de adicionar sem remover)
-
-- **[aluno.html]** Foto de perfil: só "Trocar foto", nunca "Remover foto" (volta ao círculo com inicial).
-- **[aluno.html]** "Ativar notificações push": sem "Desativar" — só via configuração do navegador/OS.
-- **[aluno.html]** Check-in de sono ("Agora não"/resposta errada): nenhum jeito de reabrir e corrigir no mesmo dia.
-- **[aluno.html]** Termos/Privacidade só aparecem na tela de consentimento do 1º acesso — sem link em lugar nenhum depois pra reler.
-- **[treinos.html]** "+ Cardio" adicionado: sem editar depois (só apagar e recriar do zero).
-- **[treinos.html]** Modelo salvo na biblioteca: só "Aplicar"/"Excluir", sem renomear/atualizar.
-- **[avaliacoes.html]** Nenhum botão "Excluir avaliação" (nem rascunho, nem finalizada) — RLS já permite, só a UI nunca expõe.
-- **[avaliacoes.html]** Avaliação finalizada por engano não pode voltar a "rascunho" (fica visível ao aluno pra sempre).
-- **[nutri.html]** "PDF de apoio": upload/substituir existem, "Remover" não (diferente da "Meta validada", que tem).
-- **[onboarding.html]** Passo 1→2 (nome→cartão): nenhum "voltar"/corrigir nome/sair do fluxo.
-- **[termos.html / privacidade.html]** Único link de navegação é `history.back()` — sem fallback pra home se a página foi aberta direto (link, busca, QR code).
-- **[index.html]** "Marcar como visto" (observação do aluno): sem jeito de "marcar como não visto" de novo se for engano ou precisar reabrir acompanhamento.
-
-## 🟡 Categoria 2 — Campo sem edição
-
-- **[aluno.html]** Alimento privado criado pelo aluno (kcal/macros): sem editar nem excluir depois — erro de digitação fica pra sempre na busca dele.
-- **[aluno.html]** RPE + observação do fim do treino: só editável enquanto a tela Finish daquela sessão está aberta — depois de sair, vira texto estático sem `onclick`.
-- **[aluno.html]** Refeição já lançada no diário: só remover e relançar do zero, sem corrigir só a quantidade.
-- **[master.html]** Campo "Trial até": apagar a data e salvar **não funciona** — `null` é silenciosamente ignorado pela RPC, a UI mostra vazio mas o banco mantém a data antiga (falha silenciosa).
-- **[perfil.html]** "Cartão da assinatura" nunca mostra bandeira/4 dígitos/validade — profissional clica "Trocar cartão" sem saber qual cartão está ativo hoje.
-
-## 🟡 Categoria 3 — Função/recurso órfão
-
-- **`is_master_email()`** (SQL) — zero uso em lugar nenhum do projeto (já documentado no CLAUDE.md antes, segue sem uso).
-- **[aluno.html:578]** `#homeTopbar` — markup morto (`display:none` fixo), substituído pela `.pro-topband` dinâmica, nunca removido.
-- **[treinos.html]** Lógica defensiva pra "grupo muscular novo" em `customExerciseSaveBtn` — nunca pode disparar de verdade, já que o campo é um `<select>` fechado, não texto livre.
-- **[mensagens.html]** `currentThreadStudentName` — variável atribuída e nunca lida (sem impacto, só código morto).
-
-## 🟡 Categoria 4 — Intersecção esquecida (a categoria com mais achados)
-
-- **[treinos.html] "Trocar exercícios" preserva a observação de execução do exercício ANTIGO**, mesmo o texto de ajuda prometendo que só sets/reps/descanso/técnica sobrevivem — a orientação de execução continua sendo mostrada ao aluno como se fosse do exercício novo.
-- **[treinos.html] Editar nome de um exercício customizado não atualiza instâncias já colocadas num bloco de treino** — o nome antigo continua aparecendo até algo mais forçar um re-render completo.
-- **[treinos.html] Wizard de IA não desabilita "Duração (semanas)" quando a periodização não usa duração** (o builder manual já faz isso) — valor digitado é silenciosamente ignorado sem sinal visual.
-- **[treinos.html] Dropdown de rascunhos não atualiza depois que o protocolo atual vira rascunho** — só se atualiza na próxima ação.
-- **[treinos.html] "Duplicar"/"Aplicar modelo" continuam clicáveis durante uma sessão de criação por IA/manual**, mutando silenciosamente o protocolo em branco sendo montado.
-- **[aluno.html] Sino de notificação não atualiza a bolinha vermelha na tela Início** — `updateNotifBadge()` nunca é rechamada depois que `buildHomeDashboard()` recria o HTML, então a bolinha só aparece nas outras abas, nunca na Início (a tela que o aluno mais vê).
-- **[aluno.html] Aba "Treino" nunca mostra o banner de "sessão em andamento"** — só aparece na Início; quem sai de um treino via botão físico de voltar e vai direto pra "Treino" não vê nem "Continuar" nem "Abandonar" ali.
-- **[aluno.html] Exercício pulado (`skipped=true`) e depois completado de verdade via "Lista" nunca reseta a flag `skipped` no banco** — a UI mostra certo, mas o dado salvo em `training_history` fica inconsistente pra sempre.
-- **[index.html] Ranking do mês não filtra por status do aluno** — aluno pausado/inativado no meio do mês continua pontuando e aparecendo no placar até o dia 1º seguinte.
-- **[index.html/relatorios.html] Relatório de texto e interpretação por IA nunca mencionam nutrição** — nenhuma das duas tabelas do nutritracker (`nutrition_guidance`, `student_macro_goal`, `student_food_log`) é lida por nenhum dos dois relatórios, apesar do nutritracker já ser uma feature grande em produção.
-- **[master.html] `#mfaGate` cobre a tela inteira, inclusive o cabeçalho** — enquanto o 2FA não está resolvido, "Sair" e "Novos códigos de recuperação" ficam inacessíveis; se o admin travar no meio do cadastro do autenticador, não tem "cancelar" dentro do próprio fluxo.
-- **[alunos.html/mensagens.html] Mandar mensagem pra um aluno Inativo (bloqueado do próprio app) não avisa o profissional** que a mensagem fica "no vazio" até ele ser reativado.
-- **[login.html] Não checa sessão já válida antes de mostrar o formulário de e-mail** (diferente de `onboarding.html`, que já faz isso) — quem já está logado e reabre o link de login precisa pedir OTP de novo à toa.
+**Nota sobre "Marcar como visto" sem desfazer**: avaliado durante a correção — reabrir a observação já vista continua possível a qualquer momento pela aba Histórico (`historico.html`, já implementada antes desta varredura), que lista todas as sessões sem filtro de "visto". O "desfazer" específico do alerta da Início não foi implementado por ser redundante com esse caminho já existente.
 
 ---
 
-## Achados menores / suspeita, não confirmados com certeza total
+## ⏳ Pendências reais, deliberadamente não corrigidas nesta leva
 
-- **[aluno.html]** Diário alimentar só mostra/edita o dia de hoje — sem tela pra revisar dias anteriores (pode ser escopo deliberado do MVP).
-- **[aluno.html]** Chat com o profissional: mensagem enviada não pode ser editada/apagada (mesmo espírito "sem retenção" de outras listas do app, mas vale confirmar se é deliberado).
-- **[aluno.html]** Dado do profissional (branding, `mp_connect_status`, `ranking_enabled`) é carregado uma vez no boot e nunca atualizado — se o profissional mudar isso com o PWA do aluno já aberto, fica desatualizado até fechar/reabrir.
-- **[perfil.html]** "Visualizar como aluno" (preview read-only) fica travado junto com o resto do white-label pra plano Starter — não está claro se é intencional.
-- **[historico.html]** Se um `student_id` na URL não existir mais (aluno excluído), a tela provavelmente cai num estado confuso em vez de indicar claramente "aluno não existe mais" — não confirmado com certeza.
-- **[index.html]** Aluno recém-cadastrado (há minutos) já pode aparecer como "nunca treinou" no card de Alertas — sem período de carência.
-- **[index.html]** `computeDueInfo` pode nascer um aluno novo já "em atraso" dependendo da combinação de data de cadastro × dia de vencimento — não testado com valores reais.
+1. **Retenção de 30 dias do cancelamento de assinatura nunca roda de verdade** (`purge_inactive_professionals`, cron desligado) — decisão consciente: é exclusão permanente e irreversível de dado real rodando sem supervisão, confirmada pelo usuário como assunto pra conversa própria, não pra dentro de uma leva de correções.
+
+## ⏳ Suspeitas não confirmadas — não corrigidas por pedido explícito do usuário
+
+Nenhuma destas foi verificada com certeza suficiente durante a varredura original — ficam registradas como pendência de investigação futura, não como bug confirmado:
+
+1. **[aluno.html]** Diário alimentar só mostra/edita o dia de hoje — sem tela pra revisar dias anteriores (pode ser escopo deliberado do MVP).
+2. **[aluno.html]** Chat com o profissional: mensagem enviada não pode ser editada/apagada (pode ser escopo deliberado, mesmo espírito "sem retenção" de outras listas do app).
+3. **[aluno.html]** Dado do profissional (branding, `mp_connect_status`, `ranking_enabled`) é carregado uma vez no boot e nunca atualizado — se o profissional mudar isso com o PWA do aluno já aberto, pode ficar desatualizado até fechar/reabrir.
+4. **[perfil.html]** "Visualizar como aluno" (preview read-only) fica travado junto com o resto do white-label pra plano Starter — não está claro se é intencional.
+5. **[historico.html]** Se um `student_id` na URL não existir mais (aluno excluído), a tela pode cair num estado confuso em vez de indicar claramente "aluno não existe mais".
+6. **[index.html]** Aluno recém-cadastrado (há minutos) pode aparecer como "nunca treinou" no card de Alertas — sem período de carência.
+7. **[index.html]** `computeDueInfo` pode nascer um aluno novo já "em atraso" dependendo da combinação de data de cadastro × dia de vencimento — não testado com valores reais.
 
 ---
 
-## Resumo por número
+## Resumo final
 
-- **58 achados no total** — 13 alto, ~18 médio, ~27 baixo (ver tabela no topo).
-- Maior concentração: **Categoria 4 (intersecção esquecida)** — reforça o diagnóstico do usuário: as features individualmente funcionam, o problema é sempre na fronteira entre uma feature e outra (ex: cobrança automática × exclusão de aluno, avaliação × comparativo, protocolo × rascunho).
-- Duas áreas concentram quase todo o risco alto: **cobrança automática** (8 achados, cruzando `alunos.html`/`financeiro.html`/`perfil.html`/`index.html`) e **protocolo de treino publicado em `treinos.html`** (2 achados de perda de dado que o aluno já está usando) — candidatas naturais a serem a primeira rodada de correção.
+- **58 achados no total** — 51 confirmados e corrigidos nesta sessão, 1 pendência consciente (retenção de 30 dias), 7 suspeitas não confirmadas deixadas como estavam.
+- **13 commits** de correção, cada um testado localmente (servidor + navegador + conta de teste real) antes do push, mais **6 migrations SQL novas** (`supabase_60` a `supabase_63`, incluindo o drop de uma função órfã) e **1 deploy de Edge Function** (`interpret-report`).
+- Zero incidente de produção durante o processo — todo push verificado com `curl` retornando 200 nas páginas tocadas logo em seguida.

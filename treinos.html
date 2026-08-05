@@ -232,7 +232,8 @@
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn secondary small" id="applyTemplateBtn" type="button">Aplicar modelo</button>
-          <button class="btn secondary small" id="deleteTemplateBtn" type="button">Excluir modelo selecionado</button>
+          <button class="btn secondary small" id="renameTemplateBtn" type="button">Renomear</button>
+          <button class="btn danger small" id="deleteTemplateBtn" type="button">Excluir modelo selecionado</button>
         </div>
       </div>
       <div id="draftsArea" style="display:none; margin-top:12px; padding-top:12px; border-top:1px dashed var(--line);">
@@ -421,7 +422,7 @@
 
   <div class="modal-overlay" id="cardioModalOverlay">
     <div class="modal-card">
-      <h3>Adicionar cardio</h3>
+      <h3 id="cardioModalTitle">Adicionar cardio</h3>
       <p>Fica sempre como o último item do treino, depois dos exercícios de força.</p>
       <div class="field">
         <label>Nome</label>
@@ -826,11 +827,28 @@
       : '<option value="">Nenhum modelo salvo ainda</option>';
   }
 
-  $('applyTemplateBtn').addEventListener('click', () => {
+  $('applyTemplateBtn').addEventListener('click', async () => {
     const t = templates.find(x => x.id === $('templateSelect').value);
     if (!t) return;
-    if (currentProtocol.workouts.length && !confirm('Isso substitui os treinos que você já montou aqui (ainda não salvos). Continuar?')) return;
+    // Achado real de varredura (2026-08-05): nunca resetava currentProtocol.id
+    // — se o protocolo carregado já tinha id (rascunho OU PUBLICADO), salvar
+    // depois disso sobrescrevia a MESMA linha, perdendo o conteúdo anterior
+    // de vez (sem nem passar por "vira rascunho"). O confirm() antigo dava a
+    // entender que só edição não-salva estava em risco. Agora sempre demove
+    // o protocolo atual (se publicado) e nasce como inserção nova — nunca
+    // mais sobrescreve, o anterior sempre sobra em "Rascunhos anteriores".
+    if (creationMode) { toast('Termine a criação atual antes de aplicar um modelo.'); return; }
+    const hasContent = currentProtocol.workouts.length || currentProtocol.id;
+    if (hasContent) {
+      const msg = currentProtocol.status === 'publicado'
+        ? `Aplicar este modelo cria um treino NOVO pra este aluno. O treino publicado atual ("${currentProtocol.titulo}") vira rascunho (fica em "Rascunhos anteriores") — mas o aluno perde acesso a ele até você publicar de novo. Continuar?`
+        : 'Isso substitui os treinos que você já montou aqui. O que está aqui agora vira rascunho salvo, recuperável em "Rascunhos anteriores". Continuar?';
+      if (!confirm(msg)) return;
+    }
+    const studentId = currentProtocol.student_id;
+    await demoteIfPublished(currentProtocol);
     lastCreationSource = 'manual';
+    currentProtocol = blankProtocol(studentId);
     currentProtocol.titulo = t.titulo;
     currentProtocol.periodizacao = t.periodizacao || 'manual';
     currentProtocol.duracao_semanas = t.duracao_semanas || null;
@@ -840,7 +858,24 @@
       exercises: (w.exercises || []).map(ex => ({ ...ex, weeks: (ex.weeks || []).map(wk => ({ ...wk })) })),
     }));
     renderProtocol();
+    await updateDraftsArea(studentId);
     toast('Modelo aplicado — revise e publique quando estiver pronto.');
+  });
+
+  // Achado real de varredura (2026-08-05): modelo salvo na biblioteca só
+  // tinha "Aplicar"/"Excluir" — corrigir um nome digitado errado exigia
+  // excluir e salvar um novo do zero.
+  $('renameTemplateBtn').addEventListener('click', async () => {
+    const id = $('templateSelect').value;
+    const t = templates.find(x => x.id === id);
+    if (!t) return;
+    const novoTitulo = prompt('Novo nome do modelo:', t.titulo);
+    if (!novoTitulo || !novoTitulo.trim() || novoTitulo.trim() === t.titulo) return;
+    const { error } = await supa.from('protocol_templates').update({ titulo: novoTitulo.trim() }).eq('id', id);
+    if (error) { toast('Erro ao renomear: ' + error.message); return; }
+    toast('Modelo renomeado.');
+    await loadTemplates();
+    $('templateSelect').value = id; // loadTemplates() reconstrói o <select>, sem isso a seleção voltaria pro primeiro item
   });
 
   $('deleteTemplateBtn').addEventListener('click', async () => {
@@ -887,13 +922,25 @@
     $('templateArea').style.display = 'block';
   }
 
-  $('duplicateBtn').addEventListener('click', () => {
+  $('duplicateBtn').addEventListener('click', async () => {
     const sourceId = $('duplicateSourceSelect').value;
     const source = latestProtocolByStudent[sourceId];
     if (!source) return;
-    if (currentProtocol.workouts.length && !confirm('Isso substitui os treinos que você já montou aqui (ainda não salvos). Continuar?')) return;
-
+    // Mesma correção de "Aplicar modelo" acima — nunca sobrescreve um
+    // protocolo já existente (rascunho ou publicado), sempre demove e
+    // nasce como inserção nova.
+    if (creationMode) { toast('Termine a criação atual antes de duplicar um protocolo.'); return; }
+    const hasContent = currentProtocol.workouts.length || currentProtocol.id;
+    if (hasContent) {
+      const msg = currentProtocol.status === 'publicado'
+        ? `Duplicar cria um treino NOVO pra este aluno. O treino publicado atual ("${currentProtocol.titulo}") vira rascunho (fica em "Rascunhos anteriores") — mas o aluno perde acesso a ele até você publicar de novo. Continuar?`
+        : 'Isso substitui os treinos que você já montou aqui. O que está aqui agora vira rascunho salvo, recuperável em "Rascunhos anteriores". Continuar?';
+      if (!confirm(msg)) return;
+    }
+    const studentId = currentProtocol.student_id;
+    await demoteIfPublished(currentProtocol);
     lastCreationSource = 'manual';
+    currentProtocol = blankProtocol(studentId);
     currentProtocol.titulo = source.titulo + ' (cópia)';
     currentProtocol.periodizacao = source.periodizacao || 'manual';
     currentProtocol.duracao_semanas = source.duracao_semanas || null;
@@ -903,6 +950,7 @@
       exercises: (w.exercises || []).map(ex => ({ ...ex, weeks: (ex.weeks || []).map(wk => ({ ...wk })) })),
     }));
     renderProtocol();
+    await updateDraftsArea(studentId);
     toast('Protocolo duplicado — revise e publique quando estiver pronto.');
   });
 
@@ -1089,9 +1137,16 @@
       w.exercises[idx].exercise_id = match?.exercise_id;
       w.exercises[idx].exercise_ref = match?.exercise_ref;
       w.exercises[idx].media = match?.gif_url;
+      // Achado real de varredura (2026-08-05): a observação de execução
+      // (`note`) é específica do exercício ANTIGO — sets/reps/descanso/
+      // técnica sobrevivem à troca de propósito, mas a orientação escrita
+      // continuava aparecendo pro aluno como se fosse do exercício novo.
+      // Limpa aqui, forçando o profissional a revisar/reescrever se fizer
+      // sentido pro exercício que entrou.
+      w.exercises[idx].note = '';
     }
     renderWorkouts();
-    toast(`Exercícios de "${w.name}" trocados.`);
+    toast(`Exercícios de "${w.name}" trocados — revise a observação de execução de cada um, se precisar.`);
   }
 
   async function loadMuscleGroups() {
@@ -1225,7 +1280,12 @@
   async function demoteIfPublished(protocol) {
     if (protocol && protocol.id && protocol.status === 'publicado') {
       const { error } = await supa.from('training_protocols').update({ status: 'rascunho' }).eq('id', protocol.id);
-      if (error) console.error('Falha ao rebaixar protocolo publicado:', error.message);
+      if (error) { console.error('Falha ao rebaixar protocolo publicado:', error.message); return; }
+      protocol.status = 'rascunho';
+      // Sem isso o dropdown "Rascunhos anteriores" só refletia o rebaixamento
+      // na próxima ação qualquer (achado real de varredura, 2026-08-05) —
+      // atualiza na hora, pro profissional já ver o item recém-rebaixado.
+      await updateDraftsArea(protocol.student_id);
     }
   }
 
@@ -1256,19 +1316,26 @@
   });
 
   let pendingCardioWorkoutId = null;
+  let pendingCardioEditIdx = null; // achado real de varredura (2026-08-05): antes só dava pra apagar e recriar
 
-  function openCardioModal(workoutId) {
+  function openCardioModal(workoutId, editIdx) {
     pendingCardioWorkoutId = workoutId;
-    $('cardioNomeInput').value = 'Caminhada';
-    $('cardioDuracaoInput').value = 30;
-    $('cardioIntensidadeSelect').value = 'leve a moderada';
-    $('cardioNoteInput').value = '';
-    $('cardioTipsInput').value = '';
+    pendingCardioEditIdx = (editIdx === undefined || editIdx === null) ? null : editIdx;
+    const w = currentProtocol.workouts.find((x) => x._uid === workoutId);
+    const editing = pendingCardioEditIdx !== null && w && w.exercises[pendingCardioEditIdx];
+    $('cardioModalTitle').textContent = editing ? 'Editar cardio' : 'Adicionar cardio';
+    $('cardioModalConfirmBtn').textContent = editing ? 'Salvar' : 'Adicionar';
+    $('cardioNomeInput').value = editing ? editing.nome : 'Caminhada';
+    $('cardioDuracaoInput').value = editing ? editing.duracao_min : 30;
+    $('cardioIntensidadeSelect').value = editing ? (editing.intensidade || 'leve a moderada') : 'leve a moderada';
+    $('cardioNoteInput').value = editing ? (editing.note || '') : '';
+    $('cardioTipsInput').value = editing && editing.tips ? editing.tips.join('\n') : '';
     $('cardioModalOverlay').classList.add('show');
   }
 
   $('cardioModalCancelBtn').addEventListener('click', () => {
     pendingCardioWorkoutId = null;
+    pendingCardioEditIdx = null;
     $('cardioModalOverlay').classList.remove('show');
   });
 
@@ -1607,7 +1674,6 @@
         $('customExerciseModalMsg').style.display = 'block';
         return;
       }
-      if (grupo && !muscleGroups.includes(grupo)) { muscleGroups.push(grupo); muscleGroups.sort(); }
       const nota = $('customExerciseNotaInput').value.trim();
       addExerciseToWorkout(workoutId, data, nota);
       resultsBox.style.display = 'none';
@@ -1621,9 +1687,21 @@
         $('customExerciseModalMsg').style.display = 'block';
         return;
       }
+      // Achado real de varredura (2026-08-05): editar o nome aqui atualizava
+      // a biblioteca, mas o nome ficava desatualizado em qualquer instância
+      // já colocada num bloco do treino atual (copiado como string estática
+      // no momento de adicionar, não é join ao vivo) — só corrigia visualmente
+      // se algo mais forçasse um renderWorkouts() completo depois.
+      let touchedCurrent = false;
+      (currentProtocol.workouts || []).forEach(w => {
+        (w.exercises || []).forEach(ex => {
+          if (ex.exercise_id === exerciseId) { ex.nome = nome; touchedCurrent = true; }
+        });
+      });
       pendingCustomExercise = null;
       $('customExerciseModalOverlay').classList.remove('show');
       toast('Exercício atualizado.');
+      if (touchedCurrent) renderWorkouts();
       searchExercises(query, grupoFilter, workoutId, resultsBox);
     }
   });
@@ -1656,11 +1734,17 @@
     const intensidade = $('cardioIntensidadeSelect').value;
     const note = $('cardioNoteInput').value.trim();
     const tips = $('cardioTipsInput').value.split('\n').map((t) => t.trim()).filter(Boolean);
-    // sempre no final — nunca via insertBeforeTrailingCardio, cardio pode empilhar depois de outro cardio
-    w.exercises.push({ nome, tipo: 'cardio', duracao_min, intensidade, note, tips });
+    if (pendingCardioEditIdx !== null && w.exercises[pendingCardioEditIdx]) {
+      Object.assign(w.exercises[pendingCardioEditIdx], { nome, tipo: 'cardio', duracao_min, intensidade, note, tips });
+      toast('Cardio atualizado.');
+    } else {
+      // sempre no final — nunca via insertBeforeTrailingCardio, cardio pode empilhar depois de outro cardio
+      w.exercises.push({ nome, tipo: 'cardio', duracao_min, intensidade, note, tips });
+      toast('Cardio adicionado ao final do treino.');
+    }
     pendingCardioWorkoutId = null;
+    pendingCardioEditIdx = null;
     renderWorkouts();
-    toast('Cardio adicionado ao final do treino.');
   });
 
   const WIZARD_CHIP_GROUPS = ['wizardObjetivo', 'wizardNivel', 'wizardFrequencia', 'wizardDuracaoSessao'];
@@ -1721,6 +1805,20 @@
     updatePeriodizationUI();
   });
 
+  // Achado real de varredura (2026-08-05): o wizard de IA nunca teve o
+  // mesmo tratamento do builder manual acima — "Semanas" ficava sempre
+  // habilitado mesmo quando a técnica escolhida (manual/ondulatória
+  // diária) não usa duração, e o valor digitado ali era silenciosamente
+  // ignorado (ver doGenerateAi, usesDuration) sem nenhum sinal visual.
+  function updateWizardPeriodizationUI() {
+    const technique = $('wizardPeriodizacaoSelect').value;
+    const usesDuration = !['manual', 'ondulatoria_diaria'].includes(technique);
+    $('wizardDuracaoInput').disabled = !usesDuration;
+    $('wizardDuracaoInput').parentElement.style.opacity = usesDuration ? '1' : '.5';
+  }
+  $('wizardPeriodizacaoSelect').addEventListener('change', updateWizardPeriodizationUI);
+  updateWizardPeriodizationUI();
+
   $('applyPeriodizationBtn').addEventListener('click', () => {
     if (!currentProtocol.workouts.length) { toast('Adicione treinos e exercícios antes de aplicar a periodização.'); return; }
     const technique = $('periodizacaoSelect').value;
@@ -1755,7 +1853,7 @@
   }
   window.openTecnicaHelp = openTecnicaHelp;
 
-  const REGENERATE_HELP_BODY = 'Troca só os exercícios desse bloco por outros do mesmo padrão de movimento — sets, reps, descanso, técnica de intensificação e periodização continuam exatamente como já estão configurados, nada disso é refeito.<br><br>' +
+  const REGENERATE_HELP_BODY = 'Troca só os exercícios desse bloco por outros do mesmo padrão de movimento — sets, reps, descanso, técnica de intensificação e periodização continuam exatamente como já estão configurados, nada disso é refeito. A observação de execução de cada exercício é limpa (ela era específica do exercício anterior) — revise depois se fizer sentido escrever uma nova.<br><br>' +
     'Pensado pra economizar seu tempo quando o protocolo já está bem calibrado e você só quer dar a sensação de treino novo pro aluno, sem remontar o bloco inteiro do zero.<br><br>' +
     '<strong>Dica de uso</strong>: numa virada de ciclo, em vez de recriar o protocolo, use esse botão pra variar os exercícios do aluno mantendo toda a estrutura que já funciona.';
   function openRegenerateHelp(e) {
@@ -1828,6 +1926,7 @@
           ${escapeHtml(ex.nome)} — ${escapeHtml(String(ex.duracao_min || 0))} min · ${escapeHtml(ex.intensidade || '')}
           ${noteHtml}${tipsHtml}
         </div>
+        <button class="btn secondary small" data-role="edit-cardio" data-workout-id="${w._uid}" data-idx="${i}">Editar</button>
         <button class="btn danger small" data-role="remove-exercise" data-workout-id="${w._uid}" data-idx="${i}">×</button>
       </div>`;
   }
@@ -1936,6 +2035,9 @@
     });
     container.querySelectorAll('[data-role="add-cardio"]').forEach(btn => {
       btn.addEventListener('click', () => openCardioModal(btn.dataset.workoutId));
+    });
+    container.querySelectorAll('[data-role="edit-cardio"]').forEach(btn => {
+      btn.addEventListener('click', () => openCardioModal(btn.dataset.workoutId, Number(btn.dataset.idx)));
     });
     container.querySelectorAll('[data-role="video-link"]').forEach(btn => {
       btn.addEventListener('click', () => openVideoModal(Number(btn.dataset.exerciseId), btn.dataset.exerciseNome));
@@ -2117,7 +2219,17 @@
     window.__checkAssistantHint && window.__checkAssistantHint();
   }
 
-  $('saveDraftBtn').addEventListener('click', () => commitCreation(() => saveProtocol('rascunho')));
+  $('saveDraftBtn').addEventListener('click', () => commitCreation(async () => {
+    // Achado real de varredura (2026-08-05): fora de uma sessão de "criar
+    // novo" (creationMode), clicar aqui em cima de um protocolo JÁ
+    // publicado tirava o treino do ar pro aluno na hora, sem confirmação
+    // nenhuma — os dois botões (rascunho/publicar) ficavam lado a lado sem
+    // diferenciar que um deles pode "desligar" o treino do aluno.
+    if (!creationMode && currentProtocol.id && currentProtocol.status === 'publicado') {
+      if (!confirm('Este treino já está PUBLICADO e o aluno pode estar usando ele agora. Salvar como rascunho tira o treino do ar pro aluno até você publicar de novo. Continuar?')) return;
+    }
+    await saveProtocol('rascunho');
+  }));
   $('publishBtn').addEventListener('click', () => commitCreation(() => saveProtocol('publicado')));
 
   boot();

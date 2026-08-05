@@ -196,6 +196,7 @@
           <h2 style="margin:0;" id="formTitle">Nova avaliação</h2>
           <span class="status-tag" id="formStatusTag"></span>
         </div>
+        <div id="formComparisonWarning" class="msg" style="display:none;background:#FFF4E5;border:1px solid #F0C892;color:#8A5A00;border-radius:10px;padding:8px 12px;margin-bottom:8px;font-size:12px;"></div>
 
         <div class="section-sub">Dados gerais</div>
         <div class="row three">
@@ -244,7 +245,9 @@
         <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
           <button class="btn secondary" id="saveDraftBtn" type="button">Salvar rascunho</button>
           <button class="btn" id="finalizeBtn" type="button">Finalizar avaliação</button>
+          <button class="btn secondary" id="unfinalizeBtn" type="button" style="display:none;">Voltar pra rascunho</button>
           <button class="btn secondary" id="cancelFormBtn" type="button">Cancelar</button>
+          <button class="btn danger" id="deleteAssessmentBtn" type="button" style="display:none;">Excluir avaliação</button>
         </div>
         <div class="msg" id="formMsg"></div>
       </div>
@@ -413,11 +416,14 @@
     }
   }
 
+  let studentsById = {};
+
   async function loadStudents() {
     const { data, error } = await supa.from('students').select('*').eq('professional_id', professional.id).order('nome');
     const select = $('studentSelect');
     if (error || !data) return;
     data.forEach(s => {
+      studentsById[s.id] = s;
       const opt = document.createElement('option');
       opt.value = s.id;
       opt.textContent = s.nome;
@@ -425,11 +431,24 @@
     });
   }
 
-  $('studentSelect').addEventListener('change', (e) => selectStudent(e.target.value));
+  $('studentSelect').addEventListener('change', (e) => {
+    // Achado real de varredura (2026-08-05): trocar de aluno no meio de uma
+    // "Nova avaliação" (fotos já escolhidas, ainda não salvas) descartava
+    // tudo silenciosamente. Agora avisa antes, só quando há algo real em
+    // risco (formulário aberto e alguma foto pendente).
+    const formOpen = $('formArea').style.display !== 'none';
+    const hasPendingPhotos = Object.keys(pendingPhotoData).length > 0;
+    if (formOpen && hasPendingPhotos && !confirm('Você tem fotos escolhidas nesta avaliação que ainda não foram salvas. Trocar de aluno agora descarta elas. Continuar?')) {
+      e.target.value = currentStudentId || '';
+      return;
+    }
+    selectStudent(e.target.value);
+  });
 
   async function selectStudent(studentId) {
     currentStudentId = studentId;
     updateTabbar(studentId);
+    clearPendingPhotoData();
     if (!studentId) { $('contentArea').style.display = 'none'; return; }
     $('contentArea').style.display = 'block';
     $('formArea').style.display = 'none';
@@ -761,9 +780,44 @@
   $('newAssessmentBtn').addEventListener('click', () => openAssessment(null));
   $('cancelFormBtn').addEventListener('click', () => { clearPendingPhotoData(); $('formArea').style.display = 'none'; });
 
+  $('deleteAssessmentBtn').addEventListener('click', async () => {
+    if (!currentAssessment || !currentAssessment.id) return;
+    const usedIn = comparisons.filter(c => c.before_assessment_id === currentAssessment.id || c.after_assessment_id === currentAssessment.id);
+    const extra = usedIn.length ? ` Ela também é usada em ${usedIn.length} comparativo(s) — excluí-la vai deixar esse(s) comparativo(s) sem dado, o profissional precisa revisar/excluir eles também depois.` : '';
+    if (!confirm(`Excluir esta avaliação de ${fmtDate(currentAssessment.avaliado_em)}? Não pode ser desfeito.${extra}`)) return;
+    $('deleteAssessmentBtn').disabled = true;
+    const { error } = await supa.from('physical_assessments').delete().eq('id', currentAssessment.id);
+    $('deleteAssessmentBtn').disabled = false;
+    if (error) { $('formMsg').textContent = 'Erro ao excluir: ' + error.message; $('formMsg').className = 'msg error'; return; }
+    toast('Avaliação excluída.');
+    clearPendingPhotoData();
+    $('formArea').style.display = 'none';
+    await loadAssessments();
+    await loadComparisons();
+  });
+
+  $('unfinalizeBtn').addEventListener('click', async () => {
+    if (!currentAssessment || !currentAssessment.id) return;
+    if (!confirm('Voltar esta avaliação pra rascunho? O aluno para de ver ela até você finalizar de novo.')) return;
+    $('unfinalizeBtn').disabled = true;
+    const { error } = await supa.from('physical_assessments').update({ status: 'rascunho' }).eq('id', currentAssessment.id);
+    $('unfinalizeBtn').disabled = false;
+    if (error) { $('formMsg').textContent = 'Erro ao reverter: ' + error.message; $('formMsg').className = 'msg error'; return; }
+    toast('Avaliação voltou pra rascunho.');
+    await loadAssessments();
+    openAssessment(currentAssessment.id);
+  });
+
   function openAssessment(id) {
+    // Achado real de varredura (2026-08-05): nova avaliação sempre nascia
+    // com sexo 'F' fixo, ignorando o gênero real já cadastrado do aluno
+    // (students.genero) — como as fórmulas de dobras cutâneas são
+    // sexo-específicas, esquecer de trocar manualmente corrompia o cálculo
+    // de %gordura em silêncio. Sem gênero informado, mantém 'F' como
+    // fallback (comportamento de sempre).
+    const defaultSexo = studentsById[currentStudentId]?.genero || 'F';
     currentAssessment = id ? assessments.find(a => a.id === id) : {
-      id: null, student_id: currentStudentId, avaliado_em: todayISO(), sexo: 'F', idade: null,
+      id: null, student_id: currentStudentId, avaliado_em: todayISO(), sexo: defaultSexo, idade: null,
       peso_kg: null, altura_cm: null, protocolo_dobras: null, dobras: {}, resultado_dobras: {},
       bioimpedancia: {}, perimetria: {}, fotos: [], observacoes: '', status: 'rascunho',
     };
@@ -775,6 +829,21 @@
     $('formStatusTag').className = 'status-tag ' + a.status;
     $('finalizeBtn').style.display = a.status === 'finalizada' ? 'none' : 'inline-block';
     $('saveDraftBtn').textContent = a.status === 'finalizada' ? 'Salvar alterações' : 'Salvar rascunho';
+    // Achado real de varredura (2026-08-05): não existia nenhum jeito de
+    // excluir uma avaliação (RLS já permite, só a UI nunca expunha) nem de
+    // voltar uma finalizada por engano pra rascunho (escondendo ela do
+    // aluno de novo).
+    $('deleteAssessmentBtn').style.display = id ? 'inline-block' : 'none';
+    $('unfinalizeBtn').style.display = a.status === 'finalizada' ? 'inline-block' : 'none';
+    // Achado real de varredura (2026-08-05): comparativo é view computada AO
+    // VIVO sobre physical_assessments (nunca uma cópia) — editar uma
+    // avaliação já referenciada por um comparativo PUBLICADO muda o que o
+    // aluno vê na hora, sem o profissional saber que esse dado está "em uso".
+    const usedIn = id ? comparisons.filter(c => c.status === 'publicado' && (c.before_assessment_id === id || c.after_assessment_id === id)) : [];
+    $('formComparisonWarning').style.display = usedIn.length ? 'block' : 'none';
+    $('formComparisonWarning').textContent = usedIn.length
+      ? `Esta avaliação já é usada em ${usedIn.length} comparativo(s) PUBLICADO(S) pro aluno — qualquer mudança salva aqui aparece pra ele imediatamente lá também.`
+      : '';
 
     $('dataInput').value = a.avaliado_em;
     $('sexoInput').value = a.sexo || 'F';

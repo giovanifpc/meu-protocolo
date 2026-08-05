@@ -94,6 +94,22 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### ⏳ Pendência registrada: check geral de segurança e integridade contra ataques e vazamento de dados — NÃO iniciado (2026-08-05, pedido explícito do usuário)
+
+Depois de fechar a varredura de inconsistências de fluxo (fluxo de uso incompleto — botão sem par, campo sem edição), o usuário pediu que ficasse registrada, à parte, uma segunda varredura futura com foco diferente: **segurança e integridade de dado**, não usabilidade. **Zero trabalho iniciado ainda** — é só o registro do pedido, pra puxar numa sessão dedicada.
+
+Escopo provável quando isso for retomado (levantado a partir do que o projeto já tem/já decidiu, não é lista fechada — revisar contra o estado real do código na hora):
+- **RLS de toda tabela nova desde a varredura de fluxo** (as ~4 migrations criadas em 2026-08-05, `supabase_60` a `supabase_63`, e qualquer coisa mais recente) — checar isolamento multi-tenant de verdade, não só "existe policy", usando a mesma técnica já registrada em memória (`set role authenticated` + `set_config('request.jwt.claims', ...)` simulando JWT de tenants diferentes, nunca `set role postgres`, que ignora RLS e dá falso positivo).
+- **Reconferir as poucas tabelas com RLS habilitada e zero policy** (bloqueio total, acesso só via RPC `SECURITY DEFINER`: `messages`, `support_messages`, `student_support_messages`, `master_recovery_codes`, `professional_mp_connections`) — confirmar que nenhuma migration recente acidentalmente abriu uma policy nelas.
+- **Sanitização contra XSS/SQL injection** nos pontos que aceitam texto livre de aluno/profissional e depois renderizam em outro contexto (nota de observação do treino, mensagens, chat de suporte, campos de anamnese) — checar `escapeHtml()` sendo usado consistentemente em todo lugar que interpola dado de usuário em HTML.
+- **Segurança das Edge Functions**: `verify_jwt` correto em cada uma (`true` por padrão, `false` só nas que precisam — webhooks, `dev-generate-login`); nenhuma delas expõe a `service role key` além do necessário; `dev-generate-login` continua restrita à allowlist fixa e nunca aceita e-mail de conta real.
+- **Headers de segurança em produção** (HSTS, X-Frame-Options, X-Content-Type-Options via Cloudflare Transform Rule, CSP por página) — confirmar que continuam ativos e que nenhuma CSP nova ficou permissiva demais (`unsafe-inline`/domínio externo desnecessário) nas páginas tocadas por esta sessão.
+- **Rate limiting** do Supabase Auth (login/OTP) — só foi conferido uma vez, em 2026-07-18; vale reconferir se os valores padrão continuam adequados.
+- **Vazamento de sessão entre papéis** (master↔profissional↔aluno) — já teve 3 bugs reais corrigidos ao longo do projeto (todos documentados mais abaixo); vale um passe específico procurando se alguma tela nova desde então (`historico.html`, `financeiro.html`, os ajustes desta sessão) ganhou as mesmas travas que as outras telas já têm.
+- **Backup/PITR do banco** — já é pendência conhecida (ver "Pendências decididas pro final do projeto" no fim deste arquivo), mas é diretamente relevante pra "integridade de dado" também; vale conectar as duas conversas quando isso for retomado.
+
+Não é trabalho pra começar sem alinhar escopo/profundidade com o usuário antes (pode ser rápido — revisão dirigida pelos pontos acima — ou mais extenso, dependendo do apetite dele na hora).
+
 ### ✅ 2 bugs reais do timer de descanso, achados testando o app de verdade (2026-08-05, mesma sessão local do PC, fecha o dia)
 
 Depois de fechar a varredura de inconsistências (seção logo abaixo), o usuário testou o app em treino real e trouxe 2 relatos concretos.

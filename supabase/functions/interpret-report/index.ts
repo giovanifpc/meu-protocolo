@@ -132,6 +132,30 @@ function resumoBemEstar(checkins: Checkin[], metaAguaMl: number) {
   };
 }
 
+// Achado real de varredura de fluxo (2026-08-05): a interpretação por IA
+// nunca lia nenhuma das 3 tabelas do nutritracker, apesar de já ser uma
+// feature grande em produção — dado real relevante (aderência à dieta,
+// meta validada) ficava de fora mesmo quando existia.
+type MacroGoal = { nutricionista_nome: string; meta_kcal: number | null; meta_proteina_g: number | null; meta_carboidrato_g: number | null; meta_gordura_g: number | null } | null;
+type FoodLogRow = { data: string; kcal: number | null };
+
+function resumoNutricao(macroGoal: MacroGoal, guidanceText: string | null, foodLogRows: FoodLogRow[]) {
+  const diasComRegistro = new Set(foodLogRows.map((r) => r.data)).size;
+  const totalKcal = foodLogRows.reduce((a, r) => a + Number(r.kcal || 0), 0);
+  const mediaKcalDia = diasComRegistro ? Math.round(totalKcal / diasComRegistro) : null;
+  return {
+    meta_validada: macroGoal
+      ? { nutricionista: macroGoal.nutricionista_nome, meta_kcal: macroGoal.meta_kcal, meta_proteina_g: macroGoal.meta_proteina_g, meta_carboidrato_g: macroGoal.meta_carboidrato_g, meta_gordura_g: macroGoal.meta_gordura_g }
+      : null,
+    orientacao_texto_livre: guidanceText || null,
+    diario_alimentar_ultimos_30_dias: {
+      dias_com_pelo_menos_1_registro: diasComRegistro,
+      media_kcal_por_dia_registrado: mediaKcalDia,
+      aderencia_a_meta_pct: macroGoal?.meta_kcal && mediaKcalDia ? Math.round((mediaKcalDia / macroGoal.meta_kcal) * 100) : null,
+    },
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -180,6 +204,16 @@ Deno.serve(async (req) => {
       .from('student_checkins').select('date_key, water_ml, sleep_quality, sleep_duration')
       .eq('student_id', student_id).gte('date_key', trintaDiasAtras).order('date_key', { ascending: true });
 
+    const { data: macroGoal } = await supa
+      .from('student_macro_goal').select('nutricionista_nome, meta_kcal, meta_proteina_g, meta_carboidrato_g, meta_gordura_g')
+      .eq('student_id', student_id).maybeSingle();
+    const { data: guidance } = await supa
+      .from('nutrition_guidance').select('orientacao')
+      .eq('student_id', student_id).maybeSingle();
+    const { data: foodLogRows } = await supa
+      .from('student_food_log').select('data, kcal')
+      .eq('student_id', student_id).gte('data', trintaDiasAtras);
+
     const assessmentsList = assessments || [];
     const pesoAtual = assessmentsList.length ? assessmentsList[assessmentsList.length - 1].peso_kg : null;
     const metaAguaMl = pesoAtual ? Math.round(pesoAtual * 35) : 2000;
@@ -191,6 +225,7 @@ Deno.serve(async (req) => {
       evolucao_carga: resumoEvolucaoCarga(history || []),
       evolucao_fisica: resumoEvolucaoFisica(assessmentsList),
       bem_estar: resumoBemEstar(checkins || [], metaAguaMl),
+      nutricao: resumoNutricao(macroGoal || null, guidance?.orientacao || null, foodLogRows || []),
       anamnese: anamnese ? { lesoes: anamnese.lesoes || null, restricoes: anamnese.restricoes || null, historico_medico: anamnese.historico_medico || null, fumante: !!anamnese.fumante } : null,
     };
 
@@ -199,12 +234,13 @@ Deno.serve(async (req) => {
 DADOS JÁ CALCULADOS (não refaça nenhuma conta, use os números como estão):
 ${JSON.stringify(dados, null, 2)}
 
-Escreva uma interpretação em texto corrido, em português do Brasil, curta e direta (o profissional lê isso entre um atendimento e outro — sem enrolação, sem markdown, sem asteriscos, sem títulos numerados). Organize em 4 blocos curtos, cada um com um cabeçalho simples em maiúsculas seguido de quebra de linha (ex: "ADESÃO E CONSISTÊNCIA"):
+Escreva uma interpretação em texto corrido, em português do Brasil, curta e direta (o profissional lê isso entre um atendimento e outro — sem enrolação, sem markdown, sem asteriscos, sem títulos numerados). Organize em 5 blocos curtos, cada um com um cabeçalho simples em maiúsculas seguido de quebra de linha (ex: "ADESÃO E CONSISTÊNCIA"):
 
 1. ADESÃO E CONSISTÊNCIA — o que os números de frequência/sessões completas/tempo desde a última sessão revelam sobre o hábito do aluno. Se houver dado de alongamento pré-treino (adesao.alongamento_pre_treino), comente também esse hábito.
 2. SINAIS DE BEM-ESTAR — o que os dados de água e sono sugerem, e o que a intensidade percebida média (RPE, adesao.intensidade_percebida_media_rpe) e as observações recentes do próprio aluno (adesao.observacoes_recentes_do_aluno) revelam — principalmente se alguma observação mencionar dor, desconforto ou dificuldade recorrente, isso é um sinal de atenção real e deve ser destacado. Só comente o que os dados realmente mostram; se não houver registro suficiente, diga isso em vez de inventar.
 3. EVOLUÇÃO FÍSICA E DE CARGA — leitura do progresso de peso/%gordura entre avaliações e da evolução de carga por exercício, se houver dado suficiente.
-4. SUGESTÃO PRÁTICA — uma recomendação concreta e acionável pro profissional considerar na próxima sessão ou ajuste de protocolo, coerente com tudo acima e respeitando qualquer lesão/restrição da anamnese.
+4. NUTRIÇÃO — se houver meta validada (nutricao.meta_validada) e registro no diário (nutricao.diario_alimentar_ultimos_30_dias), comente a aderência (aderencia_a_meta_pct) e a consistência de registro. Sem meta validada nem diário, diga isso numa frase curta em vez de inventar — nunca dê orientação nutricional prescritiva (kcal/macro específicos), isso é atribuição exclusiva da nutricionista parceira, não sua.
+5. SUGESTÃO PRÁTICA — uma recomendação concreta e acionável pro profissional considerar na próxima sessão ou ajuste de protocolo, coerente com tudo acima e respeitando qualquer lesão/restrição da anamnese.
 
 Se algum bloco não tiver dado suficiente, diga isso em uma frase curta em vez de inventar ou generalizar. Nunca dê conselho médico — só leitura de treino/adesão/hábito.`;
 

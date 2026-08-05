@@ -29,7 +29,14 @@
 </head>
 <body>
   <div class="wrap">
-    <a class="back" href="javascript:history.back()">&larr; Voltar</a>
+    <!-- Achado real de varredura (2026-08-05): history.back() não leva a
+         lugar nenhum se esta página foi a primeira da aba (link direto
+         compartilhado, busca, QR code, aba nova) — sem nenhuma rota de
+         saída dentro do site. href de fallback pro login (porta de
+         entrada neutra, serve tanto profissional quanto aluno); só tenta
+         voltar de verdade quando existe um referrer de dentro do próprio
+         site. -->
+    <a class="back" href="login.html" onclick="if(document.referrer&&new URL(document.referrer).origin===location.origin){history.back();return false;}">&larr; Voltar</a>
     <h1>Termos de Uso</h1>
     <p class="updated">Última atualização: julho de 2026</p>
     <div class="card">

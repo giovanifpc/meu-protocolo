@@ -197,7 +197,7 @@
     return new Date(d).toLocaleDateString('pt-BR');
   }
 
-  function buildReport(student, protocol, history) {
+  function buildReport(student, protocol, history, guidance, macroGoal, foodLogDays, avgKcalPerDay) {
     const now = new Date();
     const lines = [];
     lines.push(`RELATÓRIO DE TREINO — ${student.nome}`);
@@ -252,6 +252,27 @@
     }
     lines.push('');
 
+    // Achado real de varredura (2026-08-05): o relatório nunca mencionava
+    // nutrição, mesmo o nutritracker já sendo uma feature grande em
+    // produção (orientação/meta validada + diário alimentar) — dado real
+    // relevante que nunca aparecia aqui.
+    lines.push('== NUTRIÇÃO ==');
+    if (guidance && guidance.orientacao) lines.push(`Orientação registrada: ${guidance.orientacao}`);
+    if (macroGoal) {
+      lines.push(`Meta nutricional validada por ${macroGoal.nutricionista_nome} (CRN ${macroGoal.nutricionista_crn || '—'}): ${macroGoal.meta_kcal}kcal/dia` +
+        (macroGoal.meta_proteina_g ? ` · P${macroGoal.meta_proteina_g}g` : '') +
+        (macroGoal.meta_carboidrato_g ? ` · C${macroGoal.meta_carboidrato_g}g` : '') +
+        (macroGoal.meta_gordura_g ? ` · G${macroGoal.meta_gordura_g}g` : ''));
+    } else {
+      lines.push('Meta nutricional: ainda não liberada (sem consulta validada com nutricionista parceira).');
+    }
+    if (foodLogDays > 0) {
+      lines.push(`Diário alimentar: ${foodLogDays} dia(s) com pelo menos 1 refeição registrada nos últimos 30 dias, média de ${avgKcalPerDay}kcal/dia registrado.`);
+    } else {
+      lines.push('Diário alimentar: nenhum registro nos últimos 30 dias.');
+    }
+    lines.push('');
+
     lines.push('== HISTÓRICO DE SESSÕES (mais recente primeiro) ==');
     if (!history.length) {
       lines.push('Nenhuma sessão registrada ainda.');
@@ -299,12 +320,26 @@
       .eq('student_id', studentId)
       .order('completed_at', { ascending: false });
 
+    // Achado real de varredura (2026-08-05): dado real do nutritracker
+    // (orientação/meta validada + diário) nunca era lido aqui — ver seção
+    // "NUTRIÇÃO" nova em buildReport().
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+    const [{ data: guidance }, { data: macroGoal }, { data: foodLogRows }] = await Promise.all([
+      supa.from('nutrition_guidance').select('*').eq('student_id', studentId).maybeSingle(),
+      supa.from('student_macro_goal').select('*').eq('student_id', studentId).maybeSingle(),
+      supa.from('student_food_log').select('data, kcal').eq('student_id', studentId).gte('data', thirtyDaysAgo),
+    ]);
+    const foodLogDaysSet = new Set((foodLogRows || []).map(r => r.data));
+    const foodLogDays = foodLogDaysSet.size;
+    const totalKcalLogged = (foodLogRows || []).reduce((a, r) => a + Number(r.kcal || 0), 0);
+    const avgKcalPerDay = foodLogDays ? Math.round(totalKcalLogged / foodLogDays) : 0;
+
     $('generateBtn').disabled = false;
     $('generateBtn').textContent = 'Gerar relatório';
 
     if (histErr) { toast('Erro ao carregar histórico: ' + histErr.message); return; }
 
-    const report = buildReport(student, protocol, history || []);
+    const report = buildReport(student, protocol, history || [], guidance, macroGoal, foodLogDays, avgKcalPerDay);
     $('outputTitle').textContent = `Relatório — ${student.nome}`;
     $('reportOutput').value = report;
     $('outputCard').style.display = 'block';

@@ -323,11 +323,27 @@
       <div class="pdf-current">
         <span class="pdf-name"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>${escapeHtml(currentGuidance.pdf_nome || 'plano.pdf')}</span>
         <button class="btn secondary small" id="viewPdfBtn" type="button">Ver PDF</button>
+        <button class="btn danger small" id="removePdfBtn" type="button">Remover</button>
       </div>`;
     $('viewPdfBtn').addEventListener('click', async () => {
       const { data, error } = await supa.storage.from('nutri-pdfs').createSignedUrl(currentGuidance.pdf_path, 300);
       if (error) { toast('Erro ao gerar link do PDF: ' + error.message); return; }
       window.open(data.signedUrl, '_blank');
+    });
+    // Achado real de varredura (2026-08-05): upload/substituir já existiam,
+    // "Remover" (voltar pro estado "sem PDF") não -- útil quando o aluno
+    // trocou de nutricionista externa e o PDF antigo já não vale mais, mas
+    // ainda não tem um novo pra subir no lugar.
+    $('removePdfBtn').addEventListener('click', async () => {
+      if (!confirm('Remover este PDF de apoio? O aluno deixa de ver o botão de PDF até você subir outro.')) return;
+      $('removePdfBtn').disabled = true;
+      const { error: removeErr } = await supa.storage.from('nutri-pdfs').remove([currentGuidance.pdf_path]);
+      if (removeErr) { toast('Erro ao remover: ' + removeErr.message); $('removePdfBtn').disabled = false; return; }
+      const { data, error } = await supa.from('nutrition_guidance').update({ pdf_path: null, pdf_nome: null }).eq('id', currentGuidance.id).select().single();
+      if (error) { toast('PDF removido do armazenamento, mas houve erro ao atualizar o registro: ' + error.message); $('removePdfBtn').disabled = false; return; }
+      currentGuidance = data;
+      renderPdfCurrent();
+      toast('PDF removido.');
     });
   }
 

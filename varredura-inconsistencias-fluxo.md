@@ -10,9 +10,19 @@ Levantamento pedido pelo usuário depois de notar um padrão recorrente de retra
 
 **Nada foi corrigido ainda** — isto é só o levantamento, pra priorizarmos juntos. Achados marcados "suspeita, verificar" não foram confirmados com certeza total.
 
+**Contagem real por gravidade** (correção de uma resposta anterior que só citou 4 — a lista "prioridade alta" abaixo sempre teve mais que isso, e 2 achados que eu tinha arquivado errado em "categoria 4" foram promovidos pra cá depois de reler com mais rigor):
+
+| Gravidade | O que significa | Quantos |
+|---|---|---|
+| 🔴 **Alto** | Dinheiro se movendo sem controle, dado de saúde corrompido, acesso trancado, ou perda permanente de dado já publicado/em uso pelo aluno | **13** |
+| 🟠 **Médio** | Perda de dado não crítico, confusão real (mas reversível), promessa que não se cumpre, falha silenciosa numa ferramenta administrativa | **~18** |
+| 🟢 **Baixo** | Fricção de UX, falta de um botão de conveniência, código morto — incômodo, não risco | **~27** |
+
+58 achados no total (confirmados + "suspeita, verificar").
+
 ---
 
-## 🔴 Prioridade alta — envolve dinheiro, dado de saúde, ou acesso trancado
+## 🔴 Prioridade alta (13) — envolve dinheiro, dado de saúde, ou acesso trancado
 
 ### Cobrança automática
 
@@ -23,19 +33,40 @@ Levantamento pedido pelo usuário depois de notar um padrão recorrente de retra
 - **[index.html] Alerta de "mensalidade em atraso" não sabe se o aluno já está em cobrança automática.** Manda a mesma mensagem manual de WhatsApp pedindo confirmação de pagamento pra quem já está sendo cobrado automaticamente — dupla cobrança, dupla confusão.
 - **[financeiro.html] Receita do mês contada em duplicidade.** "Recebido este mês" (a partir de `ultimo_pagamento_em`) e o bloco "Bruto/Taxa/Líquido" (a partir de `student_billing_charges`) somam a MESMA cobrança automática duas vezes, sem reconciliação — infla o número mostrado.
 - **[alunos.html] Editar o dia de vencimento (`mensalidade_dia_vencimento`) de um aluno já com cartão automático não sincroniza com o Mercado Pago.** Só o valor (`mensalidade_valor`) é sincronizado — o dia real da cobrança continua o antigo, o app mostra um dia diferente do que realmente acontece.
-- **[perfil.html] Crédito de indicação pendente (meses grátis) não é mencionado no fluxo de cancelamento** — não fica claro se é perdido ao cancelar antes de usar.
-- **Retenção de 30 dias prometida no cancelamento nunca roda de verdade.** `purge_inactive_professionals()` existe mas o `cron.schedule` que a dispararia está **comentado/desligado** desde que foi criada (`supabase_17`) — decisão deliberada aguardando confirmação explícita, mas a tela de cancelamento promete "expira em 30 dias" e isso nunca se cumpre sozinho no banco.
 
 ### Dado de saúde / integridade de avaliação
 
 - **[avaliacoes.html] Nova avaliação física sempre nasce com "Sexo: Feminino" fixo, ignorando `students.genero` já cadastrado.** As fórmulas de dobras cutâneas são sexo-específicas — esquecer de trocar manualmente corrompe o cálculo de %gordura em silêncio.
 - **[avaliacoes.html] Editar uma avaliação que já compõe um comparativo publicado muda o que o aluno vê na hora, sem aviso ao profissional.** Comparativo é view computada ao vivo, não uma cópia — corrigir um peso digitado errado de 2 meses atrás altera retroativamente o "antes/depois" já compartilhado.
-- **[avaliacoes.html] Trocar de aluno no meio de uma "Nova avaliação" descarta fotos já escolhidas (ainda não salvas) sem nenhum aviso.**
 
 ### Acesso e sessão
 
 - **[onboarding.html] Boot não checa `status`/`billing_exempt` como `login.html` já checa.** Um profissional com assinatura cancelada mas sessão antiga ainda aberta pode contornar o bloqueio de reativação navegando direto pra `onboarding.html`; um profissional Founder isento (`billing_exempt`) que caia ali fora do fluxo normal vê a tela de cartão que deveria estar isento dela.
 - **[master.html] Cadastro manual de profissional não checa se o e-mail já pertence a um aluno.** Reproduz exatamente a classe de bug "vazamento de sessão entre papéis" (aluno↔profissional) já corrigida em `index.html`/`onboarding.html`/`aluno.html` várias vezes — mas essa trava nunca chegou no painel master.
+
+### Protocolo de treino publicado (perda de dado que o aluno já está usando)
+
+- **[treinos.html] "Salvar rascunho" despublica silenciosamente um protocolo já ativo.** Fora de um fluxo de "criar novo" (ex: só abrindo o protocolo já publicado de um aluno e ajustando algo), clicar "Salvar rascunho" muda `status` pra `rascunho` na mesma hora, sem confirmação — **o aluno perde acesso ao próprio treino instantaneamente** até o profissional perceber e publicar de novo. Reclassificado de "categoria 4" pra cá — é o mesmo tipo de dano que os itens de cobrança automática, só que na área de treino.
+- **[treinos.html] "Aplicar modelo"/"Duplicar protocolo de outro aluno" sobrescrevem um protocolo já publicado sem rede de segurança**, diferente de "Criar novo" (que sempre demove pra rascunho antes). O aviso mostrado (`confirm()`) dá a entender que só edição não-salva está em risco — na prática, **o protocolo publicado é perdido de vez**. Mesma reclassificação.
+
+---
+
+## 🟠 Prioridade média (~18) — perda de dado reversível, confusão real, promessa não cumprida
+
+- **[perfil.html] Crédito de indicação pendente (meses grátis) não é mencionado no fluxo de cancelamento** — não fica claro se é perdido ao cancelar antes de usar.
+- **Retenção de 30 dias prometida no cancelamento nunca roda de verdade.** `purge_inactive_professionals()` existe mas o `cron.schedule` que a dispararia está **comentado/desligado** desde que foi criada (`supabase_17`) — decisão deliberada aguardando confirmação explícita, mas a tela de cancelamento promete "expira em 30 dias" e isso nunca se cumpre sozinho no banco.
+- **[avaliacoes.html] Trocar de aluno no meio de uma "Nova avaliação" descarta fotos já escolhidas (ainda não salvas) sem nenhum aviso** — recuperável (basta escolher de novo), mas perde tempo/trabalho sem confirmação.
+- **[master.html] Campo "Trial até": apagar a data e salvar não funciona** — `null` é silenciosamente ignorado pela RPC, a UI mostra vazio mas o banco mantém a data antiga (falha silenciosa, ferramenta administrativa).
+- **[alunos.html] `mp_charge_method` nunca aparece no painel do profissional** (ver contexto completo na seção "Cobrança automática" acima — listado como alto por causa do efeito dominó que causa, mas o problema em si é "falta de informação na tela", não perda de dinheiro direta).
+- Os demais itens de "categoria 4" abaixo que envolvem confusão real mas não perda de dado crítico: sino de notificação sem badge na Início, banner de sessão em andamento ausente na aba Treino, ranking sem filtrar status, relatório/IA sem mencionar nutrição, mensagem pra aluno inativo sem aviso, trocar exercícios preservando observação do antigo.
+- Os itens de "categoria 2" (campo sem edição) que envolvem dado real do dia a dia: RPE/observação do fim do treino travada fora da hora, alimento privado sem editar, refeição sem corrigir quantidade, cartão da assinatura sem mostrar detalhes.
+- Os itens de "categoria 1" com maior chance de gerar mensagem de suporte: avaliação sem excluir, avaliação finalizada sem voltar a rascunho, onboarding sem voltar/corrigir nome.
+
+*(Estes últimos 3 grupos ficam detalhados por categoria abaixo — a lista acima é só a sinalização de gravidade; não estou duplicando o texto completo de novo.)*
+
+## 🟢 Prioridade baixa (~27) — fricção de UX, código morto, sem risco real
+
+Foto de perfil sem remover, push sem desativar, sono sem reabrir, termos/privacidade sem link depois, cardio sem editar, modelo de biblioteca sem renomear, PDF de apoio sem remover, marcar como visto sem desfazer, `is_master_email()` órfã, `#homeTopbar` morto, variável morta em `mensagens.html`, lógica morta de grupo muscular em `treinos.html`, e os demais itens de menor impacto listados nas categorias abaixo e na seção de suspeitas.
 
 ---
 
@@ -71,8 +102,6 @@ Levantamento pedido pelo usuário depois de notar um padrão recorrente de retra
 
 ## 🟡 Categoria 4 — Intersecção esquecida (a categoria com mais achados)
 
-- **[treinos.html] "Salvar rascunho" despublica silenciosamente um protocolo já ativo.** Fora de um fluxo de "criar novo" (ex: só abrindo o protocolo já publicado de um aluno e ajustando algo), clicar "Salvar rascunho" muda `status` pra `rascunho` na mesma hora, sem confirmação — o aluno perde acesso ao próprio treino instantaneamente até o profissional perceber e publicar de novo.
-- **[treinos.html] "Aplicar modelo"/"Duplicar protocolo de outro aluno" sobrescrevem um protocolo já publicado sem rede de segurança**, diferente de "Criar novo" (que sempre demove pra rascunho antes). O aviso mostrado (`confirm()`) dá a entender que só edição não-salva está em risco — na prática, o protocolo publicado é perdido de vez.
 - **[treinos.html] "Trocar exercícios" preserva a observação de execução do exercício ANTIGO**, mesmo o texto de ajuda prometendo que só sets/reps/descanso/técnica sobrevivem — a orientação de execução continua sendo mostrada ao aluno como se fosse do exercício novo.
 - **[treinos.html] Editar nome de um exercício customizado não atualiza instâncias já colocadas num bloco de treino** — o nome antigo continua aparecendo até algo mais forçar um re-render completo.
 - **[treinos.html] Wizard de IA não desabilita "Duração (semanas)" quando a periodização não usa duração** (o builder manual já faz isso) — valor digitado é silenciosamente ignorado sem sinal visual.
@@ -103,6 +132,6 @@ Levantamento pedido pelo usuário depois de notar um padrão recorrente de retra
 
 ## Resumo por número
 
-- **~50 achados confirmados** + ~7 "suspeita, verificar"
+- **58 achados no total** — 13 alto, ~18 médio, ~27 baixo (ver tabela no topo).
 - Maior concentração: **Categoria 4 (intersecção esquecida)** — reforça o diagnóstico do usuário: as features individualmente funcionam, o problema é sempre na fronteira entre uma feature e outra (ex: cobrança automática × exclusão de aluno, avaliação × comparativo, protocolo × rascunho).
-- Área de maior risco real (dinheiro se movendo sem controle, ou acesso trancado): **cobrança automática** (7 achados diferentes, todos cruzando `alunos.html`/`financeiro.html`/`perfil.html`/`index.html`) — candidata natural a ser a primeira rodada de correção.
+- Duas áreas concentram quase todo o risco alto: **cobrança automática** (8 achados, cruzando `alunos.html`/`financeiro.html`/`perfil.html`/`index.html`) e **protocolo de treino publicado em `treinos.html`** (2 achados de perda de dado que o aluno já está usando) — candidatas naturais a serem a primeira rodada de correção.

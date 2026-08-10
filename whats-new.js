@@ -1,6 +1,18 @@
 /* Banner "novidades desta atualização" — autocontido, mesmo padrão de support-widget.js.
    Versão + changelog por superfície (profissional/aluno); localStorage guarda a última
-   versão vista por superfície, então o banner só aparece de novo quando a versão muda. */
+   versão vista por superfície, então o banner só aparece de novo quando a versão muda.
+
+   Bug real achado em 2026-08-10 (usuário reportou "sumiu no aluno, nunca apareceu no
+   profissional" mesmo já com o código certo em produção): o Cloudflare (e o próprio
+   cache HTTP do navegador) guardam este arquivo por até 4h (Cache-Control: max-age=14400)
+   — sem nome de arquivo mudando, uma correção pode demorar horas pra chegar em quem já
+   carregou a página antes. Todas as `<script src="whats-new.js?v=...">` do projeto têm
+   uma query string de versão — BUMP ESSE NÚMERO (data + letra, ex: 20260810c) sempre que
+   este arquivo mudar, senão o "corrigido" pode não aparecer pra ninguém por horas. Mesmo
+   princípio já usado no CACHE_NAME de sw.js, só que via query string em vez de nome de
+   cache — nome de arquivo (renomear pra whats-new-v2.js) seria mais parecido com o que já
+   foi feito nos ícones do PWA, mas exigiria atualizar a tag em 11 páginas a cada mudança;
+   query string é mais barato de manter (só o valor muda, não o nome do arquivo em si). */
 (function () {
   var IS_ALUNO = /aluno\.html/i.test(location.pathname);
   var SURFACE = IS_ALUNO ? 'aluno' : 'profissional';

@@ -15,6 +15,11 @@
 // pela 1ª vez) — não é só o badge de mensagem não lida que já existia
 // (get_professional_unread_message_count, no item "Mensagens" do drawer),
 // é um log mais amplo, com histórico.
+//
+// Bump o `?v=...` da tag <script src="notif-bell.js?v=..."> sempre que este
+// arquivo mudar (mesmo motivo documentado no topo de whats-new.js — Cloudflare
+// e o cache do navegador guardam por até 4h sem isso, atrasando qualquer
+// correção real pra quem já carregou a página antes).
 (function () {
   const SUPABASE_URL = 'https://yumqmramxbahkfxsthtt.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1bXFtcmFteGJhaGtmeHN0aHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxNTgsImV4cCI6MjA5ODQ1MDE1OH0.7br_PYBCn1h7lUrCfpJ3VP3HOxMXmoVFyo-GTwVf3Zc';

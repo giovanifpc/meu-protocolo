@@ -7,8 +7,9 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.19.0',
+      version: '1.20.0',
       items: [
+        'Corrigido: gerar treino por IA podia terminar com um erro técnico cru na tela (treino mais completo — muitos exercícios/semanas — cortava a resposta da IA no meio) — ajustado o gerador pra caber a resposta inteira com folga, e mesmo se acontecer de novo agora aparece um aviso normal pedindo pra tentar de novo, nunca mais o erro técnico cru.',
         'Corrigido: gerar treino por IA podia dar erro se você trocasse de aluno, clicasse em "‹ Voltar" ou abrisse "Criar novo manual" antes da geração terminar — esses controles agora ficam bloqueados durante a geração, e o texto mostra o tempo real decorrido em vez do "até 30s" (que não era real em treinos mais completos).',
         'Novo: publicar um treino agora avisa o aluno automaticamente (notificação dentro do app + push, se ele tiver ativado) — antes ele só saberia se abrisse o app por conta própria. Um botão novo "Avisar no WhatsApp" também apareceu ao lado de "Publicar", pra mandar um aviso direto pelo WhatsApp cadastrado do aluno.',
         'Corrigido: treino de Costas podia sair com um exercício de outro grupo (ex: "Glúteo na polia baixa") mesmo depois do filtro que evita isso — a causa era o passo que busca o gif do exercício, que às vezes trocava o nome por um de outro grupo com texto de equipamento parecido. Agora esse passo nunca mais troca o nome do exercício, só o gif/vídeo vinculado.',

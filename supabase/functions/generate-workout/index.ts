@@ -332,7 +332,23 @@ Responda APENAS com um JSON válido, sem texto antes ou depois, exatamente neste
       },
       body: JSON.stringify({
         model: CLAUDE_MODEL,
-        max_tokens: 8192,
+        max_tokens: 12000,
+        // Sem "thinking" explícito, a Claude Sonnet 5 roda adaptive thinking
+        // por padrão (mudança de API sem aviso — antes, omitir o campo
+        // rodava sem pensar) — e o raciocínio consome do MESMO orçamento de
+        // max_tokens antes de qualquer texto de resposta ser escrito. Foi
+        // exatamente isso que causou um bug real em produção (2026-08-10):
+        // a resposta era cortada no meio do JSON, sobrando algo que ainda
+        // "parecia" JSON o bastante pra passar pelo regex de detecção mas
+        // quebrava no JSON.parse com um erro técnico cru na tela do
+        // profissional. Essa tarefa é geração estruturada guiada por um
+        // prompt já bem detalhado (regras 1-9 acima) e toda regra crítica é
+        // GARANTIDA de novo por código depois da resposta (veto de técnica,
+        // filtro de grupo muscular, anti-redundância, cardio obrigatório) —
+        // não é uma tarefa que se beneficia de raciocínio estendido, e não
+        // vale o risco de truncamento silencioso. Desligado explicitamente
+        // pra garantir 100% do orçamento de tokens indo pro JSON de resposta.
+        thinking: { type: 'disabled' },
         messages: [{ role: 'user', content: prompt }],
       }),
     });
@@ -348,14 +364,27 @@ Responda APENAS com um JSON válido, sem texto antes ou depois, exatamente neste
       .map((c: { text: string }) => c.text)
       .join('');
     const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const motivoCorte = claudeData.stop_reason === 'max_tokens'
+      ? 'a resposta da IA foi cortada por ficar longa demais'
+      : null;
     if (!jsonMatch) {
-      const motivo = claudeData.stop_reason === 'max_tokens'
-        ? 'a resposta da IA foi cortada por ficar longa demais'
-        : `resposta inesperada da IA: "${text.slice(0, 150) || '(vazia)'}"`;
+      const motivo = motivoCorte || `resposta inesperada da IA: "${text.slice(0, 150) || '(vazia)'}"`;
       throw new Error(`A IA não retornou um JSON válido (${motivo}). Tente de novo.`);
     }
 
-    const suggestion = JSON.parse(jsonMatch[0]);
+    // Garantia extra, não só esperança de que o regex acima pegasse todo
+    // caso de truncamento: mesmo achando um bloco "{ ... }", o conteúdo
+    // pode estar malformado no meio (resposta cortada dentro de um
+    // array/string, sobrando um "}" solto no fim que engana o regex sem
+    // fechar a estrutura direito) — sem isso, um JSON.parse cru quebrava
+    // com erro técnico direto na tela do profissional (bug real, 2026-08-10).
+    let suggestion: any;
+    try {
+      suggestion = JSON.parse(jsonMatch[0]);
+    } catch {
+      const motivo = motivoCorte || 'a resposta da IA veio com JSON malformado';
+      throw new Error(`A IA não retornou um JSON válido (${motivo}). Tente de novo.`);
+    }
     suggestion.workouts = filtrarExerciciosForaDeContexto(suggestion.workouts || []);
     suggestion.workouts = removerExerciciosRedundantes(suggestion.workouts);
     suggestion.workouts = garantirCardioFinal(suggestion.workouts);

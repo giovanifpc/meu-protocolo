@@ -105,6 +105,12 @@ Responda APENAS com um JSON válido, sem texto antes ou depois, exatamente neste
       body: JSON.stringify({
         model: CLAUDE_MODEL,
         max_tokens: 2048,
+        // Ver o mesmo comentário em generate-workout/index.ts (bug real de
+        // 2026-08-10): sem "thinking" explícito, a Claude Sonnet 5 roda
+        // adaptive thinking por padrão, consumindo do mesmo orçamento de
+        // max_tokens antes do JSON de resposta — desligado por garantia,
+        // mesmo essa tarefa sendo pequena (troca só a lista de nomes).
+        thinking: { type: 'disabled' },
         messages: [{ role: 'user', content: prompt }],
       }),
     });
@@ -120,11 +126,23 @@ Responda APENAS com um JSON válido, sem texto antes ou depois, exatamente neste
       .map((c: { text: string }) => c.text)
       .join('');
     const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const motivoCorte = claudeData.stop_reason === 'max_tokens'
+      ? 'a resposta da IA foi cortada por ficar longa demais'
+      : null;
     if (!jsonMatch) {
-      throw new Error(`A IA não retornou um JSON válido. Tente de novo.`);
+      throw new Error(`A IA não retornou um JSON válido${motivoCorte ? ` (${motivoCorte})` : ''}. Tente de novo.`);
     }
 
-    const result = JSON.parse(jsonMatch[0]);
+    // Mesma garantia extra de generate-workout/index.ts: um bloco "{ ... }"
+    // achado pelo regex ainda pode estar malformado por dentro se a
+    // resposta foi cortada no meio — sem isso, JSON.parse cru quebrava com
+    // erro técnico direto na tela do profissional.
+    let result: any;
+    try {
+      result = JSON.parse(jsonMatch[0]);
+    } catch {
+      throw new Error(`A IA não retornou um JSON válido${motivoCorte ? ` (${motivoCorte})` : ''}. Tente de novo.`);
+    }
     if (!Array.isArray(result.exercises) || result.exercises.length !== exercises.length) {
       throw new Error('A IA retornou uma quantidade de exercícios diferente da esperada. Tente de novo.');
     }

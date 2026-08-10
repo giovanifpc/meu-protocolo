@@ -75,14 +75,25 @@ Deno.serve(async (req) => {
     }
     if (!authUserId) throw new Error('Conta de autenticação do aluno não encontrada.');
 
+    // Garantia extra, achada testando de verdade (2026-08-10): o Admin API
+    // do Supabase Auth normaliza e-mail pra minúsculo sozinho ao gravar em
+    // auth.users, mas um update comum em `students` via PostgREST NÃO
+    // normaliza nada — grava exatamente o que for passado. Se as duas
+    // tabelas divergissem em maiúscula/minúscula, o match de RLS
+    // (students.email = auth.jwt()->>'email', sempre lowercase no JWT)
+    // quebraria o acesso do aluno. request-student-email-change já
+    // normaliza antes de gravar o pedido, mas normalizar de novo aqui é
+    // garantia, não esperança de que o passo anterior sempre fez certo.
+    const newEmailNorm = reqRow.new_email.toLowerCase();
+
     // Externo primeiro, local depois — se o Admin API falhar, nada muda em
     // students, nunca fica um estado em que o app "acha" que trocou mas o
     // login continua com o e-mail velho.
-    const { error: authUpdateErr } = await supaAdmin.auth.admin.updateUserById(authUserId, { email: reqRow.new_email });
+    const { error: authUpdateErr } = await supaAdmin.auth.admin.updateUserById(authUserId, { email: newEmailNorm });
     if (authUpdateErr) throw new Error('Falha ao atualizar o e-mail de login: ' + authUpdateErr.message);
 
     const { error: studentUpdateErr } = await supaAdmin.from('students')
-      .update({ email: reqRow.new_email, pending_email: null }).eq('id', student.id);
+      .update({ email: newEmailNorm, pending_email: null }).eq('id', student.id);
     if (studentUpdateErr) {
       // Estado inconsistente por um instante (mesmo risco residual já
       // aceito em outros fluxos de duas escritas coordenadas do projeto) —
@@ -92,7 +103,7 @@ Deno.serve(async (req) => {
 
     await supaAdmin.from('student_email_change_requests').update({ used_at: new Date().toISOString() }).eq('id', reqRow.id);
 
-    return jsonResponse({ ok: true, new_email: reqRow.new_email });
+    return jsonResponse({ ok: true, new_email: newEmailNorm });
   } catch (err) {
     return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 400);
   }

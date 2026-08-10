@@ -102,24 +102,17 @@ Deno.serve(async (req) => {
       .from('professionals').select('id').ilike('email', newEmailNorm).maybeSingle();
     if (existingPro) throw new Error('Esse e-mail já pertence a uma conta de profissional.');
 
-    // Reenviar (pedido de novo, ex: e-mail perdido/expirado) invalida
-    // qualquer pedido anterior ainda pendente desse aluno — só o link mais
-    // recente continua válido.
-    await supaAdmin.from('student_email_change_requests').update({ used_at: new Date().toISOString() })
-      .eq('student_id', student_id).is('used_at', null);
-
+    // Externo primeiro, local depois (mesmo princípio já usado no
+    // cancelamento de assinatura) — bug real achado testando de verdade
+    // (2026-08-10): a 1ª versão escrevia pending_email/o pedido no banco
+    // ANTES de mandar o e-mail, então uma falha no envio (Resend fora do
+    // ar, endereço rejeitado etc.) deixava a UI mostrando "pendente de
+    // confirmação" pra um e-mail que nunca foi enviado, sem jeito de saber.
+    // Agora o e-mail precisa sair com sucesso antes de qualquer escrita —
+    // se falhar, nada muda, o profissional só vê o erro e tenta de novo.
     const rawToken = randomToken();
     const tokenHash = await sha256Hex(rawToken);
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-
-    const { error: insertErr } = await supaAdmin.from('student_email_change_requests').insert({
-      student_id, new_email: newEmailNorm, token_hash: tokenHash, expires_at: expiresAt,
-    });
-    if (insertErr) throw new Error('Erro ao gerar o pedido de troca: ' + insertErr.message);
-
-    const { error: pendingErr } = await supaAdmin.from('students').update({ pending_email: newEmailNorm }).eq('id', student_id);
-    if (pendingErr) throw new Error('Erro ao salvar o e-mail pendente: ' + pendingErr.message);
-
     const link = `https://meuprotocolo.app/confirmar-email.html?token=${rawToken}`;
     const html = `<!doctype html><html><body style="margin:0;padding:0;background:#F8F9FA;font-family:Arial,Helvetica,sans-serif;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F8F9FA;padding:24px 0;">
@@ -147,7 +140,22 @@ Deno.serve(async (req) => {
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'content-type': 'application/json' },
       body: JSON.stringify({ from: FROM, to: [newEmailNorm], subject: 'Confirme seu novo e-mail — Meu Protocolo', html }),
     });
-    if (!res.ok) throw new Error(`Falha ao enviar o e-mail (Resend ${res.status}).`);
+    if (!res.ok) throw new Error(`Falha ao enviar o e-mail (Resend ${res.status}). Nada foi alterado — tente de novo.`);
+
+    // E-mail confirmado enviado com sucesso — só agora grava/invalida no
+    // banco. "Reenviar" (pedido de novo, ex: e-mail perdido/expirado)
+    // invalida qualquer pedido anterior ainda pendente desse aluno — só o
+    // link mais recente continua válido.
+    await supaAdmin.from('student_email_change_requests').update({ used_at: new Date().toISOString() })
+      .eq('student_id', student_id).is('used_at', null);
+
+    const { error: insertErr } = await supaAdmin.from('student_email_change_requests').insert({
+      student_id, new_email: newEmailNorm, token_hash: tokenHash, expires_at: expiresAt,
+    });
+    if (insertErr) throw new Error('E-mail enviado, mas falhou ao registrar o pedido: ' + insertErr.message + '. O link enviado não vai funcionar — peça pro aluno ignorar.');
+
+    const { error: pendingErr } = await supaAdmin.from('students').update({ pending_email: newEmailNorm }).eq('id', student_id);
+    if (pendingErr) throw new Error('Erro ao salvar o e-mail pendente: ' + pendingErr.message);
 
     return jsonResponse({ ok: true, pending_email: newEmailNorm });
   } catch (err) {

@@ -146,4 +146,13 @@
   }
   if (document.body) schedule();
   else document.addEventListener('DOMContentLoaded', schedule);
+
+  // Item fixo no sino de notificações (2026-08-10) — pedido do usuário pra
+  // sempre ter como reabrir o changelog da versão atual a partir do sino,
+  // sem depender de já ter sido "visto" antes (o `render()` acima já ignora
+  // o estado salvo, então reaproveitamos ele direto). Nunca soma no ponto
+  // de "não lido" do sino — quem chama isso (notif-bell.js/aluno.html)
+  // trata como um item à parte, nunca como notificação real do banco.
+  window.__mpOpenWhatsNew = render;
+  window.__mpWhatsNewVersion = function () { return entry.version; };
 })();

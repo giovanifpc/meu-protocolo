@@ -352,6 +352,8 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .summary-row{display:flex;gap:12px;margin-bottom:18px}
 .hist-item{background:var(--card-grad);border:1px solid var(--card-border);box-shadow:var(--shadow-sm);border-radius:var(--radius-sm);padding:15px;margin-bottom:10px}
 .hist-item.hist-incomplete{background:var(--warn-bg);border-color:var(--warn-border)}
+.hist-item.notif-pinned{background:rgba(var(--primary-rgb),.06)}
+.hist-item.notif-pinned .hist-date svg{width:14px;height:14px;flex-shrink:0}
 .hist-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .hist-date{font-size:14px;font-weight:700}
 .hist-badge{font-size:11px;color:var(--primary);font-weight:700;background:rgba(var(--primary-rgb),.1);padding:4px 10px;border-radius:8px;white-space:nowrap}
@@ -1803,22 +1805,42 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     }
   }
 
+  // Item fixo "Novidades desta atualização" (2026-08-10) — nunca vem de
+  // student_notifications (banco), lê direto do CHANGELOG hardcoded em
+  // whats-new.js (window.__mpOpenWhatsNew/__mpWhatsNewVersion, expostos de
+  // propósito pra isso). Por não vir do banco, nunca soma no ponto de
+  // "não lido" (updateNotifBadge() só olha pro array `notifications` real)
+  // — fica sempre presente, independente de já ter sido "visto" antes.
+  function pinnedWhatsNewHtml() {
+    if (typeof window.__mpWhatsNewVersion !== 'function') return '';
+    const v = window.__mpWhatsNewVersion();
+    if (!v) return '';
+    return `
+      <div class="hist-item notif-pinned" data-role="open-whats-new" style="cursor:pointer;">
+        <div class="hist-top"><span class="hist-date" style="display:flex;align-items:center;gap:5px;color:var(--primary);">${ICONS.zap}Novidades desta atualização (v${escapeHtml(v)})</span></div>
+        <div class="hist-meta"><span>Toque pra ver o que mudou.</span></div>
+      </div>`;
+  }
+
   function renderNotifications() {
     const el = $('notificationsContent');
+    const pinned = pinnedWhatsNewHtml();
     if (!notifications.length) {
-      el.innerHTML = `<div class="empty-state"><div class="es-ico">${ICONS.bell}</div><div class="es-txt">Nenhuma notificação ainda.<br>Mensagens do seu personal aparecerão aqui.</div></div>`;
-      return;
+      el.innerHTML = pinned + `<div class="empty-state"><div class="es-ico">${ICONS.bell}</div><div class="es-txt">Nenhuma notificação ainda.<br>Mensagens do seu personal aparecerão aqui.</div></div>`;
+    } else {
+      el.innerHTML = pinned + notifications.map(n => {
+        const d = new Date(n.created_at);
+        const dataStr = `${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+        return `
+          <div class="hist-item">
+            <div class="hist-top"><span class="hist-date">${escapeHtml(n.title)}</span></div>
+            ${n.body ? `<div class="hist-meta"><span>${escapeHtml(n.body)}</span></div>` : ''}
+            <div class="hist-meta"><span>${dataStr}</span></div>
+          </div>`;
+      }).join('');
     }
-    el.innerHTML = notifications.map(n => {
-      const d = new Date(n.created_at);
-      const dataStr = `${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-      return `
-        <div class="hist-item">
-          <div class="hist-top"><span class="hist-date">${escapeHtml(n.title)}</span></div>
-          ${n.body ? `<div class="hist-meta"><span>${escapeHtml(n.body)}</span></div>` : ''}
-          <div class="hist-meta"><span>${dataStr}</span></div>
-        </div>`;
-    }).join('');
+    const pinnedEl = el.querySelector('[data-role="open-whats-new"]');
+    if (pinnedEl) pinnedEl.addEventListener('click', () => { if (window.__mpOpenWhatsNew) window.__mpOpenWhatsNew(); });
   }
 
   function updateChatBadge() {

@@ -43,6 +43,9 @@
     .notif-item .ni-title { font-size:13px; font-weight:700; color:var(--text,#1E2A3A); margin-bottom:2px; }
     .notif-item .ni-body { font-size:12.5px; color:var(--muted,#63707F); margin-bottom:4px; line-height:1.4; }
     .notif-item .ni-date { font-size:11px; color:var(--muted,#63707F); }
+    .notif-item.notif-pinned { cursor:pointer; background:rgba(var(--primary-rgb,45,107,228),.06); margin-bottom:4px; }
+    .notif-item.notif-pinned .ni-title { color:var(--primary,#2D6BE4); display:flex; align-items:center; gap:5px; }
+    .notif-item.notif-pinned .ni-pin-ico { width:14px; height:14px; flex-shrink:0; }
     #notifPanelEmpty { padding:26px 16px; text-align:center; font-size:13px; color:var(--muted,#63707F); }
     #notifPanelFooter { padding:10px 12px; border-top:1px solid var(--line,#E9EBEF); }
     #notifPushBtn { width:100%; background:none; border:1px solid var(--line,#E9EBEF); border-radius:10px; padding:9px 10px; font-size:12.5px; font-weight:700; color:var(--primary,#2D6BE4); cursor:pointer; font-family:inherit; }
@@ -73,22 +76,42 @@
     document.getElementById('notifBellDot').style.display = hasUnread ? 'block' : 'none';
   }
 
+  // Item fixo "Novidades desta atualização" (2026-08-10) — nunca vem do
+  // banco (professional_notifications), lê direto do CHANGELOG hardcoded
+  // em whats-new.js (window.__mpOpenWhatsNew/__mpWhatsNewVersion, expostos
+  // de propósito pra isso). Por não vir do banco, nunca soma no ponto de
+  // "não lido" do sino (updateDot() só olha pro array `notifications` real)
+  // — fica sempre presente, independente de já ter sido "visto" antes.
+  function pinnedItemHtml() {
+    if (typeof window.__mpWhatsNewVersion !== 'function') return '';
+    const v = window.__mpWhatsNewVersion();
+    if (!v) return '';
+    return `
+      <div class="notif-item notif-pinned" data-role="open-whats-new">
+        <div class="ni-title"><svg class="ni-pin-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>Novidades desta atualização (v${escapeHtml(v)})</div>
+        <div class="ni-body">Toque pra ver o que mudou.</div>
+      </div>`;
+  }
+
   function renderPanel() {
     const list = document.getElementById('notifPanelList');
+    const pinned = pinnedItemHtml();
     if (!notifications.length) {
-      list.innerHTML = `<div id="notifPanelEmpty">Nenhuma notificação ainda.</div>`;
-      return;
+      list.innerHTML = pinned + `<div id="notifPanelEmpty">Nenhuma notificação ainda.</div>`;
+    } else {
+      list.innerHTML = pinned + notifications.map((n) => {
+        const d = new Date(n.created_at);
+        const dataStr = `${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+        return `
+          <div class="notif-item ${n.read_at ? '' : 'unread'}">
+            <div class="ni-title">${escapeHtml(n.title)}</div>
+            ${n.body ? `<div class="ni-body">${escapeHtml(n.body)}</div>` : ''}
+            <div class="ni-date">${dataStr}</div>
+          </div>`;
+      }).join('');
     }
-    list.innerHTML = notifications.map((n) => {
-      const d = new Date(n.created_at);
-      const dataStr = `${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-      return `
-        <div class="notif-item ${n.read_at ? '' : 'unread'}">
-          <div class="ni-title">${escapeHtml(n.title)}</div>
-          ${n.body ? `<div class="ni-body">${escapeHtml(n.body)}</div>` : ''}
-          <div class="ni-date">${dataStr}</div>
-        </div>`;
-    }).join('');
+    const pinnedEl = list.querySelector('[data-role="open-whats-new"]');
+    if (pinnedEl) pinnedEl.addEventListener('click', () => { if (window.__mpOpenWhatsNew) window.__mpOpenWhatsNew(); });
   }
 
   async function loadNotifications() {

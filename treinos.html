@@ -14,6 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://js.sentry-cdn.com/dd3ca3ee7a720284b2a9bf8240b29158.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script src="support-widget.js" defer></script>
 <script src="assistant-hints.js" defer></script>
 <script src="whats-new.js" defer></script>
@@ -123,6 +124,18 @@
   .ex-name-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
   .exercise-row-multi { padding:10px 0; border-bottom:2px solid rgba(20,30,45,.32); }
   .exercise-row-multi:last-child { border-bottom:none; }
+  /* Reordenar exercícios do bloco por arraste (2026-08-10) — alça dedicada
+     pra não brigar com toque em textarea/select/botão da própria linha. */
+  .exercise-row, .exercise-row-multi { position:relative; padding-left:26px; }
+  .ex-drag-handle { position:absolute; left:0; top:9px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; color:var(--muted); cursor:grab; touch-action:none; }
+  .ex-drag-handle:active { cursor:grabbing; }
+  .sortable-ghost { opacity:.35; }
+  .sortable-chosen .ex-drag-handle { color:var(--primary); }
+  /* Reordenar blocos por posição (2026-08-10) — a letra nunca é editável
+     como texto solto (mesmo bug que já causou letra duplicada/pulada em
+     2026-08-01); é sempre um select de posição, recalculado por código. */
+  .workout-pos-select { font-size:13px; font-weight:800; color:#fff; background:var(--primary); border:none; border-radius:8px; width:32px; height:32px; text-align:center; text-align-last:center; -webkit-appearance:none; appearance:none; cursor:pointer; flex-shrink:0; font-family:var(--font); }
+  .workout-pos-select:focus { outline:2px solid var(--primary-dim); outline-offset:1px; }
   .week-grid { overflow-x:auto; }
   .week-grid table { border-collapse:collapse; font-size:12px; }
   .week-grid th, .week-grid td { padding:3px 4px; text-align:center; white-space:nowrap; }
@@ -547,6 +560,7 @@
   let professional = null;
   let currentProtocol = null; // { id, student_id, titulo, status, periodizacao, duracao_semanas, workouts: [...] }
   let searchDebounce = null;
+  let exerciseSortables = []; // instâncias SortableJS ativas, uma por bloco renderizado
   let muscleGroups = [];
   let viewMode = 'none'; // 'none' | 'edit' | 'wizard'
   let creationMode = null; // null | 'manual' | 'ia' — qual botão de criação está aberto (dropdown)
@@ -1898,6 +1912,20 @@
   // execução, e por último o seletor de técnica (antes vinha primeiro,
   // brigando com o nome pela atenção de quem só quer ver "qual exercício é
   // esse" de cara).
+  // Garantia, não esperança (mesmo princípio já usado no projeto): a letra
+  // de cada bloco NUNCA é lida de um valor gravado — é sempre recalculada
+  // pela posição real no array, toda vez que a lista de blocos é
+  // renderizada. Ponto único de verdade: impossível duplicar/pular letra
+  // (mesma classe de bug corrigida em 2026-08-01 pro caso da IA), e cura
+  // sozinho qualquer protocolo antigo que tenha ficado com letra errada.
+  function recomputeWorkoutLetters(workouts) {
+    workouts.forEach((w, i) => { w.id = String.fromCharCode(65 + i); });
+  }
+
+  function dragHandleHtml() {
+    return `<span class="ex-drag-handle" data-role="drag-handle" title="Arrastar para reordenar"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><circle cx="8" cy="6" r="1.6"/><circle cx="8" cy="12" r="1.6"/><circle cx="8" cy="18" r="1.6"/><circle cx="16" cy="6" r="1.6"/><circle cx="16" cy="12" r="1.6"/><circle cx="16" cy="18" r="1.6"/></svg></span>`;
+  }
+
   function renderExerciseHeader(ex, w, i) {
     const titleHtml = `<div class="ex-title">${escapeHtml(ex.nome)}</div>`;
     const mediaBtn = renderVideoIconBtn(ex);
@@ -1921,6 +1949,7 @@
     const noteHtml = ex.note ? `<div class="ex-note">${escapeHtml(ex.note)}</div>` : '';
     return `
       <div class="exercise-row exercise-row-edit">
+        ${dragHandleHtml()}
         <div class="ex-name-col">
           <span class="tecnica-chip">Cardio</span><br>
           ${escapeHtml(ex.nome)} — ${escapeHtml(String(ex.duracao_min || 0))} min · ${escapeHtml(ex.intensidade || '')}
@@ -1938,6 +1967,7 @@
       const wk = weeks[0];
       return `
         <div class="exercise-row exercise-row-edit">
+          ${dragHandleHtml()}
           <div class="ex-name-col">${renderExerciseHeader(ex, w, i)}</div>
           <div class="ex-fields">
             <input type="number" min="1" class="ex-field-input" value="${escapeHtml(wk.sets)}" data-role="wk-sets" data-workout-id="${w._uid}" data-idx="${i}" data-week="0" title="Séries">
@@ -1951,6 +1981,7 @@
     }
     return `
       <div class="exercise-row-multi">
+        ${dragHandleHtml()}
         <div class="ex-name-row">
           <div class="ex-name-col">${renderExerciseHeader(ex, w, i)}</div>
           <button class="btn danger small" data-role="remove-exercise" data-workout-id="${w._uid}" data-idx="${i}">×</button>
@@ -1969,14 +2000,18 @@
   }
 
   function renderWorkouts() {
+    recomputeWorkoutLetters(currentProtocol.workouts);
     const container = $('workoutsContainer');
     if (!currentProtocol.workouts.length) {
       container.innerHTML = '<div class="card"><div class="empty">Nenhum treino adicionado ainda.</div></div>';
       return;
     }
-    container.innerHTML = currentProtocol.workouts.map(w => `
+    container.innerHTML = currentProtocol.workouts.map((w, idx) => `
       <div class="workout-block" data-workout-id="${w._uid}">
         <div class="workout-block-header">
+          <select class="workout-pos-select" data-role="workout-pos" data-workout-id="${w._uid}" aria-label="Mover treino para a posição" title="Mover treino para outra posição">
+            ${currentProtocol.workouts.map((_, pi) => `<option value="${pi}" ${pi === idx ? 'selected' : ''}>${String.fromCharCode(65 + pi)}</option>`).join('')}
+          </select>
           <input type="text" value="${escapeHtml(w.name)}" data-role="workout-name" data-workout-id="${w._uid}">
           <div style="display:flex;gap:6px;flex-shrink:0;">
             <button class="btn secondary small" data-role="regenerate-exercises" data-workout-id="${w._uid}" type="button" title="Trocar exercícios, mantendo técnicas e periodização"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>Trocar exercícios</button>
@@ -2027,6 +2062,17 @@
     container.querySelectorAll('[data-role="remove-workout"]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         currentProtocol.workouts = currentProtocol.workouts.filter(x => x._uid !== e.target.dataset.workoutId);
+        renderWorkouts();
+      });
+    });
+    container.querySelectorAll('[data-role="workout-pos"]').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const workoutId = e.target.dataset.workoutId;
+        const oldIdx = currentProtocol.workouts.findIndex(x => x._uid === workoutId);
+        const newIdx = Number(e.target.value);
+        if (oldIdx < 0 || newIdx === oldIdx) return;
+        const [moved] = currentProtocol.workouts.splice(oldIdx, 1);
+        currentProtocol.workouts.splice(newIdx, 0, moved);
         renderWorkouts();
       });
     });
@@ -2102,6 +2148,32 @@
         searchExercises(query, e.target.value, workoutId, resultsBox);
       });
     });
+
+    // Reordenar exercícios do bloco por arraste (2026-08-10). Cada bloco
+    // tem sua própria instância — a ordem final só é gravada em
+    // `w.exercises` no fim do gesto (onEnd), nunca durante o arraste.
+    if (exerciseSortables.length) { exerciseSortables.forEach(s => s.destroy()); exerciseSortables = []; }
+    if (typeof Sortable === 'function') {
+      container.querySelectorAll('.exercises-list').forEach(list => {
+        const workoutId = list.closest('.workout-block').dataset.workoutId;
+        exerciseSortables.push(Sortable.create(list, {
+          handle: '.ex-drag-handle',
+          animation: 150,
+          ghostClass: 'sortable-ghost',
+          chosenClass: 'sortable-chosen',
+          onEnd(evt) {
+            if (evt.oldIndex === evt.newIndex) return;
+            const w = currentProtocol.workouts.find(x => x._uid === workoutId);
+            if (!w) return;
+            const [moved] = w.exercises.splice(evt.oldIndex, 1);
+            w.exercises.splice(evt.newIndex, 0, moved);
+            renderWorkouts();
+          }
+        }));
+      });
+    } else {
+      console.warn('SortableJS não carregou — reordenar exercícios por arraste está indisponível nesta sessão.');
+    }
   }
 
   async function searchExercises(query, grupoFilter, workoutId, resultsBox) {

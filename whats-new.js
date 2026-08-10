@@ -7,8 +7,10 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.18.0',
+      version: '1.19.0',
       items: [
+        'Novo: reorganize os exercícios de um bloco de treino arrastando pela alça ao lado de cada um — inclusive os que a IA criou ou os que você acabou de adicionar (antes só entravam no final, sem jeito de reordenar).',
+        'Novo: pra mover um treino inteiro (A, B, C...) de posição, use o seletor de letra no canto do bloco — escolher a letra de destino já reordena tudo, sem precisar arrastar o bloco.',
         'Novo: aba "Histórico" por aluno — veja todas as sessões de treino já finalizadas, com a intensidade percebida e a observação que o aluno escreveu no fim do treino (ex: relato de dor/desconforto).',
         'Novo: observação nova do aluno agora vira alerta na Início, igual mensalidade atrasada — antes só aparecia se você gerasse o relatório de texto do aluno.',
         'Corrigido: o treino gerado por IA podia repetir o mesmo exercício com equipamentos diferentes (ex: tríceps francês na polia e com halteres no mesmo treino) — agora a IA evita esse tipo de redundância.',

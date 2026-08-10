@@ -106,6 +106,8 @@ Um protocolo tem status **rascunho** (só o profissional vê) ou **publicado** (
 
 Ao criar um treino novo por cima de um já existente, o anterior não é apagado — vira um rascunho guardado num dropdown "Rascunhos anteriores deste aluno" (acima dos botões de criar), com opção de reabrir (volta pra edição normal) ou apagar de vez.
 
+**Reorganizar exercícios e treinos (desde 2026-08-10)**: dentro de um bloco de treino, cada exercício tem uma alça (ícone de pontinhos, à esquerda) — segurar e arrastar reordena os exercícios livremente, inclusive os que a IA criou ou os recém-adicionados (que antes só entravam no final, sem jeito de mudar). Pra mover um treino inteiro (A, B, C...) de posição, tem um seletor de letra no canto do bloco — escolher outra letra ali já reordena o bloco pra aquela posição, sem precisar arrastar (arrastar um bloco inteiro seria ruim no celular, é grande demais pra tela pequena).
+
 ### 5.6 App do aluno
 
 O aluno usa um app separado, instalável na tela inicial do celular (PWA). Ele vê o próximo treino do seu ciclo, executa marcando séries feitas (com carga e reps), tem timer de descanso automático, e ao final vê um resumo com avaliação de humor. Se a máquina de um exercício estiver ocupada, o botão "Lista" (rodapé da execução, desde 2026-07-31) mostra todos os exercícios do treino com check nos concluídos — toca em qualquer um pra pular direto pra ele, sem perder o controle do que já fez; "Próximo" passa a pular sozinho quem já foi concluído, em vez de seguir só a ordem original. Também acompanha evolução de carga (gráfico), histórico de treinos, avaliação física (se o profissional já registrou alguma) e orientação nutricional. Ganha "conquistas" (badges) por marcos como primeiro treino, sequência de semanas treinando, etc.

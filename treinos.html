@@ -1036,10 +1036,10 @@
           });
           continue;
         }
-        const match = await matchExerciseByName(ex.nome);
+        const match = await matchExerciseByNameSafe(ex.nome);
         const base = { sets: Number(ex.sets) || 3, reps: String(ex.reps || '12'), rest: Number(ex.rest) || 60, nota: '' };
         exercises.push({
-          nome: match ? match.nome : ex.nome,
+          nome: ex.nome,
           exercise_id: match?.exercise_id,
           exercise_ref: match?.exercise_ref,
           media: match?.gif_url,
@@ -1118,6 +1118,68 @@
     );
   }
 
+  // Bug real reportado testando (2026-08-10): treino de Costas continuava
+  // saindo com "Glúteo na polia baixa unilateral" mesmo depois do filtro
+  // de contexto (filtrarExerciciosForaDeContexto, generate-workout) já ter
+  // sido corrigido em 2026-07-31. Causa raiz não era o filtro nem o
+  // grupo_muscular cadastrado errado na biblioteca (checado — está
+  // correto, "Glúteos") — é este passo aqui: match_exercise_library() faz
+  // busca por SIMILARIDADE DE TEXTO na biblioteca INTEIRA, sem noção
+  // nenhuma de grupo muscular. Um nome de costas legítimo (ex: "Remada
+  // unilateral na polia baixa") pode compartilhar texto de EQUIPAMENTO
+  // ("polia baixa unilateral") com um exercício de glúteo — o match então
+  // acha o exercício errado, e o código sobrescrevia `ex.nome` com o nome
+  // do match encontrado, jogando fora o nome original (que já tinha
+  // passado pelo filtro de contexto) e trocando pelo de outro grupo.
+  //
+  // Corrigido em duas camadas, mesmo princípio "garantia, não esperança"
+  // já usado no resto do projeto: (1) o nome do exercício NUNCA mais é
+  // sobrescrito pelo nome do match — o match serve só pra resolver
+  // exercise_id/gif, nunca pra decidir como o exercício se chama; (2) um
+  // match cujo grupo_muscular bate com um grupo claramente diferente do
+  // que o nome original já indicava é descartado (tratado como "não
+  // achou"), em vez de aceito só por parecido demais no texto.
+  const GRUPOS_KEYWORDS_MATCH = {
+    peito: ['peito', 'peitoral', 'supino', 'crucifixo', 'cross over', 'crossover', 'voador', 'peck deck'],
+    triceps: ['tríceps', 'triceps'],
+    costas: ['costas', 'dorsal', 'puxada', 'remada', 'pulldown', 'levantamento terra', 'barra fixa', 'pull-up', 'pulley'],
+    biceps: ['bíceps', 'biceps', 'rosca'],
+    ombro: ['ombro', 'deltoide', 'deltóide', 'desenvolvimento', 'elevação lateral', 'elevação frontal', 'arnold press', 'encolhimento'],
+    perna: ['perna', 'quadríceps', 'quadriceps', 'posterior de coxa', 'isquiotibial', 'agachamento', 'leg press', 'cadeira extensora', 'cadeira flexora', 'panturrilha', 'afundo', 'passada', 'stiff', 'hack machine', 'avanço'],
+    gluteo: ['glúteo', 'gluteo', 'elevação pélvica', 'hip thrust', 'coice', 'quatro apoios', 'abdução de quadril', 'abdutora'],
+    abdomen: ['abdôm', 'abdom', 'prancha', 'oblíquo', 'obliquo', 'abdominal'],
+  };
+  // Mapeia o texto real de exercise_library.grupo_muscular (levantado
+  // direto do seed, supabase_05) pro mesmo vocabulário acima — só os
+  // valores que correspondem a um grupo específico; "Geral"/"Iniciante"/
+  // "Masculino"/"Feminino"/"Mobilidade"/"Trapézio"/"Antebraços"/"Pescoço"/
+  // etc. ficam de fora de propósito (ambíguos, nunca usados pra rejeitar
+  // um match — na dúvida, não bloqueia, mesmo critério já usado no filtro
+  // server-side).
+  const GRUPO_MUSCULAR_TO_KEY = {
+    'Peitoral': 'peito', 'Tríceps': 'triceps', 'Costas': 'costas', 'Bíceps': 'biceps',
+    'Ombros': 'ombro', 'Pernas': 'perna', 'Panturrilhas': 'perna', 'Glúteos': 'gluteo',
+    'Core/Lombar': 'abdomen',
+  };
+
+  function detectarGruposMatch(texto) {
+    const t = (texto || '').toLowerCase();
+    return Object.entries(GRUPOS_KEYWORDS_MATCH).filter(([, kws]) => kws.some((k) => t.includes(k))).map(([g]) => g);
+  }
+
+  async function matchExerciseByNameSafe(nome) {
+    const match = await matchExerciseByName(nome);
+    if (!match) return null;
+    const gruposEsperados = detectarGruposMatch(nome);
+    if (!gruposEsperados.length) return match; // nome sem grupo reconhecível — não dá pra checar, aceita
+    const grupoDoMatch = GRUPO_MUSCULAR_TO_KEY[match.grupo_muscular];
+    if (grupoDoMatch && !gruposEsperados.includes(grupoDoMatch)) {
+      console.warn(`Match descartado por grupo muscular incompatível: "${nome}" (esperava ${gruposEsperados.join('/')}) casou com "${match.nome}" (${match.grupo_muscular}).`);
+      return null;
+    }
+    return match;
+  }
+
   async function regenerateWorkoutExercises(workoutUid, btn) {
     const w = currentProtocol.workouts.find(x => x._uid === workoutUid);
     if (!w || !w.exercises.length) return;
@@ -1152,9 +1214,9 @@
     for (let k = 0; k < strengthIdx.length; k++) {
       const novoNome = data.exercises[k]?.nome;
       if (!novoNome) continue;
-      const match = await matchExerciseByName(novoNome);
+      const match = await matchExerciseByNameSafe(novoNome);
       const idx = strengthIdx[k];
-      w.exercises[idx].nome = match ? match.nome : novoNome;
+      w.exercises[idx].nome = novoNome;
       w.exercises[idx].exercise_id = match?.exercise_id;
       w.exercises[idx].exercise_ref = match?.exercise_ref;
       w.exercises[idx].media = match?.gif_url;

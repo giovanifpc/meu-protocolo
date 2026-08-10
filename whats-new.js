@@ -9,6 +9,7 @@
     profissional: {
       version: '1.19.0',
       items: [
+        'Corrigido: gerar treino por IA podia dar erro se você trocasse de aluno, clicasse em "‹ Voltar" ou abrisse "Criar novo manual" antes da geração terminar — esses controles agora ficam bloqueados durante a geração, e o texto mostra o tempo real decorrido em vez do "até 30s" (que não era real em treinos mais completos).',
         'Novo: publicar um treino agora avisa o aluno automaticamente (notificação dentro do app + push, se ele tiver ativado) — antes ele só saberia se abrisse o app por conta própria. Um botão novo "Avisar no WhatsApp" também apareceu ao lado de "Publicar", pra mandar um aviso direto pelo WhatsApp cadastrado do aluno.',
         'Corrigido: treino de Costas podia sair com um exercício de outro grupo (ex: "Glúteo na polia baixa") mesmo depois do filtro que evita isso — a causa era o passo que busca o gif do exercício, que às vezes trocava o nome por um de outro grupo com texto de equipamento parecido. Agora esse passo nunca mais troca o nome do exercício, só o gif/vídeo vinculado.',
         'Novo: rascunho de treino salva sozinho a cada poucos segundos, sem precisar clicar em "Salvar rascunho" — atualizar a página ou fechar o app no meio de uma montagem não perde mais o progresso (só protocolo já publicado continua exigindo clique explícito em "Publicar").',

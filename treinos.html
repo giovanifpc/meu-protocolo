@@ -140,6 +140,16 @@
      motivo (mesmo estado "erro" fica visível até o próximo autosave dar certo). */
   .autosave-status { font-size:12px; color:var(--muted); }
   .autosave-status.is-error { color:var(--danger, #C0392B); font-weight:600; }
+  /* Geração por IA (2026-08-10) — barra INDETERMINADA de propósito: não dá
+     pra saber % real de progresso (a resposta da Claude não é streamada
+     aqui, chega inteira ou não chega), então em vez de fingir uma
+     porcentagem, mostra só "está trabalhando" (faixa deslizante) + tempo
+     decorrido real — honesto sobre o que sabemos e o que não sabemos. */
+  #aiProgressWrap { margin-top:10px; }
+  .ai-progress-track { height:6px; border-radius:4px; background:var(--line); overflow:hidden; }
+  .ai-progress-fill { height:100%; width:40%; border-radius:4px; background:var(--primary); animation: aiProgressSlide 1.3s ease-in-out infinite; }
+  @keyframes aiProgressSlide { 0% { margin-left:-40%; } 100% { margin-left:100%; } }
+  .ai-progress-hint { font-size:12px; color:var(--muted); margin-top:6px; }
   .week-grid { overflow-x:auto; }
   .week-grid table { border-collapse:collapse; font-size:12px; }
   .week-grid th, .week-grid td { padding:3px 4px; text-align:center; white-space:nowrap; }
@@ -354,6 +364,10 @@
         </div>
 
         <button class="btn" id="generateAiBtn" type="button"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" style="vertical-align:-2px;margin-right:5px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Criar treino perfeito</button>
+        <div id="aiProgressWrap" style="display:none;">
+          <div class="ai-progress-track"><div class="ai-progress-fill"></div></div>
+          <div class="ai-progress-hint" id="aiProgressHint">Gerando... 0s</div>
+        </div>
         <div class="msg" id="aiMsg"></div>
       </div>
     </div>
@@ -569,6 +583,7 @@
   let exerciseSortables = []; // instâncias SortableJS ativas, uma por bloco renderizado
   let autosaveInFlight = false;
   let lastAutosavedSnapshot = null; // baseline pra saber se algo mudou desde o último save (manual ou automático)
+  let aiGenerating = false; // true durante a chamada a generate-workout — trava rotas que corromperiam o resultado
   let muscleGroups = [];
   let viewMode = 'none'; // 'none' | 'edit' | 'wizard'
   let creationMode = null; // null | 'manual' | 'ia' — qual botão de criação está aberto (dropdown)
@@ -978,6 +993,40 @@
 
   $('generateAiBtn').addEventListener('click', () => commitCreation(doGenerateAi));
 
+  // Bugs reais reportados testando (2026-08-10): (1) "pode levar até 30s"
+  // é uma promessa que a própria geração já quebra em treino grande — o
+  // modelo pode levar mais de 1min; (2) nada travava trocar de aluno,
+  // clicar "‹ Voltar" do wizard, ou abrir "Criar novo manual" durante a
+  // espera — qualquer um desses reatribui currentProtocol, e quando a
+  // resposta atrasada da IA finalmente chegava, ela sobrescrevia o que
+  // estivesse na tela NAQUELE momento (não necessariamente o mesmo aluno/
+  // contexto que pediu a geração) — é isso que aparecia como "erro".
+  //
+  // Corrigido travando as rotas que causariam a corrupção (mais simples e
+  // mais seguro que tentar detectar/descartar uma resposta "atrasada"
+  // depois do fato): seletor de aluno, "‹ Voltar" do wizard e os 2 botões
+  // de "Criar novo" ficam bloqueados enquanto a geração está em
+  // andamento. Navegar pra OUTRA página (bottom nav, menu, fechar aba)
+  // ainda é possível — isso não dá pra travar num app de páginas
+  // separadas — mas dispara um aviso nativo do navegador (beforeunload)
+  // perguntando se quer mesmo sair, já que a geração em si nunca é salva
+  // em lugar nenhum até o profissional revisar e clicar Salvar/Publicar —
+  // sair de verdade sempre perde o resultado, não tem "continuar em
+  // segundo plano" que faça sentido guardar sem essa revisão.
+  function setAiControlsLocked(locked) {
+    $('studentSelect').disabled = locked;
+    $('newManualBtn').disabled = locked;
+    $('newAiBtn').disabled = locked;
+    $('wizardBackBtn').style.pointerEvents = locked ? 'none' : '';
+    $('wizardBackBtn').style.opacity = locked ? '.4' : '';
+  }
+
+  window.addEventListener('beforeunload', (e) => {
+    if (!aiGenerating) return;
+    e.preventDefault();
+    e.returnValue = ''; // texto exato não é customizável pelos navegadores modernos, é sempre o aviso padrão deles
+  });
+
   async function doGenerateAi() {
     if (!currentProtocol.student_id) return;
 
@@ -990,10 +1039,19 @@
     const frequencia = Number(wizardChipValue('wizardFrequencia')) || 4;
     const duracaoSessaoMin = Number(wizardChipValue('wizardDuracaoSessao')) || 60;
 
+    aiGenerating = true;
+    setAiControlsLocked(true);
     $('generateAiBtn').disabled = true;
-    $('generateAiBtn').textContent = 'Criando... (pode levar até 30s)';
+    $('generateAiBtn').textContent = 'Criando...';
     $('aiMsg').textContent = '';
     $('aiMsg').className = 'msg';
+    $('aiProgressWrap').style.display = 'block';
+    const geracaoIniciadaEm = Date.now();
+    const progressTimer = setInterval(() => {
+      const s = Math.round((Date.now() - geracaoIniciadaEm) / 1000);
+      $('aiProgressHint').textContent = `Gerando... ${s}s (treinos mais completos podem passar de 1 minuto)`;
+    }, 1000);
+    $('aiProgressHint').textContent = 'Gerando... 0s (treinos mais completos podem passar de 1 minuto)';
 
     const { data, error } = await supa.functions.invoke('generate-workout', {
       body: {
@@ -1006,6 +1064,10 @@
       },
     });
 
+    clearInterval(progressTimer);
+    $('aiProgressWrap').style.display = 'none';
+    aiGenerating = false;
+    setAiControlsLocked(false);
     $('generateAiBtn').disabled = false;
     $('generateAiBtn').innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" style="vertical-align:-2px;margin-right:5px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Criar treino perfeito';
 

@@ -136,6 +136,10 @@
      2026-08-01); é sempre um select de posição, recalculado por código. */
   .workout-pos-select { font-size:13px; font-weight:800; color:#fff; background:var(--primary); border:none; border-radius:8px; width:32px; height:32px; text-align:center; text-align-last:center; -webkit-appearance:none; appearance:none; cursor:pointer; flex-shrink:0; font-family:var(--font); }
   .workout-pos-select:focus { outline:2px solid var(--primary-dim); outline-offset:1px; }
+  /* Autosave de rascunho (2026-08-10) — indicador discreto, nunca some sem
+     motivo (mesmo estado "erro" fica visível até o próximo autosave dar certo). */
+  .autosave-status { font-size:12px; color:var(--muted); }
+  .autosave-status.is-error { color:var(--danger, #C0392B); font-weight:600; }
   .week-grid { overflow-x:auto; }
   .week-grid table { border-collapse:collapse; font-size:12px; }
   .week-grid th, .week-grid td { padding:3px 4px; text-align:center; white-space:nowrap; }
@@ -387,10 +391,11 @@
 
       <div id="workoutsContainer"></div>
 
-      <div class="card" style="display:flex; gap:10px; flex-wrap:wrap;">
+      <div class="card" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
         <button class="btn secondary" id="saveDraftBtn">Salvar rascunho</button>
         <button class="btn" id="publishBtn">Publicar para o aluno</button>
         <button class="btn secondary" id="saveAsTemplateBtn" type="button">Salvar como modelo</button>
+        <span id="autosaveStatus" class="autosave-status"></span>
       </div>
     </div>
   </main>
@@ -561,6 +566,8 @@
   let currentProtocol = null; // { id, student_id, titulo, status, periodizacao, duracao_semanas, workouts: [...] }
   let searchDebounce = null;
   let exerciseSortables = []; // instâncias SortableJS ativas, uma por bloco renderizado
+  let autosaveInFlight = false;
+  let lastAutosavedSnapshot = null; // baseline pra saber se algo mudou desde o último save (manual ou automático)
   let muscleGroups = [];
   let viewMode = 'none'; // 'none' | 'edit' | 'wizard'
   let creationMode = null; // null | 'manual' | 'ia' — qual botão de criação está aberto (dropdown)
@@ -1803,6 +1810,14 @@
     $('duracaoInput').value = currentProtocol.duracao_semanas || PERIODIZATION_DEFAULT_WEEKS[currentProtocol.periodizacao] || 4;
     updatePeriodizationUI();
     renderWorkouts();
+    // Autosave: toda vez que o protocolo em tela é (re)carregado — aluno
+    // trocado, rascunho reaberto, modelo aplicado, IA gerou um resultado
+    // novo, ou o próprio autosave/save acabou de gravar — o snapshot atual
+    // vira a nova base de comparação. Sem isso, o primeiro tick depois de
+    // carregar um protocolo diferente compararia contra o snapshot do
+    // aluno anterior e disparia um autosave redundante na hora.
+    lastAutosavedSnapshot = protocolSnapshot();
+    setAutosaveStatus('idle');
   }
 
   function updatePeriodizationUI() {
@@ -2242,6 +2257,89 @@
   function stripInternalFields(workouts) {
     return workouts.map(w => ({ id: w.id, name: w.name, exercises: w.exercises, dias_semana: w.dias_semana || [] }));
   }
+
+  // Autosave de rascunho (2026-08-10) — resolve o problema original que o
+  // botão "Salvar rascunho" sozinho nunca resolveu: nada em treinos.html
+  // persiste fora do clique explícito, então atualizar a página, fechar a
+  // aba ou trocar de aluno sem salvar perdia tudo que estava em memória.
+  //
+  // Decisão de escopo fechada com o usuário: autosave só roda enquanto o
+  // protocolo é RASCUNHO (ou ainda nem foi salvo) — nunca grava sozinho em
+  // cima de um protocolo já PUBLICADO. Só o clique explícito em "Publicar"
+  // muda o que o aluno vê; autosave nunca decide isso por conta própria,
+  // pra uma edição pela metade (ex: exercício removido no meio de uma
+  // reorganização) nunca ir ao vivo sozinha antes do profissional terminar.
+  function protocolSnapshot() {
+    if (!currentProtocol) return null;
+    const tituloEl = $('tituloInput');
+    return JSON.stringify({
+      titulo: (tituloEl ? tituloEl.value.trim() : currentProtocol.titulo) || 'Protocolo de treino',
+      periodizacao: currentProtocol.periodizacao || 'manual',
+      duracao_semanas: currentProtocol.duracao_semanas || null,
+      workouts: stripInternalFields(currentProtocol.workouts || []),
+    });
+  }
+
+  function autosaveEligible() {
+    if (!currentProtocol || !currentProtocol.student_id) return false;
+    if (currentProtocol.status === 'publicado') return false;
+    const tituloEl = $('tituloInput');
+    const tituloAtual = ((tituloEl ? tituloEl.value : currentProtocol.titulo) || '').trim();
+    // Só passa a salvar sozinho quando existe algo de verdade pra perder —
+    // evita criar uma linha vazia no banco só porque o profissional abriu
+    // "Criar novo" e ainda não adicionou nada.
+    return !!(currentProtocol.id || (currentProtocol.workouts && currentProtocol.workouts.length) || (tituloAtual && tituloAtual !== 'Protocolo de treino'));
+  }
+
+  function setAutosaveStatus(state) {
+    const el = $('autosaveStatus');
+    if (!el) return;
+    el.classList.toggle('is-error', state === 'error');
+    if (state === 'saving') el.textContent = 'Salvando rascunho...';
+    else if (state === 'saved') el.textContent = 'Rascunho salvo automaticamente às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '.';
+    else if (state === 'error') el.textContent = 'Não consegui salvar automaticamente — confira sua internet ou salve manualmente.';
+    else el.textContent = '';
+  }
+
+  async function persistAutosave() {
+    const payload = {
+      professional_id: professional.id,
+      student_id: currentProtocol.student_id,
+      titulo: $('tituloInput').value.trim() || 'Protocolo de treino',
+      status: 'rascunho', // autosave nunca publica nem despublica sozinho — sempre grava como rascunho
+      periodizacao: currentProtocol.periodizacao || 'manual',
+      duracao_semanas: currentProtocol.duracao_semanas || null,
+      workouts: stripInternalFields(currentProtocol.workouts),
+      publicado_em: currentProtocol.publicado_em || null,
+    };
+    let result;
+    if (currentProtocol.id) {
+      result = await supa.from('training_protocols').update(payload).eq('id', currentProtocol.id).select().single();
+    } else {
+      payload.origem = lastCreationSource === 'ia' ? 'ia' : 'manual';
+      payload.created_at = new Date().toISOString();
+      result = await supa.from('training_protocols').insert(payload).select().single();
+    }
+    if (result.error) { console.error('Autosave falhou:', result.error.message); return false; }
+    currentProtocol.id = result.data.id;
+    currentProtocol.status = result.data.status;
+    currentProtocol.titulo = payload.titulo;
+    await updateDraftsArea(currentProtocol.student_id);
+    return true;
+  }
+
+  async function runAutosaveTick() {
+    if (autosaveInFlight || !autosaveEligible()) return;
+    const snap = protocolSnapshot();
+    if (snap === lastAutosavedSnapshot) return; // nada mudou desde o último save
+    autosaveInFlight = true;
+    setAutosaveStatus('saving');
+    const ok = await persistAutosave();
+    autosaveInFlight = false;
+    if (ok) { lastAutosavedSnapshot = snap; setAutosaveStatus('saved'); }
+    else setAutosaveStatus('error');
+  }
+  setInterval(runAutosaveTick, 3000);
 
   async function saveProtocol(status) {
     currentProtocol.titulo = $('tituloInput').value.trim() || 'Protocolo de treino';

@@ -120,6 +120,7 @@
       <div class="field">
         <label>Nome</label>
         <input type="text" id="newStudentName" placeholder="Nome do aluno">
+        <div class="status-hint">Esse é o nome que aparece pro aluno dentro do próprio app dele.</div>
       </div>
       <div class="field">
         <label>E-mail</label>
@@ -324,6 +325,8 @@
           </select>
 
           <div class="notes-sub-label">Editar dados do aluno</div>
+          <input type="text" data-role="nome" data-student-id="${s.id}" placeholder="Nome" value="${escapeHtml(s.nome)}">
+          <div class="status-hint">Esse é o nome que aparece pro aluno dentro do próprio app dele.</div>
           <textarea data-role="note-text" data-student-id="${s.id}" placeholder="Nota privada sobre esse aluno (só você vê)...">${escapeHtml(note.nota || '')}</textarea>
           <div style="display:flex;gap:6px;">
             <input type="tel" data-role="telefone" data-student-id="${s.id}" placeholder="WhatsApp com DDD e país, ex: 5511999999999" value="${escapeHtml(s.telefone || '')}" style="flex:1;min-width:0;">
@@ -340,6 +343,21 @@
           </div>
           <button class="btn small" style="padding:7px 12px;font-size:12px;" data-role="save-edit" data-student-id="${s.id}">Salvar edição</button>
           <div class="msg" id="editSaveMsg-${s.id}"></div>
+
+          <div class="notes-sub-label">E-mail de acesso<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Por que a troca precisa de confirmação', 'O e-mail é o login do aluno — trocar errado aqui poderia trancar ele pra fora do próprio app sem ninguém perceber.<br><br>Por isso a troca só vale de verdade depois que o <strong>aluno confirma</strong>, clicando num link enviado pro endereço novo. O e-mail atual continua funcionando normalmente até lá.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></div>
+          ${s.pending_email ? `
+            <div class="status-hint">E-mail pendente de confirmação: <strong>${escapeHtml(s.pending_email)}</strong> — aguardando o aluno clicar no link enviado. O e-mail atual (${escapeHtml(s.email)}) continua funcionando até lá.</div>
+            <div style="display:flex;gap:6px;">
+              <button class="btn small secondary" style="flex:1;padding:7px 12px;font-size:12px;" data-role="resend-email-change" data-student-id="${s.id}" data-email="${escapeHtml(s.pending_email)}">Reenviar e-mail</button>
+              <button class="btn small secondary" style="flex:1;padding:7px 12px;font-size:12px;" data-role="cancel-email-change" data-student-id="${s.id}">Cancelar troca</button>
+            </div>
+          ` : `
+            <div style="display:flex;gap:6px;">
+              <input type="email" data-role="edit-email" data-student-id="${s.id}" placeholder="Novo e-mail" value="${escapeHtml(s.email)}" style="flex:1;min-width:0;">
+              <button class="btn small secondary" style="padding:7px 10px;font-size:11.5px;white-space:nowrap;flex-shrink:0;" data-role="request-email-change" data-student-id="${s.id}">Alterar e-mail</button>
+            </div>
+          `}
+          <div class="msg" id="emailChangeMsg-${s.id}"></div>
 
           <div class="payment-zone">
             <div class="notes-sub-label">Pagamento</div>
@@ -391,6 +409,15 @@
     });
     list.querySelectorAll('[data-role="mark-paid"]').forEach(btn => {
       btn.addEventListener('click', () => markPaid(btn.dataset.studentId));
+    });
+    list.querySelectorAll('[data-role="request-email-change"]').forEach(btn => {
+      btn.addEventListener('click', () => requestEmailChange(btn.dataset.studentId));
+    });
+    list.querySelectorAll('[data-role="resend-email-change"]').forEach(btn => {
+      btn.addEventListener('click', () => requestEmailChange(btn.dataset.studentId, btn.dataset.email));
+    });
+    list.querySelectorAll('[data-role="cancel-email-change"]').forEach(btn => {
+      btn.addEventListener('click', () => cancelEmailChange(btn.dataset.studentId));
     });
     list.querySelectorAll('[data-role="copy-invite"]').forEach(btn => {
       btn.addEventListener('click', () => sendInvite(btn.dataset.studentId, btn.dataset.name));
@@ -479,11 +506,19 @@
     msgEl.textContent = '';
     msgEl.className = 'msg';
 
+    const nome = document.querySelector(`[data-role="nome"][data-student-id="${studentId}"]`).value.trim();
     const nota = document.querySelector(`[data-role="note-text"][data-student-id="${studentId}"]`).value.trim();
     const telefone = document.querySelector(`[data-role="telefone"][data-student-id="${studentId}"]`).value.replace(/\D/g, '');
     const genero = document.querySelector(`[data-role="genero"][data-student-id="${studentId}"]`).value;
     const valorRaw = document.querySelector(`[data-role="mensalidade-valor"][data-student-id="${studentId}"]`).value;
     const diaRaw = document.querySelector(`[data-role="mensalidade-dia"][data-student-id="${studentId}"]`).value;
+
+    if (!nome) {
+      btn.disabled = false;
+      msgEl.textContent = 'O nome não pode ficar em branco.';
+      msgEl.className = 'msg error';
+      return;
+    }
 
     const notePayload = { professional_id: professional.id, student_id: studentId, nota };
     const existingNote = notesByStudent[studentId];
@@ -492,6 +527,7 @@
       : await supa.from('student_notes').insert(notePayload);
 
     const studentsPayload = {
+      nome,
       telefone: telefone || null,
       genero: genero || null,
       mensalidade_valor: valorRaw ? parseFloat(valorRaw) : null,
@@ -524,6 +560,59 @@
     // lista terminar — feedback imediato de que salvou e recolheu.
     const panel = $('notesPanel-' + studentId);
     if (panel) panel.classList.remove('open');
+    await loadStudents();
+  }
+
+  // Troca de e-mail com confirmação no endereço novo (2026-08-10, ver
+  // escopo-ajustes-agosto2026.md item 5) — separada do botão único "Salvar
+  // edição" de propósito: é uma classe de risco diferente (e-mail é o
+  // login do aluno, students.email = auth.jwt()->>'email' resolve
+  // identidade em quase toda RLS do projeto), então tem seu próprio fluxo
+  // assíncrono via Edge Function em vez de ser só mais um campo no update
+  // direto. `forcedEmail` é usado pelo botão "Reenviar" (já sabe o
+  // pending_email, não precisa reler do input, que nem existe nesse estado).
+  async function requestEmailChange(studentId, forcedEmail) {
+    const btn = document.querySelector(`[data-role="request-email-change"][data-student-id="${studentId}"], [data-role="resend-email-change"][data-student-id="${studentId}"]`);
+    const msgEl = $('emailChangeMsg-' + studentId);
+    if (btn) btn.disabled = true;
+    msgEl.textContent = '';
+    msgEl.className = 'msg';
+
+    const newEmail = forcedEmail || document.querySelector(`[data-role="edit-email"][data-student-id="${studentId}"]`)?.value?.trim();
+    if (!newEmail) {
+      if (btn) btn.disabled = false;
+      msgEl.textContent = 'Informe o novo e-mail.';
+      msgEl.className = 'msg error';
+      return;
+    }
+
+    const { data, error } = await supa.functions.invoke('request-student-email-change', {
+      body: { student_id: studentId, new_email: newEmail },
+    });
+    if (btn) btn.disabled = false;
+    if (error || data?.error) {
+      msgEl.textContent = 'Erro: ' + (data?.error || error?.message);
+      msgEl.className = 'msg error';
+      return;
+    }
+    toast('E-mail de confirmação enviado pro endereço novo.');
+    await loadStudents();
+  }
+
+  async function cancelEmailChange(studentId) {
+    const btn = document.querySelector(`[data-role="cancel-email-change"][data-student-id="${studentId}"]`);
+    const msgEl = $('emailChangeMsg-' + studentId);
+    btn.disabled = true;
+    const { data, error } = await supa.functions.invoke('request-student-email-change', {
+      body: { student_id: studentId, cancel: true },
+    });
+    btn.disabled = false;
+    if (error || data?.error) {
+      msgEl.textContent = 'Erro ao cancelar: ' + (data?.error || error?.message);
+      msgEl.className = 'msg error';
+      return;
+    }
+    toast('Troca de e-mail cancelada.');
     await loadStudents();
   }
 

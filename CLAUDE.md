@@ -94,6 +94,18 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### ⏳ Escopo FECHADO, pronto pra implementar (ainda zero código): 5 ajustes de uso real (2026-08-10, mesma sessão remota, continuação)
+
+Documento completo em `escopo-ajustes-agosto2026.md` — 5 anotações do usuário testando o app nos dias 05/08 e 09/08, desenhadas com o mesmo rigor de sempre (mapear ida-e-volta, intersecção com o que já existe, decisões de fork fechadas via `AskUserQuestion` antes de codar). **Zero código escrito ainda.**
+
+1. **Changelog fixo no sino, sem contar como "não lido"** — item pinado no topo da lista (profissional E aluno, decisão fechada), lendo direto do `CHANGELOG` já hardcoded em `whats-new.js` (expõe `window.__mpOpenWhatsNew()`), nunca vindo do banco. Sem schema novo.
+2. **Técnica de intensificação vs. contador de séries** — decisão fechada: só clareza de texto (Opção A), sem reestruturar a marcação. `TECNICA_TIPS` ganha frase explícita conectando a técnica ao que "Série N" significa na tela, e as 4 técnicas "de ciclo" (Rest-Pause/Drop-Set/Cluster/Myo-Reps) trocam o rótulo pra "Ciclo N" (só exibição, dado por trás intocado).
+3. **Excluir treino realizado** — decisão fechada: só o aluno, não o profissional. RLS já permite hoje (`training_history for all`), confirmado seguro nas duas intersecções que existem (ranking recalcula ao vivo, alerta de observação do profissional lê a tabela direto) — só falta o botão + confirm().
+4. **Legenda no campo "Nome"** — "esse é o nome que aparece pro aluno", mesmo padrão de legenda sempre visível já usado em Nutri.
+5. **Editar nome e e-mail do aluno** — nome é baixo risco (não é usado em RLS, entra no botão único "Salvar edição" já existente). **E-mail é o item mais delicado da leva**: `students.email = auth.jwt()->>'email'` resolve identidade em quase toda RLS do projeto — decisão fechada: troca **com confirmação no e-mail novo** antes de valer (não muda na hora), via 2 Edge Functions novas + tabela `student_email_change_requests` (token, mesmo padrão de bloqueio total de outras tabelas sensíveis) + página nova `confirmar-email.html`. Único item da leva que depende de deploy de Edge Function pra funcionar de ponta a ponta.
+
+Ver o `.md` pro desenho completo item a item, incluindo o fluxo exato de confirmação de e-mail e a tabela de "o que precisa de schema/deploy novo". Aguardando confirmação do usuário pra começar.
+
 ### ✅ Leva de ajustes em `treinos.html` + criador de treino por IA (2026-08-10, sessão remota)
 
 Sequência de pedidos do usuário testando `treinos.html` de verdade em produção, um a um.

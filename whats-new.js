@@ -9,6 +9,8 @@
     profissional: {
       version: '1.19.0',
       items: [
+        'Corrigido: treino de Costas podia sair com um exercício de outro grupo (ex: "Glúteo na polia baixa") mesmo depois do filtro que evita isso — a causa era o passo que busca o gif do exercício, que às vezes trocava o nome por um de outro grupo com texto de equipamento parecido. Agora esse passo nunca mais troca o nome do exercício, só o gif/vídeo vinculado.',
+        'Novo: rascunho de treino salva sozinho a cada poucos segundos, sem precisar clicar em "Salvar rascunho" — atualizar a página ou fechar o app no meio de uma montagem não perde mais o progresso (só protocolo já publicado continua exigindo clique explícito em "Publicar").',
         'Novo: reorganize os exercícios de um bloco de treino arrastando pela alça ao lado de cada um — inclusive os que a IA criou ou os que você acabou de adicionar (antes só entravam no final, sem jeito de reordenar).',
         'Novo: pra mover um treino inteiro (A, B, C...) de posição, use o seletor de letra no canto do bloco — escolher a letra de destino já reordena tudo, sem precisar arrastar o bloco.',
         'Novo: aba "Histórico" por aluno — veja todas as sessões de treino já finalizadas, com a intensidade percebida e a observação que o aluno escreveu no fim do treino (ex: relato de dor/desconforto).',

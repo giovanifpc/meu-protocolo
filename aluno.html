@@ -3853,17 +3853,26 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   // nunca tinha nenhuma explicação de como executar a técnica escolhida,
   // só via essa mesma nomenclatura sem contexto (quando via algo).
   const TECNICA_TIPS = {
-    'Drop-Set': 'Ao chegar na falha, reduza a carga e continue a série sem descansar.',
-    'Rest-Pause': 'Ao chegar perto da falha, pause 10-15s e continue com a mesma carga.',
-    'Cluster': 'Divida a série em mini-blocos, com um descanso bem curto entre eles.',
-    'Myo-Reps': 'Faça uma série de ativação e, em seguida, várias mini-séries curtas.',
-    'Pirâmide Crescente': 'A carga aumenta a cada série — comece mais leve.',
-    'Pirâmide Decrescente': 'A carga diminui a cada série — comece mais pesado.',
+    'Drop-Set': 'Ao chegar na falha, reduza a carga e continue sem descansar, quantas vezes o seu personal orientar. Cada "Ciclo" da lista abaixo é 1 rodada completa (com todos os drops) — marque só ao terminar a rodada inteira, não a cada drop.',
+    'Rest-Pause': 'Ao chegar perto da falha, pause 10-15s e continue com a mesma carga. Cada "Ciclo" da lista abaixo é 1 sequência completa de pausa-e-continua — marque só ao terminar o ciclo inteiro, não a cada pausa.',
+    'Cluster': 'Divida a série em mini-blocos, com um descanso bem curto entre eles. Cada "Ciclo" da lista abaixo é 1 cluster completo (todos os mini-blocos) — marque só ao terminar o cluster inteiro.',
+    'Myo-Reps': 'Faça uma série de ativação e, em seguida, várias mini-séries curtas. Cada "Ciclo" da lista abaixo é a ativação + todas as mini-séries dela — marque só ao terminar o ciclo inteiro.',
+    'Pirâmide Crescente': 'A carga aumenta a cada série — comece mais leve. Cada "Série" da lista abaixo é 1 degrau da pirâmide: ajuste peso e reps a cada uma, seguindo a progressão.',
+    'Pirâmide Decrescente': 'A carga diminui a cada série — comece mais pesado. Cada "Série" da lista abaixo é 1 degrau da pirâmide: ajuste peso e reps a cada uma, seguindo a progressão.',
     'Super Slow': 'Execute bem mais devagar que o normal, controlando toda a fase do movimento.',
-    'Bi-Set': 'Faça esse exercício seguido de outro, sem descanso entre os dois.',
-    'Tri-Set': 'Faça esse exercício seguido de mais dois, sem descanso entre eles.',
+    'Bi-Set': 'Depois de terminar a série daqui, vá direto pro próximo exercício sem descansar entre os dois.',
+    'Tri-Set': 'Depois de terminar a série daqui, vá direto pros próximos dois exercícios, sem descansar entre eles.',
     'Negativo': 'Foque na descida do movimento, bem devagar — peça ajuda de alguém se precisar.',
   };
+
+  // Técnicas onde uma linha da lista de marcação representa um CICLO inteiro
+  // da técnica (várias sub-tentativas), não uma série comum — o rótulo
+  // genérico "Série N" confundia o aluno sobre o que marcar e quando
+  // (relatado pelo usuário, 2026-08-10). Ajuste só de exibição: o dado por
+  // trás (sd.sets[si]) continua exatamente igual, nenhuma mudança de
+  // schema — ver escopo-ajustes-agosto2026.md, item 2 (decisão: só
+  // clareza de texto, sem reestruturar a marcação).
+  const TECNICAS_DE_CICLO = new Set(['Drop-Set', 'Rest-Pause', 'Cluster', 'Myo-Reps']);
 
   function renderExercise() {
     const w = protocol.workouts[state.workoutIndex];
@@ -3897,10 +3906,11 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
           ? mediaImgMarkup(ex.media, ex.nome, `<div class="media-ph"><span class="ph-ico">${ICONS.dumbbell}</span>Vídeo indisponível.</div>`)
           : `<div class="media-ph"><span class="ph-ico">${ICONS.dumbbell}</span>Vídeo em breve.</div>`;
 
+    const setLabel = TECNICAS_DE_CICLO.has(ex.tecnica) ? 'Ciclo' : 'Série';
     const setsHtml = sd.sets.map((set,si) => `
       <div class="set-row ${set.done?'done':''}" id="setRow${si}">
         <button class="set-check" onclick="toggleSet(${si})">${ICONS.check}</button>
-        <span class="set-num">Série ${si+1}</span>
+        <span class="set-num">${setLabel} ${si+1}</span>
         <div class="set-inputs">
           <div class="set-field"><input type="number" inputmode="decimal" placeholder="${escapeHtml(String(cfg.reps||''))}" value="${escapeHtml(set.reps)}" onchange="updateSetField(${si},'reps',this.value)"><label>reps</label></div>
           <div class="set-field"><input type="number" inputmode="decimal" placeholder="kg" value="${escapeHtml(set.carga)}" onchange="updateSetField(${si},'carga',this.value)"><label>carga</label></div>
@@ -3914,7 +3924,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       <div class="exec-counter">Exercício ${i+1} de ${w.exercises.length}</div>
       <div class="exec-name">${escapeHtml(ex.nome)}</div>
       <div class="exec-media">${media}</div>
-      <div class="sets-head"><span class="sh-title">Séries</span><span class="sh-target">Meta: ${cfg.sets}x${escapeHtml(String(cfg.reps))}${cfg.nota ? ' · ' + escapeHtml(cfg.nota) : ''} · descanso ${cfg.rest}s</span></div>
+      <div class="sets-head"><span class="sh-title">${setLabel}s</span><span class="sh-target">Meta: ${cfg.sets}x${escapeHtml(String(cfg.reps))}${cfg.nota ? ' · ' + escapeHtml(cfg.nota) : ''} · descanso ${cfg.rest}s</span></div>
       ${setsHtml}
       ${tecnicaHtml}
       ${noteHtml}`;

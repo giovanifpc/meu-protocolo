@@ -70,9 +70,6 @@
   if (!entry || !entry.items || !entry.items.length) return;
 
   var STORAGE_KEY = 'mp_whats_new_seen_' + SURFACE;
-  var seenVersion = null;
-  try { seenVersion = localStorage.getItem(STORAGE_KEY); } catch (e) {}
-  if (seenVersion === entry.version) return;
 
   function escapeHtml(s) {
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -142,8 +139,22 @@
   // dentro do PWA do aluno"). A página que sabe que vai redirecionar
   // deve setar `window.__mpSuppressWhatsNew = true` antes de navegar —
   // ver index.html/aluno.html boot().
+  //
+  // "Já visto" só bloqueia o popup AUTOMÁTICO — bug real achado testando
+  // de verdade (2026-08-10): a checagem de versão já vista estava ANTES
+  // de tudo, com um `return` que saía da IIFE inteira antes mesmo de expor
+  // window.__mpOpenWhatsNew/__mpWhatsNewVersion. Resultado: assim que
+  // alguém fechava o popup uma vez (gravando a versão em localStorage), o
+  // item fixo do sino parava de funcionar pro resto do dia — reproduzia
+  // exatamente o relato ("apareceu no aluno, não apareceu no profissional"
+  // — o profissional só tinha visto o popup mais cedo, o aluno não).
+  // Corrigido: a checagem de "já visto" agora só decide se o popup abre
+  // sozinho, nunca impede as duas funções globais de existirem.
   function maybeRender() {
     if (window.__mpSuppressWhatsNew) return;
+    var seenVersion = null;
+    try { seenVersion = localStorage.getItem(STORAGE_KEY); } catch (e) {}
+    if (seenVersion === entry.version) return;
     render();
   }
   function schedule() {
@@ -152,10 +163,9 @@
   if (document.body) schedule();
   else document.addEventListener('DOMContentLoaded', schedule);
 
-  // Item fixo no sino de notificações (2026-08-10) — pedido do usuário pra
-  // sempre ter como reabrir o changelog da versão atual a partir do sino,
-  // sem depender de já ter sido "visto" antes (o `render()` acima já ignora
-  // o estado salvo, então reaproveitamos ele direto). Nunca soma no ponto
+  // Item fixo no sino de notificações (2026-08-10) — sempre exposto,
+  // independente de já ter sido "visto" antes (é justamente o ponto do
+  // pedido: reabrir o changelog a qualquer momento). Nunca soma no ponto
   // de "não lido" do sino — quem chama isso (notif-bell.js/aluno.html)
   // trata como um item à parte, nunca como notificação real do banco.
   window.__mpOpenWhatsNew = render;

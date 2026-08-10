@@ -102,9 +102,11 @@ Dois jeitos de montar o treino de um aluno:
 
 **Cardio**: no modo manual, pode ser adicionado como item opcional de um treino (duração, intensidade, orientação, dicas). No modo por IA (desde 2026-08-04), é sempre incluído automaticamente como o último item de cada treino — leve se o treino for de perna/glúteo, moderado a intenso se for de superiores. Em qualquer um dos dois modos, cardio sempre aparece por último no treino, nunca no meio dos exercícios de força.
 
-Um protocolo tem status **rascunho** (só o profissional vê) ou **publicado** (o aluno já enxerga e pode treinar).
+Um protocolo tem status **rascunho** (só o profissional vê) ou **publicado** (o aluno já enxerga e pode treinar). Desde 2026-08-10, publicar (ou republicar um treino já ativo) avisa o aluno automaticamente — notificação dentro do app (sino) e push nativo, se ele já tiver ativado. O profissional também tem um botão "Avisar no WhatsApp" ao lado de "Publicar" pra mandar um recado direto, usando o WhatsApp cadastrado do aluno.
 
 Ao criar um treino novo por cima de um já existente, o anterior não é apagado — vira um rascunho guardado num dropdown "Rascunhos anteriores deste aluno" (acima dos botões de criar), com opção de reabrir (volta pra edição normal) ou apagar de vez.
+
+**Rascunho salva sozinho (desde 2026-08-10)**: enquanto o protocolo está em rascunho (ou ainda não foi salvo), o app salva automaticamente a cada poucos segundos que algo muda — atualizar a página ou fechar sem clicar em "Salvar rascunho" não perde mais o progresso. Um protocolo já publicado continua exigindo clique explícito em "Publicar" pra qualquer edição valer pro aluno.
 
 **Reorganizar exercícios e treinos (desde 2026-08-10)**: dentro de um bloco de treino, cada exercício tem uma alça (ícone de pontinhos, à esquerda) — segurar e arrastar reordena os exercícios livremente, inclusive os que a IA criou ou os recém-adicionados (que antes só entravam no final, sem jeito de mudar). Pra mover um treino inteiro (A, B, C...) de posição, tem um seletor de letra no canto do bloco — escolher outra letra ali já reordena o bloco pra aquela posição, sem precisar arrastar (arrastar um bloco inteiro seria ruim no celular, é grande demais pra tela pequena).
 

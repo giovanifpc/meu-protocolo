@@ -395,6 +395,7 @@
         <button class="btn secondary" id="saveDraftBtn">Salvar rascunho</button>
         <button class="btn" id="publishBtn">Publicar para o aluno</button>
         <button class="btn secondary" id="saveAsTemplateBtn" type="button">Salvar como modelo</button>
+        <button class="btn secondary" id="notifyWhatsappBtn" type="button" style="display:none;"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="vertical-align:-2px;margin-right:5px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12.004 2C6.486 2 2.01 6.477 2.01 11.996c0 1.996.582 3.85 1.578 5.42L2 22l4.68-1.548a9.94 9.94 0 0 0 5.324 1.542h.004c5.518 0 9.994-4.478 9.994-9.997C21.998 6.478 17.522 2 12.004 2Zm0 18.19a8.17 8.17 0 0 1-4.166-1.144l-.299-.177-3.09 1.023 1.038-3.006-.194-.31a8.19 8.19 0 0 1-1.256-4.38c0-4.53 3.687-8.216 8.221-8.216 4.531 0 8.216 3.686 8.216 8.216 0 4.53-3.685 8.216-8.216 8.216Z"/></svg>Avisar no WhatsApp</button>
         <span id="autosaveStatus" class="autosave-status"></span>
       </div>
     </div>
@@ -1872,6 +1873,9 @@
     $('duracaoInput').value = currentProtocol.duracao_semanas || PERIODIZATION_DEFAULT_WEEKS[currentProtocol.periodizacao] || 4;
     updatePeriodizationUI();
     renderWorkouts();
+    // Botão de avisar por WhatsApp só faz sentido pra treino já publicado
+    // (rascunho não existe ainda pro aluno, não tem o que avisar).
+    $('notifyWhatsappBtn').style.display = currentProtocol.status === 'publicado' ? '' : 'none';
     // Autosave: toda vez que o protocolo em tela é (re)carregado — aluno
     // trocado, rascunho reaberto, modelo aplicado, IA gerou um resultado
     // novo, ou o próprio autosave/save acabou de gravar — o snapshot atual
@@ -2422,7 +2426,31 @@
   }
   setInterval(runAutosaveTick, 3000);
 
+  // Bug real reportado (2026-08-10): publicar um treino não avisava o
+  // aluno de jeito nenhum — ele só saberia abrindo o app por conta
+  // própria. Reaproveita a Edge Function send-push que já existe (mesma
+  // usada por outros avisos do projeto) — ela grava a notificação DENTRO
+  // do app (sino de notificações) sempre, e manda push nativo de verdade
+  // se o aluno já tiver ativado (Perfil > Notificações). Nunca bloqueia
+  // nem falha o "Publicar" em si — se o aviso não sair por algum motivo,
+  // o treino continua publicado normalmente, só sem o aviso extra.
+  async function notifyStudentPublished(jaEstavaPublicado) {
+    try {
+      await supa.functions.invoke('send-push', {
+        body: {
+          student_id: currentProtocol.student_id,
+          title: jaEstavaPublicado ? 'Seu treino foi atualizado!' : 'Novo treino disponível!',
+          body: 'Abra o app pra conferir.',
+          url: 'aluno.html',
+        },
+      });
+    } catch (e) {
+      console.error('Falha ao notificar aluno sobre o treino publicado:', e);
+    }
+  }
+
   async function saveProtocol(status) {
+    const jaEstavaPublicado = currentProtocol.status === 'publicado';
     currentProtocol.titulo = $('tituloInput').value.trim() || 'Protocolo de treino';
     const payload = {
       professional_id: professional.id,
@@ -2467,6 +2495,7 @@
     renderProtocol();
     await updateDraftsArea(currentProtocol.student_id);
     toast(status === 'publicado' ? 'Protocolo publicado para o aluno.' : 'Rascunho salvo.');
+    if (status === 'publicado') notifyStudentPublished(jaEstavaPublicado);
     window.__checkAssistantHint && window.__checkAssistantHint();
   }
 
@@ -2482,6 +2511,28 @@
     await saveProtocol('rascunho');
   }));
   $('publishBtn').addEventListener('click', () => commitCreation(() => saveProtocol('publicado')));
+
+  // Mesmo padrão já usado em sendInvite() (alunos.html): abre o WhatsApp
+  // com a mensagem pronta se o aluno tem telefone cadastrado; sem
+  // telefone, copia o texto pro clipboard (sem link fixo pra copiar aqui,
+  // diferente do convite — é só uma mensagem avulsa).
+  $('notifyWhatsappBtn').addEventListener('click', async () => {
+    const student = studentsById[currentProtocol.student_id];
+    if (!student) return;
+    const primeiroNome = (student.nome || '').trim().split(' ')[0];
+    const msg = `Oi ${primeiroNome}! Seu treino no Meu Protocolo foi atualizado — já pode abrir o app e conferir.`;
+    const telefone = (student.telefone || '').replace(/\D/g, '');
+    if (telefone) {
+      window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(msg);
+      toast('Sem WhatsApp cadastrado pra esse aluno — mensagem copiada, cole onde preferir.');
+    } catch {
+      toast('Sem WhatsApp cadastrado pra esse aluno.');
+    }
+  });
 
   boot();
 </script>

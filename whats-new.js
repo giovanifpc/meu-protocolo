@@ -9,6 +9,7 @@
     profissional: {
       version: '1.19.0',
       items: [
+        'Novo: publicar um treino agora avisa o aluno automaticamente (notificação dentro do app + push, se ele tiver ativado) — antes ele só saberia se abrisse o app por conta própria. Um botão novo "Avisar no WhatsApp" também apareceu ao lado de "Publicar", pra mandar um aviso direto pelo WhatsApp cadastrado do aluno.',
         'Corrigido: treino de Costas podia sair com um exercício de outro grupo (ex: "Glúteo na polia baixa") mesmo depois do filtro que evita isso — a causa era o passo que busca o gif do exercício, que às vezes trocava o nome por um de outro grupo com texto de equipamento parecido. Agora esse passo nunca mais troca o nome do exercício, só o gif/vídeo vinculado.',
         'Novo: rascunho de treino salva sozinho a cada poucos segundos, sem precisar clicar em "Salvar rascunho" — atualizar a página ou fechar o app no meio de uma montagem não perde mais o progresso (só protocolo já publicado continua exigindo clique explícito em "Publicar").',
         'Novo: reorganize os exercícios de um bloco de treino arrastando pela alça ao lado de cada um — inclusive os que a IA criou ou os que você acabou de adicionar (antes só entravam no final, sem jeito de reordenar).',
@@ -36,8 +37,9 @@
       ]
     },
     aluno: {
-      version: '1.11.0',
+      version: '1.12.0',
       items: [
+        'Novo: quando seu personal publica ou atualiza seu treino, você recebe um aviso (dentro do app + notificação push, se estiver ativada) — não precisa mais adivinhar quando tem treino novo.',
         'Corrigido: o som do timer de descanso estava baixo demais e a vibração podia não disparar no fim do descanso — som bem mais alto/longo, e a tela agora fica sempre ativa durante o treino (evita que o celular apague e atrapalhe o timer).',
         'Corrigido: busca de alimento no diário não encontrava itens básicos que já existiam na base (ex: ovo frito, ovo cozido, arroz branco) — busca melhorada pra encontrar mesmo com palavras fora de ordem.',
         'Corrigido: a aba onde você clica em "Instalar" continuava logada depois — se ficasse aberta, podia derrubar sua sessão no app instalado sem nenhum aviso. Agora, assim que o app termina de instalar, aparece um recado claro pra fechar essa aba.',

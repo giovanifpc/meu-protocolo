@@ -1934,7 +1934,26 @@
   // (mesma classe de bug corrigida em 2026-08-01 pro caso da IA), e cura
   // sozinho qualquer protocolo antigo que tenha ficado com letra errada.
   function recomputeWorkoutLetters(workouts) {
-    workouts.forEach((w, i) => { w.id = String.fromCharCode(65 + i); });
+    workouts.forEach((w, i) => {
+      const newId = String.fromCharCode(65 + i);
+      // O título (w.name) é texto livre, separado de w.id — nasce sempre
+      // como "Treino {letra}" ou "Treino {letra} - grupo muscular" (tanto
+      // no criador manual quanto na IA), mas depois de criado nunca mais é
+      // tocado por código. Sem isso, mover um bloco pelo seletor de
+      // posição trocava a letra do badge mas deixava a letra ERRADA
+      // grudada no título (achado real testando: "Treino C" continuava
+      // "Treino C" depois de virar o 2º bloco/letra B).
+      // Corrigido: só a letra em si, no início exato do texto, é trocada
+      // — nunca um find-and-replace solto no meio do título, então um
+      // título de verdade customizado (sem esse prefixo) nunca é mexido.
+      if (w.id && w.id !== newId && w.name) {
+        const m = w.name.match(/^(Treino\s+)([A-Z])\b/);
+        if (m && m[2] === w.id) {
+          w.name = w.name.slice(0, m[1].length) + newId + w.name.slice(m[1].length + 1);
+        }
+      }
+      w.id = newId;
+    });
   }
 
   function dragHandleHtml() {

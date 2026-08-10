@@ -7,8 +7,10 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.20.0',
+      version: '1.21.0',
       items: [
+        'Novo: item fixo "Novidades desta atualização" no sino de notificações — reabra o changelog da versão atual a qualquer momento, sem esperar ele aparecer sozinho de novo.',
+        'Novo: agora dá pra editar o nome e o e-mail de um aluno já cadastrado, direto no painel de edição — nome é editável junto do resto (com aviso de que é o nome que o aluno vê no app dele); e-mail tem um fluxo próprio, com confirmação no endereço novo antes de valer de verdade (evita trancar o aluno fora por erro de digitação).',
         'Corrigido: gerar treino por IA podia terminar com um erro técnico cru na tela (treino mais completo — muitos exercícios/semanas — cortava a resposta da IA no meio) — ajustado o gerador pra caber a resposta inteira com folga, e mesmo se acontecer de novo agora aparece um aviso normal pedindo pra tentar de novo, nunca mais o erro técnico cru.',
         'Corrigido: gerar treino por IA podia dar erro se você trocasse de aluno, clicasse em "‹ Voltar" ou abrisse "Criar novo manual" antes da geração terminar — esses controles agora ficam bloqueados durante a geração, e o texto mostra o tempo real decorrido em vez do "até 30s" (que não era real em treinos mais completos).',
         'Novo: publicar um treino agora avisa o aluno automaticamente (notificação dentro do app + push, se ele tiver ativado) — antes ele só saberia se abrisse o app por conta própria. Um botão novo "Avisar no WhatsApp" também apareceu ao lado de "Publicar", pra mandar um aviso direto pelo WhatsApp cadastrado do aluno.',
@@ -39,8 +41,11 @@
       ]
     },
     aluno: {
-      version: '1.12.0',
+      version: '1.13.0',
       items: [
+        'Novo: item fixo "Novidades desta atualização" no sino de notificações — reabra o changelog da versão atual a qualquer momento.',
+        'Novo: dá pra excluir uma sessão de treino do seu histórico (ex: um teste ou engano) — toque no ícone de lixeira em qualquer sessão.',
+        'Corrigido: pra técnicas como Rest-Pause, Drop-Set, Cluster e Myo-Reps, o rótulo das séries na tela de execução agora diz "Ciclo" em vez de "Série" — deixa claro que cada linha é um ciclo completo da técnica, não uma série comum.',
         'Novo: quando seu personal publica ou atualiza seu treino, você recebe um aviso (dentro do app + notificação push, se estiver ativada) — não precisa mais adivinhar quando tem treino novo.',
         'Corrigido: o som do timer de descanso estava baixo demais e a vibração podia não disparar no fim do descanso — som bem mais alto/longo, e a tela agora fica sempre ativa durante o treino (evita que o celular apague e atrapalhe o timer).',
         'Corrigido: busca de alimento no diário não encontrava itens básicos que já existiam na base (ex: ovo frito, ovo cozido, arroz branco) — busca melhorada pra encontrar mesmo com palavras fora de ordem.',

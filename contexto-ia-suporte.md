@@ -92,6 +92,8 @@ O app **não processa pagamento de aluno pra profissional** — só ajuda o prof
 
 Ao cadastrar um aluno novo (desde 2026-07-27), aparece um banner com o WhatsApp preenchido e um botão "Enviar convite" — clicar abre o WhatsApp já com o link e a mensagem prontos; dá pra fechar e mandar depois também (o mesmo botão "Enviar convite" continua disponível na lista de alunos a qualquer momento).
 
+Nome e e-mail do aluno também são editáveis (desde 2026-08-10), direto no painel de edição. Nome muda na hora, junto do resto ("Salvar edição"). E-mail é diferente: como é o login do aluno, a troca **não vale imediatamente** — o sistema manda um e-mail de confirmação pro endereço NOVO, e só quando o aluno clica no link é que a troca acontece de verdade (o e-mail antigo continua funcionando até lá). Enquanto está pendente, o profissional vê o status na tela, com opção de reenviar o e-mail ou cancelar a troca.
+
 ### 5.5 Treinos
 
 Dois jeitos de montar o treino de um aluno:
@@ -113,6 +115,8 @@ Ao criar um treino novo por cima de um já existente, o anterior não é apagado
 ### 5.6 App do aluno
 
 O aluno usa um app separado, instalável na tela inicial do celular (PWA). Ele vê o próximo treino do seu ciclo, executa marcando séries feitas (com carga e reps), tem timer de descanso automático, e ao final vê um resumo com avaliação de humor. Se a máquina de um exercício estiver ocupada, o botão "Lista" (rodapé da execução, desde 2026-07-31) mostra todos os exercícios do treino com check nos concluídos — toca em qualquer um pra pular direto pra ele, sem perder o controle do que já fez; "Próximo" passa a pular sozinho quem já foi concluído, em vez de seguir só a ordem original. Também acompanha evolução de carga (gráfico), histórico de treinos, avaliação física (se o profissional já registrou alguma) e orientação nutricional. Ganha "conquistas" (badges) por marcos como primeiro treino, sequência de semanas treinando, etc.
+
+Desde 2026-08-10, o aluno pode excluir uma sessão do próprio histórico de treino (ícone de lixeira em cada sessão) — útil pra limpar um teste ou engano. Não tem volta depois de confirmar. Também desde 2026-08-10, pra técnicas de intensificação que agrupam várias tentativas numa só marcação (Rest-Pause, Drop-Set, Cluster, Myo-Reps), o rótulo das linhas na tela de execução vira "Ciclo" em vez de "Série" — é só uma etiqueta mais clara, o número de linhas continua o mesmo.
 
 Desde 2026-07-27, no primeiro acesso (antes de responder a anamnese de saúde), a Início mostra um card de boas-vindas pedindo pra responder a anamnese antes de começar a usar o app — não bloqueia o resto do app, é só um lembrete que fica ali até o aluno responder.
 
@@ -162,6 +166,8 @@ Cada profissional tem um link próprio de indicação, em Configurações ("Indi
 ### 5.16 Sino de notificações e menu (adicionado 2026-07-27)
 
 O painel do profissional tem um sino fixo no topo de toda tela (ao lado do menu ☰), com histórico de eventos: mensagem nova de um aluno, aluno que respondeu a anamnese pela primeira vez. "Sair" saiu do topo e agora fica dentro do menu ☰ (lateral), junto dos outros atalhos.
+
+Desde 2026-08-10, o sino também tem um item fixo no topo, "Novidades desta atualização" — sempre presente (não é uma notificação de verdade, nunca conta como "não lida"), reabre o mesmo banner de changelog da versão atual a qualquer momento. O app do aluno tem o mesmo item no próprio sino dele.
 
 ### 5.17 Exercício personalizado (adicionado 2026-07-27)
 

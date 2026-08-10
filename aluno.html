@@ -356,8 +356,12 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .hist-item.notif-pinned .hist-date svg{width:14px;height:14px;flex-shrink:0}
 .hist-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .hist-date{font-size:14px;font-weight:700}
+.hist-top-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .hist-badge{font-size:11px;color:var(--primary);font-weight:700;background:rgba(var(--primary-rgb),.1);padding:4px 10px;border-radius:8px;white-space:nowrap}
 .hist-incomplete .hist-badge{color:var(--warn-text);background:var(--warn-bg)}
+.hist-delete-btn{background:none;border:none;padding:4px;cursor:pointer;color:var(--muted);display:flex;align-items:center;flex-shrink:0}
+.hist-delete-btn svg{width:16px;height:16px}
+.hist-delete-btn:active{color:var(--danger,#C0392B)}
 .hist-meta{font-size:12px;color:var(--muted);margin-top:8px;display:flex;gap:16px;flex-wrap:wrap}
 .hist-meta-ico{display:inline-flex;align-items:center;gap:4px}
 .hist-meta-ico svg{width:13px;height:13px;flex-shrink:0}
@@ -2477,7 +2481,10 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         <div class="hist-item ${incomplete ? 'hist-incomplete' : ''}">
           <div class="hist-top">
             <span class="hist-date">Treino ${escapeHtml(h.workout_id)} · ${escapeHtml(String(h.workout_name || '').replace(/^Treino [A-Za-z0-9]+ — /,''))}</span>
-            <span class="hist-badge">${incomplete ? 'Incompleto' : 'Completo'}</span>
+            <span class="hist-top-right">
+              <span class="hist-badge">${incomplete ? 'Incompleto' : 'Completo'}</span>
+              <button type="button" class="hist-delete-btn" data-role="delete-session" data-uid="${escapeHtml(h.session_uid)}" data-incomplete="${incomplete ? '1' : ''}" title="Excluir esta sessão" aria-label="Excluir sessão">${ICONS.trash}</button>
+            </span>
           </div>
           <div class="hist-meta">
             <span class="hist-meta-ico">${ICONS.calendar} ${d.toLocaleDateString('pt-BR')}</span>
@@ -2499,6 +2506,32 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     container.querySelectorAll('[data-role="edit-rating-toggle"]').forEach(el => {
       el.addEventListener('click', () => openHistoryRatingEditor(el.dataset.uid));
     });
+    // Excluir sessão (2026-08-10) — pedido real do usuário, pra limpar
+    // sessão de teste/engano. RLS já permite (training_history "student
+    // manages own history" for all, supabase_06) — não precisou de
+    // migration nova, só o botão. Sem restrição de escopo (completa ou
+    // incompleta pode ser apagada, mesmo padrão "sem retenção" já usado
+    // em outras listas do app) — só o texto do confirm() muda pra deixar
+    // claro quando a sessão conta nas estatísticas. Mutação local do
+    // array `history` (splice) + re-render, mesmo padrão já usado em
+    // finishWorkout() (history.unshift) — Home/calendário semanal leem
+    // essa mesma referência ao vivo na próxima vez que renderizarem,
+    // sem precisar de um refresh forçado agora.
+    container.querySelectorAll('[data-role="delete-session"]').forEach(el => {
+      el.addEventListener('click', () => deleteHistorySession(el.dataset.uid, el.dataset.incomplete === '1', container));
+    });
+  }
+
+  async function deleteHistorySession(sessionUid, incomplete, container) {
+    const msg = incomplete
+      ? 'Excluir esta sessão de treino? Essa ação não pode ser desfeita.'
+      : 'Essa sessão está completa e conta nas suas estatísticas — apagar não pode ser desfeito. Excluir mesmo assim?';
+    if (!confirm(msg)) return;
+    const { error } = await supa.from('training_history').delete().eq('session_uid', sessionUid);
+    if (error) { toast('Erro ao excluir: ' + error.message); return; }
+    history = history.filter(h => h.session_uid !== sessionUid);
+    buildHistList(container);
+    toast('Sessão excluída.');
   }
 
   function openHistoryRatingEditor(sessionUid) {

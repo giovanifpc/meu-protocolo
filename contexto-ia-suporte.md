@@ -118,6 +118,8 @@ O aluno usa um app separado, instalável na tela inicial do celular (PWA). Ele v
 
 Desde 2026-08-10, o aluno pode excluir uma sessão do próprio histórico de treino (ícone de lixeira em cada sessão) — útil pra limpar um teste ou engano. Não tem volta depois de confirmar. Também desde 2026-08-10, pra técnicas de intensificação que agrupam várias tentativas numa só marcação (Rest-Pause, Drop-Set, Cluster, Myo-Reps), o rótulo das linhas na tela de execução vira "Ciclo" em vez de "Série" — é só uma etiqueta mais clara, o número de linhas continua o mesmo.
 
+Cada série já vem com carga e reps pré-preenchidos com o que o aluno realmente fez naquela MESMA série na última vez que treinou esse exercício (série 1 puxa da série 1 anterior, série 2 da série 2 anterior, e assim por diante — nunca um valor único repetido em todas). Uma série nova, que a sessão anterior não tinha, ou que nunca chegou a ser marcada como feita, vem em branco/com a meta de reps do protocolo, não com um número inventado.
+
 Desde 2026-07-27, no primeiro acesso (antes de responder a anamnese de saúde), a Início mostra um card de boas-vindas pedindo pra responder a anamnese antes de começar a usar o app — não bloqueia o resto do app, é só um lembrete que fica ali até o aluno responder.
 
 ### 5.7 Avaliação física

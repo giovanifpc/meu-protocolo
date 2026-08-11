@@ -1984,15 +1984,27 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     }
     return streak;
   }
-  function lastCargaFor(nome) {
+  // Bug real reportado pelo usuário (2026-08-11): o app pré-preenchia TODA
+  // série com um único número (o maior peso levantado na última vez que o
+  // exercício apareceu) e sempre usava a meta de reps do PROTOCOLO, nunca o
+  // que o aluno realmente fez — então um exercício em pirâmide (ex: série 1
+  // a 40kg, série 2 a 45kg, série 3 a 50kg) reabria com 50kg nas 3 séries, e
+  // reps nunca refletia o que foi de fato realizado. Corrigido: agora
+  // retorna a lista de séries da última vez (por POSIÇÃO), pra cada nova
+  // série puxar carga E reps do mesmo índice da sessão anterior — exatamente
+  // como pedido ("salvar as cargas e reps exatamente como foram no último
+  // treino daquele exercício"), não mais um valor único aplicado a tudo.
+  function lastSetsFor(nome) {
     for (const h of history) {
-      const found = (h.detail?.exercises || []).find(e => e.nome === nome);
-      if (found && found.sets) {
-        const cargas = found.sets.filter(s => s.done && s.carga).map(s => parseFloat(s.carga) || 0);
-        if (cargas.length) return String(Math.max(...cargas));
-      }
+      const found = (h.detail?.exercises || []).find(e => e.nome === nome && Array.isArray(e.sets));
+      // Só conta como "última vez" se pelo menos 1 série de fato foi
+      // marcada feita — sessão em que o exercício foi só pulado (todas as
+      // séries com done:false) não tem dado real pra propagar; carga/reps
+      // ali dentro seria só o pré-preenchido de uma sessão ainda mais
+      // antiga, não algo que aconteceu de verdade.
+      if (found && found.sets.some(s => s.done)) return found.sets;
     }
-    return '';
+    return null;
   }
 
   /* ---- HISTÓRICO ---- */
@@ -3957,7 +3969,25 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         return { type: 'cardio', done: false, skipped: false, minutesDone: '', targetMinutes: exerciseTargetMinutes(ex) };
       }
       const cfg = exerciseWeekConfig(ex);
-      return { type: 'strength', skipped: false, sets: Array.from({ length: Number(cfg.sets) || 1 }, () => ({ done:false, doneAt:null, carga: lastCargaFor(ex.nome), reps: String(cfg.reps || '') })) };
+      const numSets = Number(cfg.sets) || 1;
+      const pastSets = lastSetsFor(ex.nome);
+      return {
+        type: 'strength', skipped: false,
+        sets: Array.from({ length: numSets }, (_, si) => {
+          // Mesma posição (si) da última vez — nunca um valor único
+          // repetido pra todas as séries. Uma série que a sessão anterior
+          // não tinha (ex: periodização aumentou o volume esta semana) ou
+          // que não foi marcada feita cai no comportamento de sempre:
+          // carga em branco, reps na meta prescrita pelo protocolo.
+          const past = pastSets && pastSets[si] && pastSets[si].done ? pastSets[si] : null;
+          return {
+            done: false,
+            doneAt: null,
+            carga: past ? String(past.carga || '') : '',
+            reps: past && past.reps ? String(past.reps) : String(cfg.reps || ''),
+          };
+        }),
+      };
     });
     $('execWoName').textContent = w.name;
     buildExecProgress();

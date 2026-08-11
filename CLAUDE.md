@@ -94,6 +94,10 @@ O código-base, sistema de pagamento, chatbot IA e onboarding devem ser projetad
 
 ## Status atual
 
+### ⏳ Pendência registrada pra sessão do PC: deploy do `support-chat` com o contexto do bug de pré-preenchimento (2026-08-11)
+
+Usuário testando o app de verdade num treino real, pediu explicitamente pra registrar. O código do bug abaixo já está corrigido, testado e no ar (deploy do GitHub Pages, não depende de Edge Function) — só o `SYSTEM_PROMPT` de `support-chat` (já atualizado no arquivo, commit `0856bd2`) não foi implantado: o Personal Access Token do Supabase gerado nesta sessão expirou (401 na chamada de deploy) antes de dar tempo. `contexto-ia-suporte.md` (seção 5.6) já está com o texto certo, só falta rodar `supabase functions deploy support-chat` — sem isso, o chatbot de suporte não sabe explicar essa mudança de comportamento se um aluno perguntar. Baixo risco/baixa urgência (não afeta o funcionamento do app), mas fica registrado aqui pra não esquecer na próxima sessão com CLI/token disponível.
+
 ### ✅ Bug real: pré-preenchimento de série usava um valor único pra tudo, nunca os reps realmente feitos (2026-08-11, mesma sessão remota, continuação)
 
 Reportado pelo usuário: *"O app preenche todas as séries com a última carga do treino anterior. Tem que salvar as cargas e reps exatamente como foram no último treino daquele exercício"*. Investigado no código (`lastCargaFor`, `aluno.html`) antes de mexer: confirmado — a função pegava o MAIOR peso entre todas as séries marcadas feitas na última vez que o exercício apareceu e aplicava esse único número em TODA série nova (bug real num treino em pirâmide: série 1 a 40kg/série 2 a 45kg/série 3 a 50kg reabria com 50kg nas 3). Reps nunca vinha do histórico — sempre a meta prescrita pelo protocolo, nunca o que o aluno de fato fez.

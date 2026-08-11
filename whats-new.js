@@ -54,8 +54,9 @@
       ]
     },
     aluno: {
-      version: '1.13.0',
+      version: '1.14.0',
       items: [
+        'Novo: o diário alimentar (aba Nutri) ganhou um seletor de dia da semana + setas pra navegar entre semanas — dá pra ver e até registrar refeição de um dia passado, não só de hoje (esqueceu de anotar o almoço de ontem? agora dá pra lançar retroativo).',
         'Novo: item fixo "Novidades desta atualização" no sino de notificações — reabra o changelog da versão atual a qualquer momento.',
         'Novo: dá pra excluir uma sessão de treino do seu histórico (ex: um teste ou engano) — toque no ícone de lixeira em qualquer sessão.',
         'Corrigido: pra técnicas como Rest-Pause, Drop-Set, Cluster e Myo-Reps, o rótulo das séries na tela de execução agora diz "Ciclo" em vez de "Série" — deixa claro que cada linha é um ciclo completo da técnica, não uma série comum.',

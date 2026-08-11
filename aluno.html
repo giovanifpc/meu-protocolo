@@ -475,6 +475,18 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 .food-log-empty{font-size:13px;color:var(--muted);text-align:center;padding:14px 0}
 .food-log-total{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;font-weight:700}
 .food-log-total span:last-child{color:var(--primary)}
+.food-log-week-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.wlnav-arrow{background:none;border:1px solid var(--card-border);border-radius:8px;width:28px;height:28px;font-size:15px;font-weight:700;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;padding:0}
+.wlnav-arrow:disabled{opacity:.35;cursor:not-allowed}
+.wlnav-range{font-size:11.5px;color:var(--muted);font-weight:700}
+.food-log-week-cal{display:flex;gap:6px;margin-bottom:12px}
+.food-log-week-cal .wc-day{flex:1;aspect-ratio:1/1;border-radius:10px;background:var(--elev);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--faint);border:1px solid var(--card-border);cursor:pointer;font-family:inherit;padding:0}
+.food-log-week-cal .wc-day:disabled{opacity:.35;cursor:not-allowed}
+.food-log-week-cal .wc-day .wc-lbl{font-size:9px;font-weight:700;text-transform:uppercase}
+.food-log-week-cal .wc-day .wc-num{font-size:13px;font-weight:800}
+.food-log-week-cal .wc-day.today:not(.selected){border-color:var(--primary);color:var(--primary)}
+.food-log-week-cal .wc-day.selected{background:var(--primary);color:#fff;border-color:transparent}
+.add-meal-day-hint{font-size:12px;color:var(--primary);font-weight:700;margin:-6px 0 10px}
 
 #addMealCard{max-width:400px;max-height:88vh;overflow-y:auto}
 .meal-type-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px}
@@ -1034,6 +1046,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
 <div class="checkin-overlay" id="addMealOverlay">
   <div class="checkin-card" id="addMealCard">
     <h3>Adicionar refeição</h3>
+    <div class="add-meal-day-hint" id="addMealDayHint" style="display:none"></div>
 
     <div id="addMealSearchView">
       <div class="meal-type-row" id="mealTypeRow"></div>
@@ -1281,7 +1294,8 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   let sleepQualitySel = null;
   let sleepDurationSel = null;
   let macroGoal = null; // student_macro_goal — null = ainda travado, sem consulta validada
-  let foodLogToday = []; // student_food_log do dia local do aluno
+  let foodLogToday = []; // student_food_log do dia SELECIONADO (nem sempre hoje, ver selectedFoodLogDate)
+  let selectedFoodLogDate = new Date(); // dia do diário alimentar em exibição — reseta pra hoje ao reentrar na aba Nutri
   let foodPickedItem = null; // item de food_library selecionado no meio do fluxo "Adicionar refeição"
   let foodSearchDebounce = null;
   let state = { workoutIndex:0, currentExercise:0, sessionData:[], startTime:null, restInterval:null, restEndsAt:null, restLabel:null, restTotal:0, rating:null, ratingNote:'', warmup:null, finishSessionUid:null, finishRecordDetail:null, overviewMode:'preview' };
@@ -1316,7 +1330,16 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     $('navNutri').classList.toggle('active', tab === 'nutri');
     $('navProfile').classList.toggle('active', tab === 'profile');
     if (tab === 'history') buildWorkoutHub();
-    else if (tab === 'nutri') buildNutri();
+    else if (tab === 'nutri') {
+      // Reentrar na aba sempre volta o diário pra hoje (nunca fica preso
+      // num dia passado que o aluno navegou antes e esqueceu de voltar).
+      if (todayKey(selectedFoodLogDate) !== todayKey()) {
+        selectedFoodLogDate = new Date();
+        loadFoodLogForSelectedDate();
+      } else {
+        buildNutri();
+      }
+    }
     else if (tab === 'profile') buildProfile();
     else buildHomeDashboard();
     showScreen(tab);
@@ -1745,7 +1768,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       .from('student_food_log')
       .select('*')
       .eq('student_id', student.id)
-      .eq('data', todayKey())
+      .eq('data', todayKey(selectedFoodLogDate))
       .order('created_at', { ascending: true });
     foodLogToday = log || [];
 
@@ -2904,8 +2927,8 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   /* ---- CHECK-IN DIÁRIO (água + sono) ----
      Coleta de dados do aluno — pré-requisito pra interpretação de relatório
      por IA (Elite). Uma linha por dia em student_checkins, upsert. */
-  function todayKey() {
-    const d = new Date();
+  function todayKey(d) {
+    d = d || new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
@@ -3052,6 +3075,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     $('foodLogList').querySelectorAll('[data-role="edit-log-qty"]').forEach(el => {
       el.addEventListener('click', () => toggleEditLogQty(el.dataset.logId));
     });
+    bindFoodLogNav();
   }
 
   /* ---- NUTRITRACKER: meta validada + diário alimentar ----
@@ -3118,8 +3142,107 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       </div>`;
   }
 
+  /* Seletor de dia/semana do diário — mesmo padrão criado pro profissional
+     em nutri.html (2026-08-10/11), aqui adaptado pro app do aluno: além de
+     ver, o aluno também pode ADICIONAR/editar/remover refeição de um dia
+     passado (esqueceu de registrar o almoço de ontem? dá pra lançar
+     retroativo), reaproveitando o mesmo botão/modal "Adicionar refeição" —
+     ele grava sempre no dia SELECIONADO, não fixo em hoje. Reseta pra hoje
+     ao reentrar na aba Nutri (goTab), nunca durante um re-render interno
+     (senão perderia a navegação a cada refeição adicionada/removida). */
+  function mondayOf(d) {
+    const dow = d.getDay();
+    const diffToMonday = dow === 0 ? -6 : 1 - dow;
+    const monday = new Date(d);
+    monday.setDate(d.getDate() + diffToMonday);
+    monday.setHours(0, 0, 0, 0);
+    return monday;
+  }
+
+  function foodLogWeekCells(anchorDate) {
+    const monday = mondayOf(anchorDate);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const labels = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      d.setHours(0, 0, 0, 0);
+      return {
+        date: d,
+        key: todayKey(d),
+        label: labels[i],
+        num: d.getDate(),
+        isToday: d.getTime() === today.getTime(),
+        isSelected: d.toDateString() === anchorDate.toDateString(),
+        isFuture: d.getTime() > today.getTime(),
+      };
+    });
+  }
+
+  function foodLogNavHtml() {
+    const cells = foodLogWeekCells(selectedFoodLogDate);
+    const weekHasToday = cells.some(c => c.isToday);
+    const fmt = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const dayBtns = cells.map(c => `
+      <button type="button" class="wc-day ${c.isSelected ? 'selected' : ''} ${c.isToday ? 'today' : ''}" ${c.isFuture ? 'disabled' : ''} data-role="food-log-day" data-key="${c.key}">
+        <span class="wc-lbl">${c.label}</span><span class="wc-num">${c.num}</span>
+      </button>`).join('');
+    return `
+      <div class="food-log-week-nav">
+        <button type="button" class="wlnav-arrow" data-role="food-log-prev-week" aria-label="Semana anterior">‹</button>
+        <span class="wlnav-range">${fmt(cells[0].date)} – ${fmt(cells[6].date)}</span>
+        <button type="button" class="wlnav-arrow" data-role="food-log-next-week" aria-label="Próxima semana" ${weekHasToday ? 'disabled' : ''}>›</button>
+      </div>
+      <div class="food-log-week-cal">${dayBtns}</div>`;
+  }
+
+  function foodLogDayLabel() {
+    const key = todayKey(selectedFoodLogDate);
+    const todayK = todayKey();
+    const yestK = todayKey(new Date(Date.now() - 86400000));
+    const fmt = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return key === todayK ? 'hoje' : key === yestK ? 'ontem' : fmt(selectedFoodLogDate);
+  }
+
+  function bindFoodLogNav() {
+    document.querySelectorAll('[data-role="food-log-day"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const [y, m, d] = btn.dataset.key.split('-').map(Number);
+        selectedFoodLogDate = new Date(y, m - 1, d);
+        loadFoodLogForSelectedDate();
+      });
+    });
+    const prevBtn = document.querySelector('[data-role="food-log-prev-week"]');
+    if (prevBtn) prevBtn.addEventListener('click', () => {
+      const d = new Date(selectedFoodLogDate);
+      d.setDate(d.getDate() - 7);
+      selectedFoodLogDate = d;
+      loadFoodLogForSelectedDate();
+    });
+    const nextBtn = document.querySelector('[data-role="food-log-next-week"]');
+    if (nextBtn && !nextBtn.disabled) nextBtn.addEventListener('click', () => {
+      const d = new Date(selectedFoodLogDate);
+      d.setDate(d.getDate() + 7);
+      selectedFoodLogDate = d;
+      loadFoodLogForSelectedDate();
+    });
+  }
+
+  async function loadFoodLogForSelectedDate() {
+    const { data, error } = await supa
+      .from('student_food_log')
+      .select('*')
+      .eq('student_id', student.id)
+      .eq('data', todayKey(selectedFoodLogDate))
+      .order('created_at', { ascending: true });
+    if (error) { toast('Erro ao carregar o diário: ' + error.message); return; }
+    foodLogToday = data || [];
+    buildNutri();
+  }
+
   function foodLogSectionHtml() {
     const t = dailyTotals();
+    const dayLabel = foodLogDayLabel();
     const rows = foodLogToday.length
       ? foodLogToday.map(r => `
           <div class="food-log-row">
@@ -3130,10 +3253,11 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
             <button type="button" class="flr-remove" data-role="remove-log" data-log-id="${r.id}" aria-label="Remover">${ICONS.trash}</button>
           </div>
           <div class="food-log-qty-edit" id="editQty-${r.id}" style="display:none;"></div>`).join('')
-      : '<div class="food-log-empty">Nenhuma refeição registrada hoje ainda.</div>';
+      : `<div class="food-log-empty">Nenhuma refeição registrada ${dayLabel === 'hoje' || dayLabel === 'ontem' ? dayLabel : `em ${dayLabel}`} ainda.</div>`;
     return `
       <div class="nutri-card">
-        <div class="section-label" style="margin-top:0">Diário de hoje</div>
+        <div class="section-label" style="margin-top:0">Diário de ${dayLabel}</div>
+        ${foodLogNavHtml()}
         <button class="btn btn-primary" id="openAddMealBtn" type="button" style="width:100%;margin-bottom:14px">${ICONS.plus} Adicionar refeição</button>
         <div id="foodLogList">${rows}</div>
         <div class="food-log-total">
@@ -3208,6 +3332,13 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     selectedMealType = defaultMealType();
     foodPickedItem = null;
     editingFoodLibId = null;
+    const dayLabel = foodLogDayLabel();
+    if (dayLabel === 'hoje') {
+      $('addMealDayHint').style.display = 'none';
+    } else {
+      $('addMealDayHint').textContent = `Registrando pra ${dayLabel}, não hoje.`;
+      $('addMealDayHint').style.display = 'block';
+    }
     $('createFoodBtn').textContent = 'Criar e usar';
     $('deleteFoodLibBtn').style.display = 'none';
     $('mealTypeRow').innerHTML = Object.keys(MEAL_LABELS).map(k =>
@@ -3340,7 +3471,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
       proteina_g: Math.round(foodPickedItem.proteina_g_100g * ratio * 100) / 100,
       carboidrato_g: Math.round(foodPickedItem.carboidrato_g_100g * ratio * 100) / 100,
       gordura_g: Math.round(foodPickedItem.gordura_g_100g * ratio * 100) / 100,
-      data: todayKey(),
+      data: todayKey(selectedFoodLogDate),
     };
     const { data, error } = await supa.from('student_food_log').insert(payload).select().single();
     if (error) { toast('Erro ao adicionar: ' + error.message); return; }

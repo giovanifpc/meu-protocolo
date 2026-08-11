@@ -102,6 +102,22 @@
   .flr-meta { font-size:11.5px; color:var(--muted); margin-top:2px; }
   .food-log-total { display:flex; justify-content:space-between; margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:12.5px; font-weight:700; }
   .food-log-total span:last-child { color:var(--primary); }
+  /* Seletor de dia + navegação por semana do diário (2026-08-10) — antes só
+     dava pra ver "hoje", pedido real de um profissional que precisou olhar
+     o registro de ontem de um aluno. Mesmo visual do calendário semanal já
+     usado em aluno.html (labels S/T/Q/Q/S/S/D, dia treinado em destaque),
+     só que aqui cada dia é clicável e existe navegação entre semanas. */
+  .food-log-week-nav { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .wlnav-arrow { background:none; border:1px solid var(--line); border-radius:8px; width:28px; height:28px; font-size:15px; font-weight:700; color:var(--text); cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:inherit; padding:0; }
+  .wlnav-arrow:disabled { opacity:.35; cursor:not-allowed; }
+  .wlnav-range { font-size:11.5px; color:var(--muted); font-weight:700; }
+  .food-log-week-cal { display:flex; gap:6px; margin-bottom:12px; }
+  .food-log-week-cal .wc-day { flex:1; aspect-ratio:1/1; border-radius:10px; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; color:var(--muted); border:1px solid var(--line); cursor:pointer; font-family:inherit; padding:0; }
+  .food-log-week-cal .wc-day:disabled { opacity:.35; cursor:not-allowed; }
+  .food-log-week-cal .wc-day .wc-lbl { font-size:9px; font-weight:700; text-transform:uppercase; }
+  .food-log-week-cal .wc-day .wc-num { font-size:13px; font-weight:800; }
+  .food-log-week-cal .wc-day.today:not(.selected) { border-color:var(--primary); color:var(--primary); }
+  .food-log-week-cal .wc-day.selected { background:var(--primary); color:#fff; border-color:transparent; }
   .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:#23263a; color:#fff; padding:10px 18px; border-radius:10px; font-size:13px; z-index:999; }
 </style>
 </head>
@@ -128,7 +144,7 @@
 
     <div id="editorArea" style="display:none;">
       <div class="card">
-        <h2>Diário alimentar de hoje<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Sobre o diário', 'O aluno registra sozinho o que comeu no próprio app — aqui você só acompanha, não edita. É o mesmo somatório que ele vê do lado dele.<br><br>É medição, não prescrição: o app nunca calcula meta nenhuma sozinho, só soma o que foi registrado.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></h2>
+        <h2><span id="foodLogTitle">Diário alimentar de hoje</span><button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Sobre o diário', 'O aluno registra sozinho o que comeu no próprio app — aqui você só acompanha, não edita. É o mesmo somatório que ele vê do lado dele.<br><br>Toque em qualquer dia da semana pra ver o registro daquele dia, ou use as setas pra navegar pra semanas anteriores.<br><br>É medição, não prescrição: o app nunca calcula meta nenhuma sozinho, só soma o que foi registrado.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></h2>
         <div id="foodLogArea"></div>
       </div>
 
@@ -216,6 +232,8 @@
   let professional = null;
   let currentGuidance = null; // { id, student_id, orientacao, pdf_path, pdf_nome }
   let currentMacroGoal = null; // student_macro_goal (null = ainda travado, nenhuma consulta validada)
+  let currentFoodLogStudentId = null; // pra rebind dos cliques de dia/semana sem precisar repassar o id toda vez
+  let selectedFoodLogDate = new Date(); // dia sendo visto no diário — reseta pra "hoje" ao trocar de aluno
   const UF_LIST = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
   const MEAL_LABELS = {
     cafe_da_manha: 'Café da manhã', lanche_manha: 'Lanche da manhã', almoco: 'Almoço',
@@ -225,8 +243,8 @@
   // current_date do servidor) — o diário é gravado com a data local de quem
   // registrou, então o profissional precisa calcular do mesmo jeito pra ver
   // o dia certo.
-  function localDateKey() {
-    const d = new Date();
+  function localDateKey(d) {
+    d = d || new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
@@ -292,6 +310,7 @@
     const studentId = e.target.value;
     updateTabbar(studentId);
     if (!studentId) { $('editorArea').style.display = 'none'; return; }
+    selectedFoodLogDate = new Date(); // trocar de aluno sempre volta pro dia de hoje
     await loadOrCreateGuidance(studentId);
     await loadMacroGoal(studentId);
     await loadFoodLogArea(studentId);
@@ -577,19 +596,108 @@
     refreshSaveEnabled();
   }
 
-  /* ---- Diário alimentar do aluno (só leitura, aluno registra do próprio app) ---- */
+  /* ---- Diário alimentar do aluno (só leitura, aluno registra do próprio app) ----
+     Antes só dava pra ver "hoje" — pedido real de um profissional que
+     precisou olhar o registro de ONTEM de um aluno pra avaliar (2026-08-10).
+     RLS já permitia ler qualquer data (student_food_log_student_date_idx,
+     supabase_51), só faltava a UI. Seletor de dia (semana atual, Segunda a
+     Domingo) + navegação entre semanas — dia selecionado nunca é reiniciado
+     sozinho, só ao trocar de aluno (ver listener de studentSelect). */
+  function mondayOf(d) {
+    const dow = d.getDay();
+    const diffToMonday = dow === 0 ? -6 : 1 - dow;
+    const monday = new Date(d);
+    monday.setDate(d.getDate() + diffToMonday);
+    monday.setHours(0, 0, 0, 0);
+    return monday;
+  }
+
+  function foodLogWeekCells(anchorDate) {
+    const monday = mondayOf(anchorDate);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const labels = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      d.setHours(0, 0, 0, 0);
+      return {
+        date: d,
+        key: localDateKey(d),
+        label: labels[i],
+        num: d.getDate(),
+        isToday: d.getTime() === today.getTime(),
+        isSelected: d.toDateString() === anchorDate.toDateString(),
+        isFuture: d.getTime() > today.getTime(),
+      };
+    });
+  }
+
+  function foodLogNavHtml() {
+    const cells = foodLogWeekCells(selectedFoodLogDate);
+    const weekHasToday = cells.some(c => c.isToday);
+    const fmt = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const dayBtns = cells.map(c => `
+      <button type="button" class="wc-day ${c.isSelected ? 'selected' : ''} ${c.isToday ? 'today' : ''}" ${c.isFuture ? 'disabled' : ''} data-role="food-log-day" data-key="${c.key}">
+        <span class="wc-lbl">${c.label}</span><span class="wc-num">${c.num}</span>
+      </button>`).join('');
+    return `
+      <div class="food-log-week-nav">
+        <button type="button" class="wlnav-arrow" data-role="food-log-prev-week" aria-label="Semana anterior">‹</button>
+        <span class="wlnav-range">${fmt(cells[0].date)} – ${fmt(cells[6].date)}</span>
+        <button type="button" class="wlnav-arrow" data-role="food-log-next-week" aria-label="Próxima semana" ${weekHasToday ? 'disabled' : ''}>›</button>
+      </div>
+      <div class="food-log-week-cal">${dayBtns}</div>`;
+  }
+
+  function updateFoodLogTitle() {
+    const key = localDateKey(selectedFoodLogDate);
+    const todayKey = localDateKey();
+    const yestKey = localDateKey(new Date(Date.now() - 86400000));
+    const fmt = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = key === todayKey ? 'de hoje' : key === yestKey ? 'de ontem' : `de ${fmt(selectedFoodLogDate)}`;
+    $('foodLogTitle').textContent = `Diário alimentar ${label}`;
+  }
+
+  function bindFoodLogNav() {
+    document.querySelectorAll('[data-role="food-log-day"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const [y, m, d] = btn.dataset.key.split('-').map(Number);
+        selectedFoodLogDate = new Date(y, m - 1, d);
+        loadFoodLogArea(currentFoodLogStudentId);
+      });
+    });
+    const prevBtn = document.querySelector('[data-role="food-log-prev-week"]');
+    if (prevBtn) prevBtn.addEventListener('click', () => {
+      const d = new Date(selectedFoodLogDate);
+      d.setDate(d.getDate() - 7);
+      selectedFoodLogDate = d;
+      loadFoodLogArea(currentFoodLogStudentId);
+    });
+    const nextBtn = document.querySelector('[data-role="food-log-next-week"]');
+    if (nextBtn && !nextBtn.disabled) nextBtn.addEventListener('click', () => {
+      const d = new Date(selectedFoodLogDate);
+      d.setDate(d.getDate() + 7);
+      selectedFoodLogDate = d;
+      loadFoodLogArea(currentFoodLogStudentId);
+    });
+  }
+
   async function loadFoodLogArea(studentId) {
+    currentFoodLogStudentId = studentId;
+    updateFoodLogTitle();
+    const nav = foodLogNavHtml();
     const { data, error } = await supa
       .from('student_food_log')
       .select('*')
       .eq('student_id', studentId)
-      .eq('data', localDateKey())
+      .eq('data', localDateKey(selectedFoodLogDate))
       .order('created_at', { ascending: true });
     const area = $('foodLogArea');
-    if (error) { area.innerHTML = '<div class="empty">Erro ao carregar o diário.</div>'; return; }
+    if (error) { area.innerHTML = nav + '<div class="empty">Erro ao carregar o diário.</div>'; bindFoodLogNav(); return; }
     const rows = data || [];
     if (!rows.length) {
-      area.innerHTML = '<div class="empty">Nenhuma refeição registrada por este aluno hoje ainda.</div>';
+      area.innerHTML = nav + '<div class="empty">Nenhuma refeição registrada por este aluno nesse dia.</div>';
+      bindFoodLogNav();
       return;
     }
     const totals = rows.reduce((acc, r) => ({
@@ -598,7 +706,7 @@
       carboidrato: acc.carboidrato + Number(r.carboidrato_g || 0),
       gordura: acc.gordura + Number(r.gordura_g || 0),
     }), { kcal: 0, proteina: 0, carboidrato: 0, gordura: 0 });
-    area.innerHTML = rows.map(r => `
+    area.innerHTML = nav + rows.map(r => `
       <div class="food-log-row">
         <div>
           <div class="flr-name">${escapeHtml(r.nome_congelado)}</div>
@@ -612,6 +720,7 @@
         <span>${Math.round(totals.kcal)}kcal · P ${Math.round(totals.proteina)}g · C ${Math.round(totals.carboidrato)}g · G ${Math.round(totals.gordura)}g</span>
       </div>
     `;
+    bindFoodLogNav();
   }
 
   boot();

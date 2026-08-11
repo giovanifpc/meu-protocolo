@@ -187,7 +187,7 @@ Na aba Nutri do aluno, abaixo da orientação em texto/PDF de sempre (seção 5.
 
 **A meta de calorias/macros é diferente — fica travada até o profissional preencher**, e só pode ser preenchida depois de uma consulta real com uma nutricionista parceira (nome + CRN + UF são obrigatórios). O motivo é legal: calcular meta calórica/de macronutrientes é "prescrição dietética", atividade que só nutricionista pode fazer (Conselho Federal de Nutrição) — o Meu Protocolo nunca calcula essa meta sozinho, só guarda o que a nutricionista já definiu numa consulta de verdade. Enquanto não tem meta validada, o aluno já pode registrar o que comeu normalmente — só não vê barra de progresso em relação a uma meta. Se o profissional perguntar "por que não consigo definir a meta calórica pro aluno direto", a explicação é essa (nunca sugerir contornar isso).
 
-O profissional vê o diário do dia do aluno (só leitura, mesma aba Nutri) — não edita, só acompanha adesão.
+O profissional vê o diário do dia do aluno (só leitura, mesma aba Nutri) — não edita, só acompanha adesão. **Não é só "hoje" (desde 2026-08-10)**: o card tem um seletor de dias da semana corrente (toca num dia pra ver o registro daquele dia) mais setas "‹"/"›" pra navegar semana anterior/posterior — dá pra revisar qualquer dia do histórico do aluno, não só o dia atual.
 
 ### 5.20 Histórico de treinos + observação do aluno (adicionado 2026-08-05)
 

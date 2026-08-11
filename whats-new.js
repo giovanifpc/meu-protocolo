@@ -19,8 +19,9 @@
 
   var CHANGELOG = {
     profissional: {
-      version: '1.21.0',
+      version: '1.22.0',
       items: [
+        'Novo: no diário alimentar do aluno (aba Nutri), agora dá pra ver o registro de qualquer dia da semana, não só de hoje — toque num dia do seletor semanal, ou use as setas pra navegar entre semanas anteriores.',
         'Novo: item fixo "Novidades desta atualização" no sino de notificações — reabra o changelog da versão atual a qualquer momento, sem esperar ele aparecer sozinho de novo.',
         'Novo: agora dá pra editar o nome e o e-mail de um aluno já cadastrado, direto no painel de edição — nome é editável junto do resto (com aviso de que é o nome que o aluno vê no app dele); e-mail tem um fluxo próprio, com confirmação no endereço novo antes de valer de verdade (evita trancar o aluno fora por erro de digitação).',
         'Corrigido: gerar treino por IA podia terminar com um erro técnico cru na tela (treino mais completo — muitos exercícios/semanas — cortava a resposta da IA no meio) — ajustado o gerador pra caber a resposta inteira com folga, e mesmo se acontecer de novo agora aparece um aviso normal pedindo pra tentar de novo, nunca mais o erro técnico cru.',

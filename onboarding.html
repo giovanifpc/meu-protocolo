@@ -167,6 +167,12 @@
     if (existingErr) console.error('Falha ao checar conta existente:', existingErr.message);
     if (existing?.status === 'inativo') {
       showMsg('Sua assinatura está cancelada. Seus dados ficam retidos por um tempo — entre em contato pra reativar: contato@meuprotocolo.app');
+    } else if (existing?.status === 'deletado') {
+      // Mesma correção de login.html (2026-08-14) — 'deletado' agora
+      // bloqueia igual 'inativo' bloqueia, em vez de deixar passar pra
+      // tela de cartão (o que, sem essa checagem, permitiria reativar
+      // uma conta marcada como excluída completando o cadastro de novo).
+      showMsg('Esta conta foi encerrada. Se isso for um engano, fale com contato@meuprotocolo.app');
     } else if (existing?.mp_preapproval_id || existing?.billing_exempt) {
       window.location.href = 'index.html';
     } else if (existing) {

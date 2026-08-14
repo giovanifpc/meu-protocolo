@@ -164,6 +164,15 @@
         showMsg('Sua assinatura está cancelada. Seus dados ficam retidos por um tempo — entre em contato pra reativar: contato@meuprotocolo.app', 'error');
         return;
       }
+      // 'deletado' agora bloqueia de verdade (2026-08-14) — achado real: até
+      // aqui era só uma string sem efeito nenhum de acesso, mais fraca que
+      // 'inativo' (que já bloqueava). is_professional_email() já exclui
+      // 'deletado' do resultado, então sem esta checagem a pessoa cairia no
+      // ramo "nunca vi essa conta" (onboarding.html) em vez de ser recusada.
+      if (prof?.status === 'deletado') {
+        showMsg('Esta conta foi encerrada. Se isso for um engano, fale com contato@meuprotocolo.app', 'error');
+        return;
+      }
       // billing_exempt: contas isentas de cobrança (teste interno, programa
       // Founder) nunca vão ter mp_preapproval_id de verdade — sem essa
       // checagem, ficariam presas num loop de volta pro onboarding pra sempre.

@@ -25,6 +25,8 @@
   .btn:active { transform:scale(.97); }
   .btn.secondary { background:var(--bg); color:var(--text); border:1px solid var(--line); }
   .btn.small { padding:6px 10px; font-size:12px; }
+  .btn.danger { background:var(--danger); }
+  .row-save { display:flex; gap:6px; }
   .btn:disabled { opacity:.5; cursor:not-allowed; }
   main { max-width:1100px; margin:0 auto; padding:20px; }
   .summary-row { display:flex; gap:12px; margin-bottom:18px; flex-wrap:wrap; }
@@ -242,11 +244,41 @@
       <td>
         <div class="row-save">
           <button class="btn small saveBtn">Salvar</button>
+          <button class="btn small danger deleteBtn" title="Excluir permanentemente">Excluir</button>
         </div>
       </td>
     `;
 
     tr.querySelector('.valorInput').addEventListener('input', (e) => applyMoneyMask(e.target));
+
+    // Exclusão permanente (2026-08-14) — sem retenção, sem desfazer. Antes
+    // disso o único jeito de "remover" alguém era marcar status='deletado',
+    // que nunca apagou nada de verdade (só mudava uma string). Confirmação
+    // por digitação do e-mail (não um confirm() simples, que se clica no
+    // automático) — a segurança de verdade é a checagem de aal2 dentro da
+    // RPC, isso aqui é só fricção contra excluir a pessoa errada.
+    tr.querySelector('.deleteBtn').addEventListener('click', async () => {
+      const typed = prompt(
+        `Isso apaga PERMANENTEMENTE "${row.display_name}" (${row.email}) e todos os dados dos alunos dele (treinos, avaliações, mensagens, tudo) — sem período de retenção, sem desfazer.\n\nNão bloqueia o e-mail de criar uma conta nova depois — pra isso, use status "inativo" em vez de excluir.\n\nDigite o e-mail exato pra confirmar:`
+      );
+      if (typed === null) return;
+      if (typed.trim().toLowerCase() !== row.email.toLowerCase()) {
+        alert('E-mail não bateu — nada foi excluído.');
+        return;
+      }
+      const btn = tr.querySelector('.deleteBtn');
+      btn.disabled = true;
+      btn.textContent = 'Excluindo...';
+      const { error } = await supa.rpc('master_delete_professional', { p_professional_id: row.id });
+      if (error) {
+        console.error('Falha ao excluir:', error.message);
+        alert('Erro ao excluir: ' + error.message);
+        btn.disabled = false;
+        btn.textContent = 'Excluir';
+        return;
+      }
+      tr.remove();
+    });
 
     tr.querySelector('.saveBtn').addEventListener('click', async () => {
       const btn = tr.querySelector('.saveBtn');

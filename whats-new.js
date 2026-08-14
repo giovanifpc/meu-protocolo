@@ -54,8 +54,9 @@
       ]
     },
     aluno: {
-      version: '1.15.0',
+      version: '1.16.0',
       items: [
+        'Corrigido: se seu personal atualizasse o treino enquanto você já estava executando ele (ex: mudou os exercícios do bloco), retomar o treino podia deixar "Marcar feito" do cardio e "Finalizar treino" sem funcionar. Agora, se o treino foi alterado enquanto estava em andamento, o app avisa e pede pra iniciar de novo com a versão mais recente, em vez de travar sem explicação.',
         'Corrigido: toda série de um exercício abria com o mesmo peso (o maior que você levantou da última vez), mesmo em treino de pirâmide com pesos diferentes por série — agora cada série pré-preenche com a carga E os reps que você realmente fez naquela mesma série (1ª com a 1ª, 2ª com a 2ª...) na última vez, não mais um número único repetido em todas.',
         'Novo: o diário alimentar (aba Nutri) ganhou um seletor de dia da semana + setas pra navegar entre semanas — dá pra ver e até registrar refeição de um dia passado, não só de hoje (esqueceu de anotar o almoço de ontem? agora dá pra lançar retroativo).',
         'Novo: item fixo "Novidades desta atualização" no sino de notificações — reabra o changelog da versão atual a qualquer momento.',

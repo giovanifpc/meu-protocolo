@@ -3798,14 +3798,29 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
      escopo pequeno até aparecer uma necessidade real de retomar em outro
      celular. */
   const ACTIVE_SESSION_KEY = 'mp_active_session_v1';
+  // "Assinatura" da lista de exercícios de um treino — tipo+nome de cada um,
+  // na ordem. Usada só pra detectar se o profissional editou o MESMO
+  // treino/protocolo (id igual, conteúdo diferente) enquanto o aluno tinha
+  // uma sessão em andamento — bug real, 2026-08-14: sem essa checagem,
+  // retomar uma sessão salva contra um treino com exercícios
+  // adicionados/removidos/reordenados/trocados (força↔cardio) deixava
+  // sessionData[i] apontando pro índice errado — "Marcar feito" do cardio
+  // virava um no-op silencioso (toggleCardioDone já recusa mexer num sd que
+  // não é type:'cardio') e finalizar quebrava (w.exercises[i] podia nem
+  // existir mais), sem nenhum erro visível pro aluno.
+  function workoutExerciseSignature(w) {
+    return (w?.exercises || []).map(ex => `${isCardioExercise(ex) ? 'cardio' : 'forca'}:${ex?.nome || ''}`).join('|');
+  }
   function persistSession() {
     if (!state.startTime) return; // sem sessão em andamento, nada a guardar
     try {
+      const w = protocol.workouts[state.workoutIndex];
       localStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify({
         studentId: student.id,
         protocolId: protocol.id,
         workoutIndex: state.workoutIndex,
-        workoutId: protocol.workouts[state.workoutIndex]?.id,
+        workoutId: w?.id,
+        exercisesSignature: workoutExerciseSignature(w),
         currentExercise: state.currentExercise,
         sessionData: state.sessionData,
         startTime: state.startTime,
@@ -3830,13 +3845,18 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     } catch (e) { return null; }
   }
   // Confere que a sessão salva ainda faz sentido contra o protocolo carregado
-  // agora (o profissional pode ter publicado um protocolo novo enquanto o
-  // aluno tinha um treino pendente) — se não bater, a sessão é descartada
-  // silenciosamente, sem erro pro aluno.
+  // agora (o profissional pode ter publicado um protocolo novo, OU editado o
+  // mesmo treino que o aluno já tinha em andamento — ver comentário de
+  // workoutExerciseSignature acima) — se não bater, a sessão é descartada
+  // silenciosamente, sem erro pro aluno (cai no fluxo de treino novo).
   function findPersistedSessionWorkout(saved) {
     if (!saved || !protocol || saved.protocolId !== protocol.id) return null;
     const w = protocol.workouts[saved.workoutIndex];
     if (!w || w.id !== saved.workoutId) return null;
+    // saved.exercisesSignature pode não existir em sessão persistida por uma
+    // versão anterior a este fix — nesse caso não há como comparar, deixa
+    // passar (mesmo comportamento de antes, sem regressão).
+    if (saved.exercisesSignature && saved.exercisesSignature !== workoutExerciseSignature(w)) return null;
     return w;
   }
 
@@ -3871,7 +3891,7 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
   function resumeSessionFromStorage() {
     const saved = loadPersistedSessionRaw();
     const w = findPersistedSessionWorkout(saved);
-    if (!saved || !w) { clearPersistedSession(); toast('Essa sessão não está mais disponível.'); return; }
+    if (!saved || !w) { clearPersistedSession(); toast('Esse treino em andamento não está mais disponível — seu personal pode ter atualizado o protocolo. Inicie de novo pra continuar.'); return; }
     hideNav();
     state.workoutIndex = saved.workoutIndex;
     state.currentExercise = Math.min(saved.currentExercise, saved.sessionData.length - 1);
@@ -3966,13 +3986,13 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     state.restEndsAt = null; state.restLabel = null; state.restTotal = 0;
     state.sessionData = w.exercises.map(ex => {
       if (isCardioExercise(ex)) {
-        return { type: 'cardio', done: false, skipped: false, minutesDone: '', targetMinutes: exerciseTargetMinutes(ex) };
+        return { type: 'cardio', nome: ex.nome, done: false, skipped: false, minutesDone: '', targetMinutes: exerciseTargetMinutes(ex) };
       }
       const cfg = exerciseWeekConfig(ex);
       const numSets = Number(cfg.sets) || 1;
       const pastSets = lastSetsFor(ex.nome);
       return {
-        type: 'strength', skipped: false,
+        type: 'strength', nome: ex.nome, skipped: false,
         sets: Array.from({ length: numSets }, (_, si) => {
           // Mesma posição (si) da última vez — nunca um valor único
           // repetido pra todas as séries. Uma série que a sessão anterior
@@ -4408,9 +4428,18 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
         rating: null,
         rating_note: null,
         warmup: state.warmup || null,
+        // Nome vem de sd.nome (gravado no início da sessão, em
+        // startWorkoutFresh) em vez de w.exercises[i] — defesa em
+        // profundidade contra o mesmo bug de sessão desatualizada (o
+        // profissional edita o treino no meio da execução): mesmo se
+        // findPersistedSessionWorkout deixasse passar algum caso, w.exercises[i]
+        // podia nem existir mais (protocolo com menos exercícios agora) e
+        // quebrava o finalizar inteiro, sem nenhum aviso pro aluno (bug real,
+        // 2026-08-14). w.exercises[i]?.nome só como último fallback, pra
+        // sessão persistida antes deste fix (sem sd.nome ainda).
         exercises: state.sessionData.map((sd,i) => sd.type === 'cardio'
-          ? { nome: w.exercises[i].nome, tipo: 'cardio', done: !!sd.done, targetMinutes: sd.targetMinutes, minutesDone: Number(sd.minutesDone) || 0 }
-          : { nome: w.exercises[i].nome, skipped: !!sd.skipped, sets: sd.sets.map(s => ({ done: s.done, carga: s.carga, reps: s.reps, doneAt: s.doneAt || null })) })
+          ? { nome: sd.nome || w.exercises[i]?.nome || 'Exercício', tipo: 'cardio', done: !!sd.done, targetMinutes: sd.targetMinutes, minutesDone: Number(sd.minutesDone) || 0 }
+          : { nome: sd.nome || w.exercises[i]?.nome || 'Exercício', skipped: !!sd.skipped, sets: sd.sets.map(s => ({ done: s.done, carga: s.carga, reps: s.reps, doneAt: s.doneAt || null })) })
       }
     };
 

@@ -84,6 +84,30 @@ Deno.serve(async (req) => {
       return jsonResponse({ ok: true, cancelled: true });
     }
 
+    // Cooldown por aluno (2026-08-14, achado numa auditoria de segurança) —
+    // antes disso, `new_email` sendo livre (não precisa ter relação nenhuma
+    // com o aluno de verdade) permitia chamar esta function repetidamente
+    // mirando um student_id próprio válido pra spammar QUALQUER caixa de
+    // terceiro com "confirme seu novo e-mail", de graça, via o remetente do
+    // Meu Protocolo — abuso de custo/spam, não vazamento de dado, mas real.
+    // 5 min é suficiente pra bloquear disparo em série sem atrapalhar o caso
+    // legítimo (reenviar depois de um typo ou "não chegou").
+    const { data: lastReq } = await supaAdmin
+      .from('student_email_change_requests')
+      .select('created_at')
+      .eq('student_id', student_id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (lastReq) {
+      const elapsedMs = Date.now() - new Date(lastReq.created_at).getTime();
+      const cooldownMs = 5 * 60 * 1000;
+      if (elapsedMs < cooldownMs) {
+        const waitSec = Math.ceil((cooldownMs - elapsedMs) / 1000);
+        throw new Error(`Aguarde ${waitSec}s antes de pedir outra troca de e-mail pra este aluno.`);
+      }
+    }
+
     if (!new_email) throw new Error('new_email é obrigatório.');
     const newEmailNorm = String(new_email).trim().toLowerCase();
     if (!isValidEmail(newEmailNorm)) throw new Error('E-mail inválido.');

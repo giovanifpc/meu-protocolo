@@ -48,8 +48,15 @@ as $$
   );
 $$;
 
-revoke execute on function is_professional_email() from public;
-revoke execute on function is_student_email() from public;
+-- IMPORTANTE (achado ao aplicar pela 1ª vez, 2026-08-14): "revoke ... from
+-- public" sozinho NÃO tira o acesso de anon — o Supabase concede EXECUTE a
+-- anon/authenticated/service_role via default privilege do schema public na
+-- criação da function, separado do papel PUBLIC. Revogar de public só afeta
+-- quem herdava só por ali. Precisa revogar de anon explicitamente também,
+-- senão a function continua chamável sem sessão nenhuma (confirmado
+-- rodando contra produção: sem esta linha, anon ainda tinha EXECUTE).
+revoke execute on function is_professional_email() from public, anon;
+revoke execute on function is_student_email() from public, anon;
 grant execute on function is_professional_email() to authenticated;
 grant execute on function is_student_email() to authenticated;
 
@@ -63,5 +70,5 @@ as $$
   select auth.jwt() ->> 'email' = 'meuprotocolo1@gmail.com';
 $$;
 
-revoke execute on function is_master() from public;
+revoke execute on function is_master() from public, anon;
 grant execute on function is_master() to authenticated;

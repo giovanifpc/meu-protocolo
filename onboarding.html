@@ -133,7 +133,9 @@
     // trava, o upsert abaixo criaria um profissional "fantasma" pro e-mail
     // master, inacessível depois pra sempre (login.html sempre redireciona
     // esse e-mail pro master.html antes de checar a tabela professionals).
-    if (session.user.email === 'meuprotocolo1@gmail.com') { window.location.href = 'master.html'; return; }
+    // Via RPC (is_master(), 2026-08-14) em vez do e-mail hardcoded aqui.
+    const { data: isMasterSession } = await supa.rpc('is_master');
+    if (isMasterSession) { window.location.href = 'master.html'; return; }
 
     // Mesmo motivo da trava do e-mail master, agora pra sessão de ALUNO:
     // localStorage é compartilhado entre abas/PWAs do mesmo navegador — um
@@ -207,7 +209,9 @@
 
     const { data: { session } } = await supa.auth.getSession();
     const email = session.user.email;
-    if (email === 'meuprotocolo1@gmail.com') { window.location.href = 'master.html'; return; }
+    // Via RPC (is_master(), 2026-08-14) em vez do e-mail hardcoded aqui.
+    const { data: isMasterSession } = await supa.rpc('is_master');
+    if (isMasterSession) { window.location.href = 'master.html'; return; }
     // Segunda camada da mesma trava — mesmo que o boot() acima tivesse
     // deixado passar por algum motivo, o handler que de fato grava no banco
     // nunca deve criar um profissional pro e-mail de um aluno já existente.

@@ -1654,7 +1654,9 @@ body{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;position:r
     // profissional ainda ativa (deixada por outra aba) não pode cair num
     // "não encontramos seu cadastro" sem saída; redireciona pro lugar certo,
     // mesmo princípio das travas já existentes em index.html/onboarding.html.
-    if (session.user.email === 'meuprotocolo1@gmail.com') { window.__mpSuppressWhatsNew = true; window.location.href = 'master.html'; return; }
+    // Via RPC (is_master(), 2026-08-14) em vez do e-mail hardcoded aqui.
+    const { data: isMasterSession } = await supa.rpc('is_master');
+    if (isMasterSession) { window.__mpSuppressWhatsNew = true; window.location.href = 'master.html'; return; }
     $('settingsEmailText').textContent = session.user.email;
 
     const { data: st, error } = await supa

@@ -139,12 +139,18 @@
   async function routeAfterAuth(email) {
     // E-mail dedicado do painel master (operação, visão de todos os tenants) —
     // checa antes de tudo, sem link público em lugar nenhum apontando pra cá.
-    if (email === 'meuprotocolo1@gmail.com') {
+    // Resolvido via RPC (is_master(), 2026-08-14) em vez de comparar o e-mail
+    // em texto puro aqui — tira o endereço real do código client-side.
+    const { data: isMasterEmail } = await supa.rpc('is_master');
+    if (isMasterEmail) {
       window.location.href = 'master.html';
       return;
     }
 
-    const { data: isPro, error: proErr } = await supa.rpc('is_professional_email', { check_email: email });
+    // Sem parâmetro de propósito (2026-08-14) — a função sempre resolve
+    // contra o e-mail já autenticado da sessão atual, nunca aceita um e-mail
+    // arbitrário (fechava um oráculo real de enumeração de conta).
+    const { data: isPro, error: proErr } = await supa.rpc('is_professional_email');
     if (proErr) console.error('is_professional_email falhou:', proErr.message);
     if (isPro) {
       // Duas checagens além de "existe profissional com esse e-mail":
@@ -164,7 +170,7 @@
       window.location.href = (prof?.mp_preapproval_id || prof?.billing_exempt) ? 'index.html' : 'onboarding.html';
       return;
     }
-    const { data: isStudent, error: stuErr } = await supa.rpc('is_student_email', { check_email: email });
+    const { data: isStudent, error: stuErr } = await supa.rpc('is_student_email');
     if (stuErr) console.error('is_student_email falhou:', stuErr.message);
     if (isStudent) {
       // Status 'inativo' é controle de acesso de verdade, escolhido pelo

@@ -864,6 +864,9 @@
     const { data: pro, error } = await supa.from('professionals').select('*').eq('email', session.user.email).maybeSingle();
     if (error) { console.error('Falha ao carregar professional:', error.message); return; }
     if (!pro) { window.location.href = 'onboarding.html'; return; }
+    // Mesma trava de index.html (2026-08-14) — sem cartão/isenção, o
+    // cadastro não terminou, não deveria dar acesso ao painel direto pela URL.
+    if (!pro.mp_preapproval_id && !pro.billing_exempt) { window.location.href = 'onboarding.html'; return; }
 
     professional = pro;
     supa.rpc('get_professional_unread_message_count').then(({ data }) => {

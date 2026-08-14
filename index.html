@@ -172,7 +172,9 @@
     if (!session) { window.location.href = 'login.html'; return; }
     // Mesma trava de onboarding.html — sessão do master nunca deve renderizar
     // o painel de profissional, mesmo que uma linha em professionals exista.
-    if (session.user.email === 'meuprotocolo1@gmail.com') { window.__mpSuppressWhatsNew = true; window.location.href = 'master.html'; return; }
+    // Via RPC (is_master(), 2026-08-14) em vez do e-mail hardcoded aqui.
+    const { data: isMasterSession } = await supa.rpc('is_master');
+    if (isMasterSession) { window.__mpSuppressWhatsNew = true; window.location.href = 'master.html'; return; }
 
     const { data: pro, error } = await supa.from('professionals').select('*').eq('email', session.user.email).maybeSingle();
     if (error) {
@@ -191,6 +193,15 @@
       const { data: stu } = await supa.from('students').select('id').eq('email', session.user.email).maybeSingle();
       if (stu) { window.__mpSuppressWhatsNew = true; window.location.href = 'aluno.html'; return; }
       window.__mpSuppressWhatsNew = true;
+      window.location.href = 'onboarding.html';
+      return;
+    }
+    // Achado de segurança real (2026-08-14): dava pra pular o passo do
+    // cartão no onboarding e cair aqui direto, navegando pra /index.html —
+    // essa checagem só existia em login.html, nunca no painel em si. Sem
+    // mp_preapproval_id (ou a isenção de cobrança), volta pro onboarding
+    // pra terminar o cadastro, mesma trava usada no login.
+    if (!pro.mp_preapproval_id && !pro.billing_exempt) {
       window.location.href = 'onboarding.html';
       return;
     }

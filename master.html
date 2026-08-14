@@ -760,7 +760,10 @@
     // pra longe desta tela) — a segurança de verdade é a checagem por dentro
     // das RPCs (master_list_professionals/master_update_professional), que
     // nunca retornam dado de outro tenant nem aceitam updates de outro e-mail.
-    if (session.user.email !== 'meuprotocolo1@gmail.com') {
+    // Via RPC (is_master(), 2026-08-14) em vez do e-mail hardcoded aqui —
+    // tira o endereço real do código client-side (achado de segurança real).
+    const { data: isMasterSession } = await supa.rpc('is_master');
+    if (!isMasterSession) {
       window.location.href = 'index.html';
       return;
     }

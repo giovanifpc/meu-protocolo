@@ -214,7 +214,20 @@ Deno.serve(async (req) => {
               .is('rewarded_at', null)
               .maybeSingle();
             if (referral) {
-              await supaAdmin.rpc('increment_referral_credit', { p_professional_id: referral.referrer_id });
+              // p_referred_id (2026-08-14): increment_referral_credit agora
+              // recusa creditar se o CPF (hash) de quem acabou de pagar já
+              // aparece em outra conta do sistema — fecha o gap de indicação
+              // em anel (várias contas-alias se indicando entre si). Retorna
+              // false quando bloqueado; a linha de referrals é marcada como
+              // "resolvida" (rewarded_at) de qualquer jeito, pra não ficar
+              // reprocessando pra sempre uma indicação que nunca vai creditar.
+              const { data: credited } = await supaAdmin.rpc('increment_referral_credit', {
+                p_professional_id: referral.referrer_id,
+                p_referred_id: professionalId,
+              });
+              if (!credited) {
+                console.warn('Indicação não creditada (CPF já usado em outra conta):', referral.id);
+              }
               await supaAdmin.from('referrals').update({ rewarded_at: new Date().toISOString() }).eq('id', referral.id);
             }
           }

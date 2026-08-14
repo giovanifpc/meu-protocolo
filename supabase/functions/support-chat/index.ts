@@ -272,6 +272,17 @@ Deno.serve(async (req) => {
       escalationNotice = ESCALATION_NOTICE_STUDENT;
     }
 
+    // Rate limit (2026-08-14) — 60 mensagens por hora, além do teto de 30
+    // mensagens já existente por conversa (mais alto aqui porque cobre
+    // idas-e-voltas legítimas de uma conversa normal, e porque precisa
+    // valer pros dois papéis: espalhar abuso em várias conversas novas
+    // não escapa mais só por não estourar o limite de uma conversa só).
+    const { data: allowed } = await supa.rpc('check_and_log_ai_call', {
+      p_function_name: 'support-chat',
+      p_limit_per_hour: 60,
+    });
+    if (!allowed) throw new Error('Limite de mensagens por hora atingido. Tente de novo daqui a pouco.');
+
     const body = await req.json();
     const cleanMessage = typeof body.message === 'string' ? body.message.trim().slice(0, 4000) : '';
     if (!cleanMessage) throw new Error('message é obrigatório.');

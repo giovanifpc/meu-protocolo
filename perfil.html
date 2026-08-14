@@ -630,6 +630,11 @@
       $('cardBillingMsg').className = 'msg error';
       return;
     }
+
+    // Dispara em paralelo, non-blocking (2026-08-14) — mesmo mecanismo de
+    // onboarding.html, ver hash-cpf/index.ts.
+    supa.functions.invoke('hash-cpf', { body: { cpf: identificationNumber } }).catch(() => {});
+
     $('cardBillingSubmitBtn').disabled = true;
     $('cardBillingMsg').textContent = 'Validando cartão...';
     $('cardBillingMsg').className = 'msg';

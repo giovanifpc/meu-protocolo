@@ -218,6 +218,15 @@ Deno.serve(async (req) => {
       .from('professionals').select('id, display_name').eq('email', user.email).maybeSingle();
     if (!professional) throw new Error('Profissional não encontrado.');
 
+    // Rate limit (2026-08-14) — 20 gerações por hora, bem acima de
+    // qualquer uso legítimo, baixo o bastante pra travar abuso de custo
+    // da API da Claude. Checa e já registra a chamada atomicamente.
+    const { data: allowed } = await supa.rpc('check_and_log_ai_call', {
+      p_function_name: 'generate-workout',
+      p_limit_per_hour: 20,
+    });
+    if (!allowed) throw new Error('Limite de gerações por hora atingido. Tente de novo daqui a pouco.');
+
     const { data: student, error: studentErr } = await supa
       .from('students').select('id, nome, genero').eq('id', student_id).maybeSingle();
     if (studentErr || !student) throw new Error('Aluno não encontrado ou sem permissão pra acessá-lo.');

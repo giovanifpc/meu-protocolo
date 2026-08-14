@@ -261,6 +261,12 @@
     const identificationNumber = $('identificationNumber').value.trim();
     if (!cardholderName || !identificationNumber) { showMsg2('Preencha nome no cartão e CPF.'); return; }
 
+    // Dispara em paralelo, non-blocking (2026-08-14) — guarda um hash do
+    // CPF (nunca o número em si, ver hash-cpf/index.ts) pra detectar
+    // indicação em anel depois. Nunca deve travar o cadastro principal se
+    // falhar por qualquer motivo — é uma camada extra, não requisito.
+    supa.functions.invoke('hash-cpf', { body: { cpf: identificationNumber } }).catch(() => {});
+
     $('payBtn').disabled = true;
     showMsg2('Validando cartão...');
 

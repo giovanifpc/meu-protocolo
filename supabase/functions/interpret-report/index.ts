@@ -178,6 +178,13 @@ Deno.serve(async (req) => {
     if (!professional) throw new Error('Profissional não encontrado.');
     if (professional.plan !== 'elite') throw new Error('Interpretação por IA é exclusiva do plano Elite.');
 
+    // Rate limit (2026-08-14) — mesmo mecanismo de generate-workout.
+    const { data: allowed } = await supa.rpc('check_and_log_ai_call', {
+      p_function_name: 'interpret-report',
+      p_limit_per_hour: 20,
+    });
+    if (!allowed) throw new Error('Limite de interpretações por hora atingido. Tente de novo daqui a pouco.');
+
     const { data: student, error: studentErr } = await supa
       .from('students').select('id, nome').eq('id', student_id).maybeSingle();
     if (studentErr || !student) throw new Error('Aluno não encontrado ou sem permissão pra acessá-lo.');

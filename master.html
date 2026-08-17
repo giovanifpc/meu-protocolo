@@ -45,6 +45,13 @@
   .status-ativo { background:#E7F7F1; color:#1B7A55; }
   .status-inativo { background:#FDEDEC; color:var(--danger); }
   .status-deletado { background:#EDEFF2; color:var(--muted); }
+  /* Conta inativa/deletada (2026-08-17) — destaque vermelho na linha
+     inteira, não só no selo de status, pra ficar óbvio de relance numa
+     tabela grande. Sempre no fim da lista (ver sortProfessionalRows). */
+  tr.row-inactive { background:rgba(192,57,43,.055); }
+  tr.row-inactive:hover { background:rgba(192,57,43,.09); }
+  tr.row-inactive td { border-bottom-color:rgba(192,57,43,.16); }
+  tr.row-inactive td:first-child { border-left:3px solid var(--danger); padding-left:11px; }
   .msg { font-size:12px; margin-top:4px; }
   .msg.error { color:var(--danger); }
   #supportLogAgeWarning { margin:10px 0; padding:10px 14px; border-radius:10px; font-size:13px; background:rgba(191,80,16,.08); border:1px solid rgba(191,80,16,.25); color:#7a3d10; }
@@ -183,6 +190,23 @@
   const PLANS = ['starter', 'pro', 'elite'];
   const STATUSES = ['trial', 'ativo', 'inativo', 'deletado'];
 
+  // 'inativo' e 'deletado' são os 2 estados de conta bloqueada (ver
+  // is_professional_email/login.html) — tratados juntos aqui pra
+  // ordenação/destaque visual, mesmo grupo semântico de "não funcional".
+  function isInactiveStatus(status) {
+    return status === 'inativo' || status === 'deletado';
+  }
+
+  // Contas inativas/deletadas sempre no fim da lista, nunca misturadas
+  // por ordem cronológica com as ativas/trial (pedido do usuário,
+  // 2026-08-17, depois de inativar 2 contas suspeitas e ter que caçá-las
+  // no meio da tabela). Array.prototype.sort é estável desde ES2019
+  // (garantido pela spec, todo browser moderno segue) — dentro de cada
+  // grupo, a ordem original (cronológica, vinda da RPC) é preservada.
+  function sortProfessionalRows(rows) {
+    return [...rows].sort((a, b) => Number(isInactiveStatus(a.status)) - Number(isInactiveStatus(b.status)));
+  }
+
   function escapeHtml(s) {
     return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
   }
@@ -224,6 +248,7 @@
   function renderRow(row) {
     const tr = document.createElement('tr');
     tr.dataset.id = row.id;
+    if (isInactiveStatus(row.status)) tr.classList.add('row-inactive');
     const dataCriado = row.created_at ? new Date(row.created_at).toLocaleDateString('pt-BR') : '—';
 
     const planOptions = PLANS.map(p => `<option value="${p}" ${p === row.plan ? 'selected' : ''}>${p}</option>`).join('');
@@ -306,14 +331,17 @@
         clear_trial_ends_at: trialRaw === '',
       };
       const { error } = await supa.rpc('master_update_professional', args);
-      btn.disabled = false;
       if (error) {
+        btn.disabled = false;
         console.error('Falha ao salvar:', error.message);
         alert('Erro ao salvar: ' + error.message);
         return;
       }
-      btn.textContent = 'Salvo!';
-      setTimeout(() => { btn.textContent = 'Salvar'; }, 1500);
+      // Recarrega a lista inteira (não só reabilita o botão) — se o status
+      // mudou pra inativo/deletado, a linha precisa mover pro fim e ganhar
+      // o destaque vermelho na hora, sem esperar o próximo reload manual
+      // da página (pedido do usuário, 2026-08-17).
+      await loadProfessionals();
     });
 
     return tr;
@@ -497,9 +525,10 @@
 
     $('emptyMsg').style.display = 'none';
     renderSummary(rows);
+    const sorted = sortProfessionalRows(rows);
     const tbody = $('tbody');
     tbody.innerHTML = '';
-    rows.forEach(row => tbody.appendChild(renderRow(row)));
+    sorted.forEach(row => tbody.appendChild(renderRow(row)));
     $('tableWrap').style.display = 'block';
   }
 

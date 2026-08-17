@@ -107,6 +107,14 @@ Checklist original (todos já implementados, ver "Status atual" pra detalhe de c
 
 ## Status atual
 
+### ✅ Contas inativas/deletadas: destaque vermelho + sempre no fim da lista no painel master (2026-08-17, mesma sessão, continuação)
+
+Pedido do usuário, motivado por ter acabado de inativar 2 contas suspeitas e ter que caçá-las no meio da tabela (ordenada por `created_at`, sem nenhum sinal visual de status bloqueado).
+
+- **`master.html`**: `isInactiveStatus(status)` (`'inativo'` ou `'deletado'`, os 2 estados de conta bloqueada já usados em `is_professional_email`/`login.html`) + `sortProfessionalRows(rows)` — ordena com essas contas sempre no fim, preservando a ordem cronológica original (vinda da RPC) **dentro** de cada grupo (`Array.prototype.sort` é estável desde ES2019, garantido pela spec). `renderRow()` aplica a classe `.row-inactive` na `<tr>` quando o status é bloqueado — fundo vermelho translúcido + borda esquerda vermelha de 3px, mais visível que só o selo de status pequeno que já existia.
+- **Reordena/destaca na hora, sem esperar reload manual**: o handler de "Salvar" agora chama `loadProfessionals()` de novo depois de um `update` bem-sucedido (antes só reabilitava o botão e mostrava "Salvo!" no lugar) — mudar o status pra inativo já move a linha pro fim com o destaque aplicado imediatamente.
+- **Testado antes do push**: lógica de ordenação isolada em Node (mistura de ativo/trial/inativo/deletado fora de ordem cronológica → grupo ativo/trial primeiro preservando ordem, grupo inativo/deletado depois preservando ordem) — confirmado correto. Visual confirmado via harness isolado (HTML com o CSS real + dado sintético, servido localmente) — captura de tela confirma: 3 contas ativas/trial no topo em ordem cronológica, 2 contas inativa/deletada no fim com a borda+fundo vermelhos aplicados. `node --check` no JS extraído sem erro.
+
 ### ✅ CAPTCHA (Cloudflare Turnstile) implementado no cadastro/login — fecha o achado #4 do relato externo de 2026-08-14 (2026-08-17, sessão local no PC)
 
 Continuação da mesma sessão que fechou as 2 contas suspeitas (ver entrada logo abaixo) — próximo item da lista de pendências, agora com acesso real ao Cloudflare (navegador logado) e ao Supabase (CLI + navegador).

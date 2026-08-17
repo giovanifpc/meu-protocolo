@@ -107,6 +107,22 @@ Checklist original (todos já implementados, ver "Status atual" pra detalhe de c
 
 ## Status atual
 
+### ⏳ Checklist pra sessão do PC — 2 contas novas suspeitas + pendências que sobraram do dia de hoje (2026-08-14, fim da sessão remota)
+
+Usuário viu no painel master 2 contas novas (print real): **"aa"** (`vanecay460@neplis.com`) e **"z"** (`ceser14377@joystill.com`), as duas Starter/trial. Nome de 1-2 letras + domínio de e-mail desconhecido (não Gmail/Outlook/etc, padrão típico de serviço de e-mail descartável tipo Mailinator/TempMail) — suspeito o bastante pra valer investigar, mas **não confirmado** como ataque (pode ser bot genérico de formulário, sem alvo específico). **Token de Management API expirou bem nessa hora** (a sessão vinha reaproveitando o mesmo token do dia todo, por pedido do usuário — confirmado morto via `401 Unauthorized`, mesmo token do resto do dia) — não deu pra investigar ao vivo antes da sessão remota encerrar. Arquivo do token apagado do scratchpad (estava morto mesmo, sem valor guardar).
+
+**Investigar na sessão do PC, com token/CLI novo**:
+1. `select id, email, display_name, status, plan, mp_preapproval_id, billing_exempt, cpf_hash, referred_by, created_at, trial_ends_at from professionals where email in ('vanecay460@neplis.com','ceser14377@joystill.com');` — os pontos-chave: **`created_at`** das duas (se forem segundos/minutos uma da outra, forte sinal de script/bot, não duas pessoas diferentes testando em momentos diferentes); **`mp_preapproval_id`** (se `null`, o gate de pagamento corrigido hoje mais cedo já está segurando elas fora do painel — não é urgente); se completaram cartão de verdade, aí sim vale atenção maior.
+2. `select count(*) from students where professional_id in (...)` — se cadastraram algum aluno, dá pra ver o que fizeram dentro do painel (mesmo que não tenham pago).
+3. Comparar com o padrão da conta do Arthur excluída hoje mais cedo (`barchiarthur@gmail.com`, ver entrada "Conta do invasor excluída" abaixo) — mesmo horário aproximado, mesmo tipo de teste, ou claramente outra coisa (bot de spam genérico, por exemplo)?
+4. Decidir o que fazer: se for claramente automatizado/malicioso, `status='inativo'` (bloqueia de verdade, ver correção de hoje) ou excluir de vez com `master_delete_professional` (ambos já funcionando, testados hoje).
+
+**Outras pendências que sobraram do dia, ainda sem ação** (nenhuma delas é código pela metade — tudo que foi decidido hoje já está commitado/deployado; isso é só o que ainda não foi decidido ou depende de coisa fora do código):
+- **CAPTCHA/Cloudflare Turnstile** (achado #4 do relato externo original) — precisa gerar as chaves no painel do Cloudflare (a mesma conta que já hospeda o domínio) e configurar em Supabase Auth → Attack Protection. Não depende de sessão local especificamente, só de fazer esse passo manual quando fizer sentido.
+- **Chargeback/estorno**: não verificado se `mercadopago-webhook` reage corretamente (revoga acesso, marca status) quando um pagamento aprovado sofre chargeback/estorno depois. Só ficou registrado como pergunta em aberto, nunca investigado no código.
+- **E-mails-alias reciclando trial grátis** (Gmail "+", `voce+1@gmail.com` etc.) — mesmo CPF, e-mails "diferentes", trial novo a cada vez. `cpf_hash` (implementado hoje) já ajudaria a detectar isso se alguém quisesse estender a mesma lógica pra além do programa de indicação (ex: recusar um 2º trial pro mesmo `cpf_hash`) — não implementado, só o caso de indicação em anel foi fechado hoje.
+- **Repositório inteiro já está com tudo commitado e em `main`** (`git status` limpo, confirmado antes desta entrada) — não há nenhum código pendente de push, só as investigações acima que precisam de acesso live ao banco/painel.
+
 ### ✅ Indicação em anel (hash de CPF) + rate limit nas 3 funções de IA — os últimos 2 itens da lista de pendências resolvidos e testados (2026-08-14, mesmo dia, continuação)
 
 Usuário aprovou os 3 planos apresentados: item 1 (PDF sem varredura) fica como está, item 2 (indicação em anel) aprovado com a correção técnica de usar HMAC em vez de hash simples, item 3 (rate limit de IA) aprovado como proposto.

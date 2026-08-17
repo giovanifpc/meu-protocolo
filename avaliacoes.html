@@ -62,6 +62,11 @@
   .drawer-item.active .di-ico{color:var(--primary)}
   .card { background:var(--card-grad); border:1px solid rgba(20,30,45,.04); box-shadow:var(--shadow-card); border-radius:var(--radius-lg); padding:16px 18px; margin-bottom:16px; }
   .card h2 { font-size:15px; margin:0 0 12px; }
+  /* Cabeçalho do formulário de avaliação (2026-08-17) — título+status ficam
+     FORA dos cards de campo (não é uma "etapa de preenchimento", é o rótulo
+     da avaliação inteira) — separa visualmente da divisão em cards abaixo. */
+  .form-header-row { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:0 2px 12px; }
+  .form-header-row h2 { margin:0; font-size:17px; }
   .field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
   .field label { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
   .field input, .field select, .field textarea { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; color:var(--text); font-family:var(--font); }
@@ -92,8 +97,6 @@
   .assessment-item:hover { background:var(--bg); }
   .ai-main { font-size:14px; font-weight:700; }
   .ai-meta { font-size:12px; color:var(--muted); margin-top:2px; }
-  .section-sub { font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin:16px 0 10px; }
-  .section-sub:first-child { margin-top:0; }
   .result-box { background:var(--bg); border:1px dashed var(--line); border-radius:10px; padding:12px 14px; margin-top:10px; font-size:13px; }
   .result-box .rb-num { font-size:20px; font-weight:700; color:var(--primary); }
   .photo-slots { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
@@ -191,58 +194,70 @@
         <div class="msg" id="cmpMsg"></div>
       </div>
 
-      <div class="card" id="formArea" style="display:none;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-          <h2 style="margin:0;" id="formTitle">Nova avaliação</h2>
+      <div id="formArea" style="display:none;">
+        <div class="form-header-row">
+          <h2 id="formTitle">Nova avaliação</h2>
           <span class="status-tag" id="formStatusTag"></span>
         </div>
         <div id="formComparisonWarning" class="msg" style="display:none;background:#FFF4E5;border:1px solid #F0C892;color:#8A5A00;border-radius:10px;padding:8px 12px;margin-bottom:8px;font-size:12px;"></div>
 
-        <div class="section-sub">Dados gerais</div>
-        <div class="row three">
-          <div class="field"><label>Data</label><input type="date" id="dataInput"></div>
-          <div class="field"><label>Sexo</label>
-            <select id="sexoInput">
-              <option value="F">Feminino</option>
-              <option value="M">Masculino</option>
+        <div class="card">
+          <h2>Dados gerais</h2>
+          <div class="row three">
+            <div class="field"><label>Data</label><input type="date" id="dataInput"></div>
+            <div class="field"><label>Sexo</label>
+              <select id="sexoInput">
+                <option value="F">Feminino</option>
+                <option value="M">Masculino</option>
+              </select>
+            </div>
+            <div class="field"><label>Idade</label><input type="number" id="idadeInput" min="10" max="110"></div>
+          </div>
+          <div class="row two">
+            <div class="field"><label>Peso (kg)</label><input type="number" step="0.1" id="pesoInput"></div>
+            <div class="field"><label>Altura (cm)</label><input type="number" step="0.1" id="alturaInput"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Dobras cutâneas (adipômetro)</h2>
+          <div class="field">
+            <label>Protocolo usado<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Qual protocolo escolher', '<ul><li><strong>Pollock 3</strong>: 3 dobras, mais rápido, boa margem de erro pra maioria dos casos.</li><li><strong>Pollock 7</strong>: 7 dobras, mais preciso, leva mais tempo.</li><li><strong>Faulkner 4</strong>: 4 pontos fixos, não muda por sexo.</li><li><strong>Guedes 3</strong>: 3 dobras, fórmula brasileira, alternativa ao Pollock 3.</li></ul><p>Os pontos de medida mudam conforme o protocolo e o sexo do aluno — a tela já indica quais dobras pedir depois de escolher.</p>')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></label>
+            <select id="protocoloInput">
+              <option value="">Nenhum (não medir dobras nesta avaliação)</option>
+              <option value="pollock3">Pollock 3 dobras</option>
+              <option value="pollock7">Pollock 7 dobras</option>
+              <option value="faulkner4">Faulkner 4 dobras</option>
+              <option value="guedes3">Guedes 3 dobras</option>
             </select>
           </div>
-          <div class="field"><label>Idade</label><input type="number" id="idadeInput" min="10" max="110"></div>
-        </div>
-        <div class="row two">
-          <div class="field"><label>Peso (kg)</label><input type="number" step="0.1" id="pesoInput"></div>
-          <div class="field"><label>Altura (cm)</label><input type="number" step="0.1" id="alturaInput"></div>
+          <div class="row three" id="skinfoldGrid"></div>
+          <div class="result-box" id="skinfoldResult" style="display:none;"></div>
         </div>
 
-        <div class="section-sub">Dobras cutâneas (adipômetro)</div>
-        <div class="field">
-          <label>Protocolo usado<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Qual protocolo escolher', '<ul><li><strong>Pollock 3</strong>: 3 dobras, mais rápido, boa margem de erro pra maioria dos casos.</li><li><strong>Pollock 7</strong>: 7 dobras, mais preciso, leva mais tempo.</li><li><strong>Faulkner 4</strong>: 4 pontos fixos, não muda por sexo.</li><li><strong>Guedes 3</strong>: 3 dobras, fórmula brasileira, alternativa ao Pollock 3.</li></ul><p>Os pontos de medida mudam conforme o protocolo e o sexo do aluno — a tela já indica quais dobras pedir depois de escolher.</p>')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></label>
-          <select id="protocoloInput">
-            <option value="">Nenhum (não medir dobras nesta avaliação)</option>
-            <option value="pollock3">Pollock 3 dobras</option>
-            <option value="pollock7">Pollock 7 dobras</option>
-            <option value="faulkner4">Faulkner 4 dobras</option>
-            <option value="guedes3">Guedes 3 dobras</option>
-          </select>
-        </div>
-        <div class="row three" id="skinfoldGrid"></div>
-        <div class="result-box" id="skinfoldResult" style="display:none;"></div>
-
-        <div class="section-sub">Bioimpedância (digitar os valores do visor da balança)<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Onde medir cada ponto', '<p><strong>Perimetria</strong> (fita métrica, sem esticar) — meça sempre do mesmo lado do corpo: braço relaxado e contraído, antebraço na maior circunferência, tórax na altura dos mamilos, cintura na menor circunferência (geralmente na altura do umbigo), abdômen na altura do umbigo, quadril na maior circunferência dos glúteos, coxa proximal (rente ao glúteo) e medial, panturrilha na maior circunferência.</p><p><strong>Bioimpedância</strong> — digite os valores exatamente como aparecem no visor da balança (peso, percentual de gordura, massa magra, água corporal, taxa metabólica basal, conforme o modelo); o aparelho já calcula, o app só registra pra comparar com avaliações anteriores. Peça pro aluno medir em jejum, sem exercício nas últimas 4h e hidratado normalmente, pra manter os números comparáveis entre avaliações.</p>')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></div>
-        <div class="row two" id="bioGrid"></div>
-
-        <div class="section-sub">Perimetria (cm)</div>
-        <div class="row three" id="periGrid"></div>
-
-        <div class="section-sub">Fotos</div>
-        <div class="photo-slots" id="photoSlots"></div>
-
-        <div class="section-sub">Observações</div>
-        <div class="field">
-          <textarea id="observacoesInput" placeholder="Ex: aluno relatou retenção de líquido nesta semana, medir em jejum na próxima..."></textarea>
+        <div class="card">
+          <h2>Bioimpedância<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Bioimpedância — como preencher', '<p>Digite os valores exatamente como aparecem no visor da balança (peso, percentual de gordura, massa magra, água corporal, taxa metabólica basal, conforme o modelo) — o aparelho já calcula, o app só registra pra comparar com avaliações anteriores.</p><p>Peça pro aluno medir em jejum, sem exercício nas últimas 4h e hidratado normalmente, pra manter os números comparáveis entre avaliações.</p>')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></h2>
+          <div class="row two" id="bioGrid"></div>
         </div>
 
-        <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
+        <div class="card">
+          <h2>Perimetria (cm)<button type="button" class="help-q-btn" aria-label="Ajuda" onclick="showHelpBanner('Onde medir cada ponto', '<p>Fita métrica, sem esticar — meça sempre do mesmo lado do corpo: <strong>cintura escapular</strong> na linha dos ombros (ponto mais largo do tronco, passando pelas escápulas), braço relaxado e contraído, antebraço na maior circunferência, tórax na altura dos mamilos, cintura na menor circunferência (geralmente na altura do umbigo), abdômen na altura do umbigo, quadril na maior circunferência dos glúteos, coxa proximal (rente ao glúteo) e medial, panturrilha na maior circunferência.</p>')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button></h2>
+          <div class="row three" id="periGrid"></div>
+        </div>
+
+        <div class="card">
+          <h2>Fotos</h2>
+          <div class="photo-slots" id="photoSlots"></div>
+        </div>
+
+        <div class="card">
+          <h2>Observações</h2>
+          <div class="field">
+            <textarea id="observacoesInput" placeholder="Ex: aluno relatou retenção de líquido nesta semana, medir em jejum na próxima..."></textarea>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:4px; flex-wrap:wrap;">
           <button class="btn secondary" id="saveDraftBtn" type="button">Salvar rascunho</button>
           <button class="btn" id="finalizeBtn" type="button">Finalizar avaliação</button>
           <button class="btn secondary" id="unfinalizeBtn" type="button" style="display:none;">Voltar pra rascunho</button>
@@ -354,6 +369,7 @@
   ];
   const PERI_FIELDS = [
     { key: 'torax', label: 'Tórax' },
+    { key: 'cintura_escapular', label: 'Cintura escapular' },
     { key: 'cintura', label: 'Cintura' },
     { key: 'abdomen', label: 'Abdômen' },
     { key: 'quadril', label: 'Quadril' },

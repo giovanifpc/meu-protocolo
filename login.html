@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://media.meuprotocolo.app https://*.supabase.co; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co https://o4511757250199552.ingest.us.sentry.io; object-src 'none'; base-uri 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.sentry-cdn.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://media.meuprotocolo.app https://*.supabase.co; connect-src 'self' https://yumqmramxbahkfxsthtt.supabase.co wss://yumqmramxbahkfxsthtt.supabase.co https://o4511757250199552.ingest.us.sentry.io https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self';">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" href="icons/favicon-32-v2.png">
 <title>Meu Protocolo — Entrar</title>
@@ -10,6 +10,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://js.sentry-cdn.com/dd3ca3ee7a720284b2a9bf8240b29158.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Cloudflare Turnstile (CAPTCHA anti-bot no cadastro/login, 2026-08-17) — script
+     externo com defer é seguro aqui (diferente do incidente de 2026-08-01, que era
+     sobre deferir um <script> INLINE, silenciosamente ignorado pelo navegador; este
+     é um <script src> de verdade). Callback global (window.onTurnstileSuccess etc.)
+     é definido pelo script inline principal no fim do body, que roda de forma
+     síncrona durante o parse — sempre antes deste script deferido executar. -->
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <style>
   :root {
     --bg:#F8F9FA;
@@ -53,6 +60,7 @@
   .msg.ok { color:var(--accent); }
   .back-link { display:block; text-align:center; margin-top:16px; font-size:13px; color:var(--muted); cursor:pointer; text-decoration:underline; }
   .as-badge { display:none; align-items:center; gap:6px; width:fit-content; background:rgba(45,107,228,.1); color:var(--primary); font-size:12px; font-weight:700; padding:5px 12px; border-radius:999px; margin-bottom:12px; }
+  .turnstile-wrap { display:flex; justify-content:center; margin-bottom:14px; min-height:65px; }
 </style>
 </head>
 <body>
@@ -66,7 +74,15 @@
         <label>E-mail</label>
         <input type="email" id="emailInput" placeholder="seu@email.com" autocomplete="email">
       </div>
-      <button class="btn" id="sendOtpBtn">Enviar código</button>
+      <div class="turnstile-wrap">
+        <div class="cf-turnstile"
+          data-sitekey="0x4AAAAAAESrlJJlB5mqtwjF"
+          data-callback="onTurnstileSuccess"
+          data-expired-callback="onTurnstileExpired"
+          data-error-callback="onTurnstileError"
+          data-theme="light"></div>
+      </div>
+      <button class="btn" id="sendOtpBtn" disabled>Enviar código</button>
     </div>
 
     <div id="stepOtp" style="display:none;">
@@ -89,6 +105,31 @@
   const $ = (id) => document.getElementById(id);
   const msgBox = $('msgBox');
   let pendingEmail = '';
+
+  // Cloudflare Turnstile — token capturado pelos callbacks globais (chamados
+  // pelo script deferido, ver <head>) e passado como captchaToken pro
+  // signInWithOtp. A verificação de verdade acontece no servidor (Supabase
+  // Auth, Attack Protection) — isto aqui é só UX: manter o botão desabilitado
+  // até ter um token válido, e pedir um novo depois de cada tentativa (token
+  // é de uso único). Falha ao carregar o script (bloqueio de rede/extensão)
+  // nunca trava o usuário pra sempre — ver checagem em sendOtpBtn abaixo.
+  let turnstileToken = '';
+  window.onTurnstileSuccess = (token) => {
+    turnstileToken = token;
+    $('sendOtpBtn').disabled = false;
+  };
+  window.onTurnstileExpired = () => {
+    turnstileToken = '';
+    $('sendOtpBtn').disabled = true;
+  };
+  window.onTurnstileError = () => {
+    turnstileToken = '';
+    // Erro de carregamento do widget (rede instável, bloqueador de anúncio
+    // etc.) não deveria travar o login pra sempre — libera o botão mesmo sem
+    // token; se o Supabase recusar por falta de captcha, o erro real aparece
+    // na tela normalmente (ver bloco de erro do fetch abaixo).
+    $('sendOtpBtn').disabled = false;
+  };
 
   // Rótulo só decorativo (landing.html/landing-aluno.html mandam ?as=... na
   // hora de linkar pra cá) — nunca decide nada sozinho, é só um sinal visual
@@ -117,8 +158,15 @@
     }
     $('sendOtpBtn').disabled = true;
     showMsg('Enviando código...', '');
-    const { error } = await supa.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
-    $('sendOtpBtn').disabled = false;
+    const options = { shouldCreateUser: true };
+    if (turnstileToken) options.captchaToken = turnstileToken;
+    const { error } = await supa.auth.signInWithOtp({ email, options });
+    // Token do Turnstile é de uso único — sempre resetar o widget depois da
+    // tentativa (sucesso ou erro), pra um reenvio pedir verificação nova em
+    // vez de reusar um token já consumido/expirado.
+    if (window.turnstile) turnstile.reset();
+    turnstileToken = '';
+    $('sendOtpBtn').disabled = true;
     if (error) {
       showMsg('Erro ao enviar código: ' + error.message, 'error');
       return;
@@ -234,6 +282,12 @@
     $('stepEmail').style.display = 'block';
     $('stepHint').textContent = 'Digite seu e-mail para receber um código de acesso.';
     showMsg('', '');
+    // Widget já foi resetado no clique de "Enviar código" (sempre roda antes
+    // de mostrar esta tela) — reforça aqui só por segurança, caso o script
+    // do Turnstile ainda estivesse carregando naquele momento.
+    turnstileToken = '';
+    $('sendOtpBtn').disabled = true;
+    if (window.turnstile) turnstile.reset();
   });
 </script>
 </body>

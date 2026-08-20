@@ -46,16 +46,24 @@ const CLAUDE_MODEL = 'claude-sonnet-5';
 const MAX_USER_MESSAGES = 30; // contexto-ia-suporte.md, seção 7
 const MAX_TOOL_ITERATIONS = 5;
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+const ALLOWED_ORIGINS = new Set(['https://meuprotocolo.app', 'https://giovanifpc.github.io']);
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'content-type': 'application/json' },
-  });
+// Calcula os headers de CORS por requisição, escopando Access-Control-Allow-Origin
+// a essa allowlist em vez de '*' (2026-08-20, mapeado contra uma lista de
+// achados de pentest genéricos) — reforço de defesa em profundidade, a
+// segurança real continua sendo o JWT/RLS de cada function, CORS nunca foi a
+// fronteira de verdade aqui. Precisa ser calculado por requisição (nunca um
+// `let` de módulo) porque o valor depende do Origin de quem chamou — uma
+// variável compartilhada entre requisições concorrentes no mesmo isolate
+// Deno seria uma condição de corrida real (uma resposta poderia devolver o
+// Origin de outra requisição concorrente).
+function corsHeadersFor(req: Request) {
+  const origin = req.headers.get('origin') || '';
+  return {
+    'Access-Control-Allow-Origin': ALLOWED_ORIGINS.has(origin) ? origin : 'https://meuprotocolo.app',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Vary': 'Origin',
+  };
 }
 
 const ESCALATION_NOTICE_PROFESSIONAL =
@@ -225,6 +233,11 @@ async function executeTool(supa: ReturnType<typeof createClient>, name: string, 
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
+  function jsonResponse(body: unknown, status = 200) {
+    return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'content-type': 'application/json' } });
+  }
+
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {

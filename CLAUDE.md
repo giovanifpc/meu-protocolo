@@ -107,6 +107,15 @@ Checklist original (todos já implementados, ver "Status atual" pra detalhe de c
 
 ## Status atual
 
+### ⏳ Pendência registrada: avaliar `supabase-pentest-skills` (toolkit externo de pentest via `npx skills`) contra produção — NÃO executado (2026-08-20)
+
+Usuário viu um vídeo sobre a skill `find-skills` da Vercel (`vercel-labs/skills`, `npx skills find`) e pediu pra investigar. Rodado `npx skills find` buscando algo relevante pro perfil do projeto (HTML/CSS/JS puro sem bundler, Supabase, foco pesado em segurança) — o achado mais relevante foi o toolkit `yoanbernabeu/supabase-pentest-skills` (24 skills, ~350-400 instalações cada). Repo clonado (read-only, fora do diretório do projeto) e lido por completo: README + o `SKILL.md` do orquestrador (`supabase-pentest`) + 3 skills individuais (`supabase-audit-rls`, `supabase-audit-auth-config`, `supabase-audit-auth-users`).
+
+- **O que é de fato**: não é análise estática do código — é um **pentest black-box contra produção**, disparando requisições HTTP reais contra a API pública do Supabase (`meuprotocolo.app` → `yumqmramxbahkfxsthtt.supabase.co`), igual um atacante externo faria. Cada skill é só um `SKILL.md` em markdown (prompt instruindo a rodar `curl`), não binário — dá pra ler tudo antes de rodar, o que já foi feito pras 4 principais.
+- **24 skills em 7 fases**: detecção → extração de chaves vazadas no client (anon/service_role/JWT/connection string) → auditoria de API (lista tabela via PostgREST, tenta ler dado, testa bypass de RLS, testa RPC) → storage (bucket público) → auth (config, signup aberto, **enumeração de usuário por timing attack** nos endpoints `/auth/v1/token`/`/recover`/`/otp` — achado genuinamente novo, diferente do oráculo de enumeração via RPC já fechado em 2026-08-14) → **cria um usuário de teste real pra achar IDOR/vazamento cross-tenant** → realtime/edge functions → relatório final com severidade P0/P1/P2.
+- **Riscos identificados antes de rodar** (nenhum bloqueante, mas precisam de atenção na hora): (1) gera tráfego HTTP real contra produção, pode esbarrar no Turnstile/rate limit já configurados; (2) a etapa de "usuário autenticado" (`supabase-audit-authenticated`) grava linha real em `auth.users`/`professionals` — precisa limpar depois, mesmo cuidado já de praxe nas sessões de teste deste projeto; (3) gera muitos arquivos de evidência (`.sb-pentest-evidence/`, log, relatório) — rodar numa pasta fora do repo, nunca commitar; (4) autor único, sem selo oficial Anthropic/Vercel — conteúdo lido é sério e bem estruturado, sem red flag, mas segue sendo código de terceiro.
+- **Instrução explícita do usuário pra quando isso for retomado**: reler o(s) `SKILL.md` inteiro(s) da skill específica que for rodar antes de executar (mesmo já tendo sido lido nesta sessão — reconfirmar antes de disparar tráfego contra produção). Ainda **nenhuma skill foi instalada nem rodada** — isso é só o registro da investigação.
+
 ### ✅ 3 ajustes no painel do profissional: campo de perimetria novo, avaliação física em cards separados, overflow lateral em Nutri (2026-08-17, mesma sessão, continuação)
 
 Pedido do usuário, 3 pontos.
